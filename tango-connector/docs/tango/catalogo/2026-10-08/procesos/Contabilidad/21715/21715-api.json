@@ -1,0 +1,123 @@
+{
+  "title": "Detalle por cuenta",
+  "moduleId": 6,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "ContabilidadDetallePorCuentaResumenModel": [
+      "ID_CUENTA",
+      "CUENTA",
+      "COD_CUENTA",
+      "DESC_CUENTA",
+      "LEYENDA",
+      "DEBE_CTE",
+      "HABER_CTE",
+      "SALDO_CTE",
+      "DEBE_EXT",
+      "HABER_EXT",
+      "SALDO_EXT",
+      "ID_ASIENTO_RESUMEN_CN",
+      "ASIENTO_RESUMEN",
+      "MONEDA_INGRESO",
+      "NRO_ASIENTO_INTERNO",
+      "ID_RENGLON_IMPORTE_RESUMEN_CN",
+      "ID_TIPO_ASIENTO",
+      "TIPO_ASIENTO",
+      "COD_TIPO_ASIENTO",
+      "DESC_TIPO_ASIENTO",
+      "FECHA_ASIENTO",
+      "NRO_ASIENTO",
+      "CONCEPTO",
+      "CLASE_ASIENTO",
+      "ASIENTO_EXTRACONTABLE",
+      "COTIZACION",
+      "ID_MONEDA",
+      "IMPORTE_EN_MONEDA",
+      "NRO_RENGLON",
+      "NRO_INTERNO_FICHA",
+      "NRO_ASIENTO_FICHA"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

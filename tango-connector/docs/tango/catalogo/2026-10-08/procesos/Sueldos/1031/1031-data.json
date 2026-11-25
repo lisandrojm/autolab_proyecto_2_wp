@@ -1,0 +1,86 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_SITUACION_REVISTA": 1,
+        "coD_SITUACION_REVISTA": "01",
+        "desC_SITUACION_REVISTA": "Percibe haberes regularmente",
+        "coD_ANSES": "01",
+        "roW_VERSION": "AAAAAADPRCM="
+      },
+      {
+        "iD_SITUACION_REVISTA": 2,
+        "coD_SITUACION_REVISTA": "10",
+        "desC_SITUACION_REVISTA": "Maternidad",
+        "coD_ANSES": "10",
+        "roW_VERSION": "AAAAAADPRCQ="
+      },
+      {
+        "iD_SITUACION_REVISTA": 3,
+        "coD_SITUACION_REVISTA": "11",
+        "desC_SITUACION_REVISTA": "Período de reserva por enfermedad",
+        "coD_ANSES": "11",
+        "roW_VERSION": "AAAAAADPRCU="
+      },
+      {
+        "iD_SITUACION_REVISTA": 4,
+        "coD_SITUACION_REVISTA": "12",
+        "desC_SITUACION_REVISTA": "Período de reserva por accidente",
+        "coD_ANSES": "12",
+        "roW_VERSION": "AAAAAADPRCY="
+      },
+      {
+        "iD_SITUACION_REVISTA": 5,
+        "coD_SITUACION_REVISTA": "20",
+        "desC_SITUACION_REVISTA": "Excedencia",
+        "coD_ANSES": "20",
+        "roW_VERSION": "AAAAAADPRCc="
+      },
+      {
+        "iD_SITUACION_REVISTA": 6,
+        "coD_SITUACION_REVISTA": "21",
+        "desC_SITUACION_REVISTA": "Licencia extraordinaria",
+        "coD_ANSES": "21",
+        "roW_VERSION": "AAAAAADPRCg="
+      },
+      {
+        "iD_SITUACION_REVISTA": 7,
+        "coD_SITUACION_REVISTA": "22",
+        "desC_SITUACION_REVISTA": "Receso por contrato de temporada",
+        "coD_ANSES": "22",
+        "roW_VERSION": "AAAAAADPRCk="
+      },
+      {
+        "iD_SITUACION_REVISTA": 8,
+        "coD_SITUACION_REVISTA": "23",
+        "desC_SITUACION_REVISTA": "Licencia gremial",
+        "coD_ANSES": "23",
+        "roW_VERSION": "AAAAAADPRCo="
+      },
+      {
+        "iD_SITUACION_REVISTA": 9,
+        "coD_SITUACION_REVISTA": "24",
+        "desC_SITUACION_REVISTA": "Otras suspensiones",
+        "coD_ANSES": "24",
+        "roW_VERSION": "AAAAAADPRCs="
+      },
+      {
+        "iD_SITUACION_REVISTA": 10,
+        "coD_SITUACION_REVISTA": "50",
+        "desC_SITUACION_REVISTA": "Trabajador temporario",
+        "coD_ANSES": "50",
+        "roW_VERSION": "AAAAAADPRCw="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

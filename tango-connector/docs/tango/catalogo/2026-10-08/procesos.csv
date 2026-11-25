@@ -1,0 +1,1871 @@
+modulo,moduleNumber,accessNumber,menuId,path,descripcion,migrated
+Ventas,10023,2117,19099,Ventas\Archivos\Actualizaciones,Clientes,1
+Ventas,10023,2700,19181,Ventas\Archivos\Actualizaciones,Valores por Defecto para Clientes,1
+Ventas,10023,2672,19169,Ventas\Archivos\Actualizaciones,Actualización masiva de clientes,1
+Ventas,10023,289,18814,Ventas\Archivos\Actualizaciones,Asignación Masiva de Clientes a Tango nexo,0
+Ventas,10023,802,18824,Ventas\Archivos\Actualizaciones,Asignación Masiva de Clientes a Interés por Mora,0
+Ventas,10023,12238,10276,Ventas\Archivos\Actualizaciones\Artículos por Cliente,Individual,0
+Ventas,10023,12239,10304,Ventas\Archivos\Actualizaciones\Artículos por Cliente,Global,0
+Ventas,10023,12215,10282,Ventas\Archivos\Actualizaciones\Clasificador de Clientes,Definición,0
+Ventas,10023,12216,10298,Ventas\Archivos\Actualizaciones\Clasificador de Clientes,Consulta,0
+Ventas,10023,12217,10215,Ventas\Archivos\Actualizaciones,Clientes Potenciales,0
+Ventas,10023,12219,10277,Ventas\Archivos\Actualizaciones\Clasificador de Clientes Potenciales,Definición,0
+Ventas,10023,12220,10303,Ventas\Archivos\Actualizaciones\Clasificador de Clientes Potenciales,Consulta,0
+Ventas,10023,864,18882,Ventas\Archivos\Actualizaciones,Rubros Comerciales,1
+Ventas,10023,972,18909,Ventas\Archivos\Actualizaciones,Grupos Empresarios,1
+Ventas,10023,952,18904,Ventas\Archivos\Actualizaciones,Vendedores,1
+Ventas,10023,960,18906,Ventas\Archivos\Actualizaciones,Transportes,1
+Ventas,10023,852,18879,Ventas\Archivos\Actualizaciones,Provincias,1
+Ventas,10023,932,18899,Ventas\Archivos\Actualizaciones,Países,1
+Ventas,10023,842,18941,Ventas\Archivos\Actualizaciones,Zonas,1
+Ventas,10023,3010,19446,Ventas\Archivos\Actualizaciones,Alícuotas,1
+Ventas,10023,19677,20754,Ventas\Archivos\Actualizaciones,Percepciones,1
+Ventas,10023,20342,21081,Ventas\Archivos\Actualizaciones,Modelos de percepciones,1
+Ventas,10023,896,18890,Ventas\Archivos\Actualizaciones,Clasificación para Percepciones Definibles,1
+Ventas,10023,908,18893,Ventas\Archivos\Actualizaciones,Códigos de Retención,1
+Ventas,10023,920,18896,Ventas\Archivos\Actualizaciones,Actividades Ingresos Brutos,1
+Ventas,10023,2497,19078,Ventas\Archivos\Actualizaciones,Condiciones de Venta,1
+Ventas,10023,1876,17577,Ventas\Archivos\Actualizaciones\Precios de Venta,Administración de precios,0
+Ventas,10023,20091,20932,Ventas\Archivos\Actualizaciones\Precios de Venta,Actualización individual,1
+Ventas,10023,20008,20901,Ventas\Archivos\Actualizaciones\Precios de Venta,Actualización individual por artículo,1
+Ventas,10023,3049,19469,Ventas\Archivos\Actualizaciones\Precios de Venta,Actualización global,1
+Ventas,10023,984,18912,Ventas\Archivos\Actualizaciones\Precios de Venta,Listas de precios,1
+Ventas,10023,20104,20936,Ventas\Archivos\Actualizaciones\Precios de Venta,Criterios de actualización de precios,1
+Ventas,10023,20123,20943,Ventas\Archivos\Actualizaciones\Precios de Venta,Políticas de redondeo,1
+Ventas,10023,2092,19026,Ventas\Archivos\Actualizaciones\Promociones,Política de promociones,0
+Ventas,10023,2009,18968,Ventas\Archivos\Actualizaciones\Promociones,Visor de promociones,0
+Ventas,10023,2016,18976,Ventas\Archivos\Actualizaciones\Promociones,Promociones AxB,1
+Ventas,10023,2035,19000,Ventas\Archivos\Actualizaciones\Promociones,Promociones A+B,1
+Ventas,10023,2047,19003,Ventas\Archivos\Actualizaciones\Promociones,Promociones por porcentaje fijo,1
+Ventas,10023,2059,19006,Ventas\Archivos\Actualizaciones\Promociones,Promociones por cantidad,1
+Ventas,10023,2071,19009,Ventas\Archivos\Actualizaciones\Promociones,Promociones por porcentaje en unidad,1
+Ventas,10023,2147,19076,Ventas\Archivos\Actualizaciones\Promociones,Promociones por tarjetas de beneficios,1
+Ventas,10023,2589,19138,Ventas\Archivos\Actualizaciones\Promociones,Promociones por precio especial,1
+Ventas,10023,2642,19162,Ventas\Archivos\Actualizaciones\Promociones,Promociones por descuento por monto,1
+Ventas,10023,3347,20673,Ventas\Archivos\Actualizaciones\Cotizaciones,Textos,1
+Ventas,10023,944,18902,Ventas\Archivos\Actualizaciones\Cotizaciones,Clasificación 1,1
+Ventas,10023,1921,18921,Ventas\Archivos\Actualizaciones\Cotizaciones,Clasificación 2,1
+Ventas,10023,940,18901,Ventas\Archivos\Actualizaciones\Cotizaciones,Motivos,1
+Ventas,10023,884,18887,Ventas\Archivos\Actualizaciones,Motivos para Pedidos,1
+Ventas,10023,767,18807,Ventas\Archivos\Actualizaciones,Motivos para Notas de Crédito,1
+Ventas,10023,747,18802,Ventas\Archivos\Actualizaciones,Políticas de Interés por Mora,1
+Ventas,10023,1992,18958,Ventas\Archivos\Actualizaciones,Configuraciones para Cobranzas Masivas,0
+Ventas,10023,12250,10180,Ventas\Archivos\Altas y Consultas,Clientes Potenciales,0
+Ventas,10023,876,18885,Ventas\Archivos\Carga Inicial,Agrupaciones de Clientes,1
+Ventas,10023,2552,19082,Ventas\Archivos\Carga Inicial,Tipos de comprobante,1
+Ventas,10023,1939,18934,Ventas\Archivos\Carga Inicial\Talonarios,Definición,0
+Ventas,10023,2987,19427,Ventas\Archivos\Carga Inicial\Talonarios,Imágenes,0
+Ventas,10023,12445,10238,Ventas\Archivos\Carga Inicial,Paneles para Comprobantes,0
+Ventas,10023,12259,10279,Ventas\Archivos\Carga Inicial\Cotizaciones,Perfiles de Usuarios,0
+Ventas,10023,12260,10301,Ventas\Archivos\Carga Inicial\Cotizaciones,Permisos a Usuarios,0
+Ventas,10023,20020,20904,Ventas\Archivos\Carga Inicial\Perfiles,Perfiles de pedidos,1
+Ventas,10023,12263,10278,Ventas\Archivos\Carga Inicial\Perfiles,Perfiles de facturación,1
+Ventas,10023,21225,21181,Ventas\Archivos\Carga Inicial\Perfiles,Perfiles de medios de pago para facturas y pedidos,1
+Ventas,10023,751,18803,Ventas\Archivos\Carga Inicial\Perfiles,Perfiles de notas de crédito,1
+Ventas,10023,21207,21175,Ventas\Archivos\Carga Inicial\Perfiles,Perfiles de cierre de caja,1
+Ventas,10023,3106,19533,Ventas\Archivos\Carga Inicial\Perfiles,Perfiles de remitos,0
+Ventas,10023,21434,21269,Ventas\Archivos\Carga Inicial\Perfiles,Perfiles de gestión de clientes,1
+Ventas,10023,1910,18919,Ventas\Archivos\Carga Inicial\Perfiles,Perfiles de aprobación,1
+Ventas,10023,3325,20663,Ventas\Archivos\Carga Inicial\Perfiles,Claves de autorización,1
+Ventas,10023,996,18915,Ventas\Archivos\Carga Inicial\Perfiles,Perfiles de consulta de precios y saldos de stock,1
+Ventas,10023,12268,10280,Ventas\Archivos\Carga Inicial\Formularios,Cancelación de Documentos,0
+Ventas,10023,12269,10300,Ventas\Archivos\Carga Inicial\Formularios,Factura de Crédito,0
+Ventas,10023,12270,10309,Ventas\Archivos\Carga Inicial\Formularios,Cancelación de Factura de Crédito,0
+Ventas,10023,2990,19430,Ventas\Archivos\Carga Inicial,Parámetros de Balanza,1
+Ventas,10023,19744,20796,Ventas\Archivos\Carga Inicial,Parámetros para Códigos de Barra,1
+Ventas,10023,21215,21178,Ventas\Archivos\Carga Inicial,Parámetros de cierre de caja,1
+Ventas,10023,3471,20734,Ventas\Archivos\Carga Inicial,Parámetros de pedidos de Tango Tiendas,1
+Ventas,10023,665,18790,Ventas\Archivos\Carga Inicial,Parámetros de Ventas,1
+Ventas,10023,85,18160,Ventas\Archivos\Parametrización contable,Clientes,1
+Ventas,10023,624,18730,Ventas\Archivos\Parametrización contable,Actualización global de clientes,1
+Ventas,10023,2824,19220,Ventas\Archivos\Parametrización contable,Valores por defecto para clientes,1
+Ventas,10023,602,18439,Ventas\Archivos\Parametrización contable,Clientes potenciales,0
+Ventas,10023,122,18175,Ventas\Archivos\Parametrización contable,Tipos de comprobantes,1
+Ventas,10023,106,18171,Ventas\Archivos\Parametrización contable,Modelos de asientos,1
+Ventas,10023,90,18164,Ventas\Archivos\Parametrización contable,Parámetros contables,1
+Ventas,10023,12274,10116,Ventas\Cotizaciones,Generación / Modificación,0
+Ventas,10023,12275,10118,Ventas\Cotizaciones,Autorización,0
+Ventas,10023,12276,10133,Ventas\Cotizaciones,Emisión,0
+Ventas,10023,12277,10134,Ventas\Cotizaciones,Aceptación del Cliente,0
+Ventas,10023,12278,10146,Ventas\Cotizaciones,Pérdida / Activación,0
+Ventas,10023,12279,10147,Ventas\Cotizaciones,Anulación,0
+Ventas,10023,12280,10158,Ventas\Cotizaciones,Consulta,0
+Ventas,10023,19845,20826,Ventas\Pedidos,Pedidos,1
+Ventas,10023,21185,21168,Ventas\Pedidos,Gestión masiva de pedidos,1
+Ventas,10023,12289,10175,Ventas\Pedidos\Pedidos automáticos,Modelos de pedidos,1
+Ventas,10023,12290,10184,Ventas\Pedidos\Pedidos automáticos,Novedades para pedidos,1
+Ventas,10023,12291,10209,Ventas\Pedidos\Pedidos automáticos,Generación de pedidos,1
+Ventas,10023,20422,21127,Ventas\Pedidos\Tango Tiendas,Revisión de órdenes,1
+Ventas,10023,20413,21119,Ventas\Pedidos\Tango Tiendas,Relacionar artículos con publicaciones,1
+Ventas,10023,20416,21122,Ventas\Pedidos\Tango Tiendas,Relacionar clientes con órdenes,1
+Ventas,10023,20431,21136,Ventas\Pedidos\Tango Tiendas,Descarga on demand de órdenes,1
+Ventas,10023,3056,19496,Ventas\Facturación,Facturador,0
+Ventas,10023,12299,10176,Ventas\Facturación\Remitos,Emisión,0
+Ventas,10023,12300,10183,Ventas\Facturación\Remitos,Devolución,0
+Ventas,10023,12301,10210,Ventas\Facturación\Remitos,Anulación,0
+Ventas,10023,12302,10216,Ventas\Facturación\Remitos,Imputación,0
+Ventas,10023,12303,10231,Ventas\Facturación\Remitos,Consulta,0
+Ventas,10023,12950,10715,Ventas\Facturación,Administración de Comprobantes Electrónicos,0
+Ventas,10023,12304,10156,Ventas\Facturación,Consulta de Precios y Saldos de Stock,1
+Ventas,10023,12306,10113,Ventas\Cuentas Corrientes,Composición Inicial de Saldos,0
+Ventas,10023,1957,18938,Ventas\Cuentas Corrientes,Cobranzas,0
+Ventas,10023,2005,18961,Ventas\Cuentas Corrientes\Cobranzas masivas,Exportación de facturas a entidades recaudadoras,0
+Ventas,10023,1986,18954,Ventas\Cuentas Corrientes\Cobranzas masivas,Generación masiva de recibos,0
+Ventas,10023,2127,19071,Ventas\Cuentas Corrientes,Imputación de Comprobantes,0
+Ventas,10023,772,18809,Ventas\Cuentas Corrientes,Gestión de Débitos por Mora,0
+Ventas,10023,2129,19136,Ventas\Cuentas Corrientes,Generación de Comprobantes de Ajustes,0
+Ventas,10023,3053,19489,Ventas\Cuentas Corrientes,Solicitud de pago electrónico,0
+Ventas,10023,12310,10166,Ventas\Cuentas Corrientes\Facturas de Crédito,Cancelación de Facturas de Crédito,0
+Ventas,10023,12311,10194,Ventas\Cuentas Corrientes\Facturas de Crédito,Impresión de Facturas de Crédito,0
+Ventas,10023,12312,10201,Ventas\Cuentas Corrientes\Facturas de Crédito,Actualización de Facturas de Crédito,0
+Ventas,10023,12313,10143,Ventas\Cuentas Corrientes,Impresión de Comprobantes de Ajuste,0
+Ventas,10023,12314,10150,Ventas\Cuentas Corrientes,Cancelación de Documentos,0
+Ventas,10023,12315,10154,Ventas\Cuentas Corrientes,Modificación de Comprobantes,0
+Ventas,10023,12316,10159,Ventas\Cuentas Corrientes,Fechas de Vencimiento de Documentos,0
+Ventas,10023,12323,10162,Ventas\Cuentas Corrientes\Registro de Anulaciones,Anulación de Comprobantes,0
+Ventas,10023,12324,10197,Ventas\Cuentas Corrientes\Registro de Anulaciones,Anulación de Cancelación de Facturas de Crédito,0
+Ventas,10023,12325,10198,Ventas\Cuentas Corrientes\Registro de Anulaciones,Anulación de Cancelación de Documentos,0
+Ventas,10023,12326,10224,Ventas\Cuentas Corrientes\Registro de Anulaciones,Listado de Comprobantes Anulados,0
+Ventas,10023,12318,10165,Ventas\Cuentas Corrientes\Consultas,Comprobantes,0
+Ventas,10023,12319,10195,Ventas\Cuentas Corrientes\Consultas,Cuentas Corrientes - Actual,0
+Ventas,10023,12320,10200,Ventas\Cuentas Corrientes\Consultas,Cuentas Corrientes - Histórico,0
+Ventas,10023,12321,10222,Ventas\Cuentas Corrientes\Consultas,Gestión de clientes,1
+Ventas,10023,12329,10123,Ventas\Procesos Periódicos,Pasaje a I.V.A.,0
+Ventas,10023,12330,10128,Ventas\Procesos Periódicos,Depuración de Cotizaciones,1
+Ventas,10023,12331,10138,Ventas\Procesos Periódicos,Depuración de Pedidos,1
+Ventas,10023,12993,17413,Ventas\Procesos Periódicos,Reclasificación de Comprobantes,0
+Ventas,10023,12333,10164,Ventas\Procesos Periódicos\Cuentas Corrientes,Balance,0
+Ventas,10023,12334,10196,Ventas\Procesos Periódicos\Cuentas Corrientes,Cierre,0
+Ventas,10023,12335,10199,Ventas\Procesos Periódicos\Cuentas Corrientes,Histórico,0
+Ventas,10023,12336,10223,Ventas\Procesos Periódicos\Cuentas Corrientes,Reconstrucción de Estados,0
+Ventas,10023,12337,10225,Ventas\Procesos Periódicos\Cuentas Corrientes,Recomposición de Saldos,0
+Ventas,10023,12346,10167,Ventas\Procesos Periódicos\Controlador Fiscal,Habilitación,0
+Ventas,10023,12347,10192,Ventas\Procesos Periódicos\Controlador Fiscal,Operación,0
+Ventas,10023,2362,17427,Ventas\Procesos Periódicos,Actualización de alícuotas de I.I.B.B. según padrón A.R.B.A. Bs. As.,0
+Ventas,10023,2495,17500,Ventas\Procesos Periódicos,Actualización de alícuotas de I.I.B.B. según padrón A.G.I.P. Bs. As.,0
+Ventas,10023,13032,17512,Ventas\Procesos Periódicos\Percepciones Definibles,Definición de Formato ASCII,0
+Ventas,10023,13035,17515,Ventas\Procesos Periódicos\Percepciones Definibles,Generación de Archivo ASCII,0
+Ventas,10023,235,18237,Ventas\Procesos Periódicos\Contabilización,Generación de asientos contables,0
+Ventas,10023,239,18241,Ventas\Procesos Periódicos\Contabilización,Eliminación de asientos contables,0
+Ventas,10023,611,18436,Ventas\Procesos Periódicos\Contabilización\Exportación,Exportación de asientos contables,0
+Ventas,10023,243,18253,Ventas\Procesos Periódicos\Contabilización\Exportación,Anulación de lotes contables generados,0
+Ventas,10023,247,18257,Ventas\Procesos Periódicos\Contabilización\Exportación,Lotes contables generados,0
+Ventas,10023,21197,21171,Ventas\Procesos Periódicos,Ajuste de precios de pedidos no actualizados,1
+Ventas,10023,13749,17975,Ventas\Consultas\Clientes,Ficha Live de clientes,1
+Ventas,10023,20295,21046,Ventas\Consultas\Clientes,Ficha Live de clientes potenciales,1
+Ventas,10023,17961,17961,Ventas\Consultas\Clientes,Nómina,1
+Ventas,10023,12205,18828,Ventas\Consultas\Clientes,Saldos,1
+Ventas,10023,10348,18062,Ventas\Consultas\Precios,por Artículo,1
+Ventas,10023,12517,18975,Ventas\Consultas\Precios,Promociones,1
+Ventas,10023,12529,18989,Ventas\Consultas\Precios,Promociones por sucursal,1
+Ventas,10023,12720,19276,Ventas\Consultas\Precios,Historial de precios,1
+Ventas,10023,12742,19307,Ventas\Consultas\Precios,Precios vigentes a una fecha,1
+Ventas,10023,12734,19296,Ventas\Consultas\Precios\Auditoría,Cotizaciones,1
+Ventas,10023,12738,19300,Ventas\Consultas\Precios\Auditoría,Pedidos,1
+Ventas,10023,12729,19290,Ventas\Consultas\Precios\Auditoría,Facturación,1
+Ventas,10023,14062,17985,Ventas\Consultas\Cotizaciones,Ficha Live de cotizaciones,1
+Ventas,10023,17948,17948,Ventas\Consultas\Cotizaciones,Consulta,1
+Ventas,10023,12481,18922,Ventas\Consultas\Cotizaciones,Detalle,1
+Ventas,10023,17945,17945,Ventas\Consultas\Cotizaciones,Resumen,1
+Ventas,10023,17949,17949,Ventas\Consultas\Cotizaciones,Resumen por artículo,1
+Ventas,10023,17946,17946,Ventas\Consultas\Cotizaciones,Comparativo,1
+Ventas,10023,17947,17947,Ventas\Consultas\Cotizaciones,Por Mes / Año,1
+Ventas,10023,14070,17986,Ventas\Consultas\Pedidos,Ficha Live de pedidos,1
+Ventas,10023,17930,17930,Ventas\Consultas\Pedidos,Consulta,1
+Ventas,10023,17928,17928,Ventas\Consultas\Pedidos,Pendientes de facturar,1
+Ventas,10023,17927,17927,Ventas\Consultas\Pedidos,Pendientes de remitir,1
+Ventas,10023,17926,17926,Ventas\Consultas\Pedidos,Pendientes de aprobación,1
+Ventas,10023,10081,18043,Ventas\Consultas\Pedidos,Detalle de pedidos,1
+Ventas,10023,17929,17929,Ventas\Consultas\Pedidos,Resumen,1
+Ventas,10023,21277,21209,Ventas\Consultas\Pedidos,Resumen por totales,1
+Ventas,10023,12648,19232,Ventas\Consultas\Pedidos,Resumen por kits,1
+Ventas,10023,17931,17931,Ventas\Consultas\Pedidos,Resumen por artículo,1
+Ventas,10023,11586,18515,Ventas\Consultas\Pedidos,Entregas pactadas / reales,1
+Ventas,10023,12651,19236,Ventas\Consultas\Pedidos,Pedidos con kits sin detalle de composición,1
+Ventas,10023,13157,19630,Ventas\Consultas\Pedidos,Pedidos por origen,1
+Ventas,10023,20393,21099,Ventas\Consultas\Pedidos,Pedidos con promociones fuera de vigencia,1
+Ventas,10023,20394,21100,Ventas\Consultas\Pedidos,Pedidos con promociones pendientes de facturar,1
+Ventas,10023,20395,21101,Ventas\Consultas\Pedidos,Pedidos con promociones por estado,1
+Ventas,10023,20396,21102,Ventas\Consultas\Pedidos,Pedidos con promociones por tipo,1
+Ventas,10023,20330,21075,Ventas\Consultas\Pedidos\Pedidos automáticos,Ficha Live de modelos de pedidos,1
+Ventas,10023,20426,21131,Ventas\Consultas\Pedidos\Pedidos automáticos,Detalle de modelos,1
+Ventas,10023,20320,21065,Ventas\Consultas\Pedidos\Pedidos automáticos,Detalle de novedades,1
+Ventas,10023,20318,21063,Ventas\Consultas\Pedidos\Pedidos automáticos,Modelos por cliente,1
+Ventas,10023,20440,21143,Ventas\Consultas\Pedidos\Pedidos automáticos,Clientes sin modelo,1
+Ventas,10023,20441,21144,Ventas\Consultas\Pedidos\Pedidos automáticos,Clientes sin modelo vigente,1
+Ventas,10023,20372,21093,Ventas\Consultas\Pedidos\Pedidos automáticos,Pendientes de generar,1
+Ventas,10023,20326,21071,Ventas\Consultas\Pedidos\Pedidos automáticos,Historial de generación de pedidos,1
+Ventas,10023,14077,17988,Ventas\Consultas\Facturación,"Ficha Live de facturas, créditos y débitos",1
+Ventas,10023,17942,17942,Ventas\Consultas\Facturación,Consulta,1
+Ventas,10023,14000,17982,Ventas\Consultas\Facturación,Ficha Live de vendedores,1
+Ventas,10023,17938,17938,Ventas\Consultas\Facturación,Ranking de ventas,1
+Ventas,10023,17935,17935,Ventas\Consultas\Facturación,Ranking por artículo,1
+Ventas,10023,17936,17936,Ventas\Consultas\Facturación,Facturas pendientes de remitir,1
+Ventas,10023,17943,17943,Ventas\Consultas\Facturación,Detalle de comprobantes,1
+Ventas,10023,17933,17933,Ventas\Consultas\Facturación,Resumen,1
+Ventas,10023,17934,17934,Ventas\Consultas\Facturación,Resumen por artículo,1
+Ventas,10023,12158,18734,Ventas\Consultas\Facturación,Resumen por kits,1
+Ventas,10023,17940,17940,Ventas\Consultas\Facturación,Por medio de pago,1
+Ventas,10023,17937,17937,Ventas\Consultas\Facturación,Comparativo,1
+Ventas,10023,17941,17941,Ventas\Consultas\Facturación,Comparativo por artículo,1
+Ventas,10023,10083,18045,Ventas\Consultas\Facturación,Consolidado de compras y ventas,1
+Ventas,10023,17939,17939,Ventas\Consultas\Facturación,Por Mes / Año,1
+Ventas,10023,12895,19360,Ventas\Consultas\Facturación,Resumen semanal de ventas por medio de pago,1
+Ventas,10023,12898,19364,Ventas\Consultas\Facturación,Resumen semanal de comprobantes con más de una venta,1
+Ventas,10023,19936,20859,Ventas\Consultas\Facturación,Ventas por origen,1
+Ventas,10023,20192,20976,Ventas\Consultas\Facturación,Cantidad de comprobantes por tipo de talonario,1
+Ventas,10023,12534,19039,Ventas\Consultas\Facturación\Facturador,Notas de crédito por promoción de tarjetas,1
+Ventas,10023,12616,19223,Ventas\Consultas\Facturación\Facturador,Notas de crédito pendientes de generar por pago con tarjeta de regalo,1
+Ventas,10023,12657,19241,Ventas\Consultas\Facturación\Facturador,Promociones facturadas por código de promoción,1
+Ventas,10023,12658,19242,Ventas\Consultas\Facturación\Facturador,Promociones facturadas por tipo de promoción,1
+Ventas,10023,12662,19243,Ventas\Consultas\Facturación\Facturador,Promociones facturadas por año / mes / día,1
+Ventas,10023,12663,19244,Ventas\Consultas\Facturación\Facturador,Resumen por artículo con promociones,1
+Ventas,10023,12664,19245,Ventas\Consultas\Facturación\Facturador,Resumen de ventas con tarjetas de regalo,1
+Ventas,10023,12889,19357,Ventas\Consultas\Facturación\Facturador,Resumen semanal de ventas,1
+Ventas,10023,13118,19555,Ventas\Consultas\Facturación\Facturador,Reportes fiscales (Nueva tecnología),1
+Ventas,10023,19965,20883,Ventas\Consultas\Facturación\Facturador,Resultados de facturación automática de pedidos de Tango Tiendas,1
+Ventas,10023,21234,21187,Ventas\Consultas\Facturación\Facturador\Procesos de cierre,Resumen de saldos por caja,1
+Ventas,10023,21237,21190,Ventas\Consultas\Facturación\Facturador\Procesos de cierre,Resumen de cierres de caja,1
+Ventas,10023,12974,19420,Ventas\Consultas\Facturación\Facturador\Procesos de cierre,Resumen de cierres Z,1
+Ventas,10023,12975,19421,Ventas\Consultas\Facturación\Facturador\Procesos de cierre,Diferencias con cierres Z,1
+Ventas,10023,12916,19379,Ventas\Consultas\Facturación,Ticket promedio diario,1
+Ventas,10023,14093,17991,Ventas\Consultas\Remitos,Ficha Live de remitos,1
+Ventas,10023,17965,17965,Ventas\Consultas\Remitos,Consulta,1
+Ventas,10023,13183,20736,Ventas\Consultas\Remitos,Detalle de comprobantes,1
+Ventas,10023,17963,17963,Ventas\Consultas\Remitos,Pendientes de facturar,1
+Ventas,10023,17964,17964,Ventas\Consultas\Remitos,Electrónicos (C.O.T),1
+Ventas,10023,14105,17994,Ventas\Consultas\Cuenta Corriente,Ficha Live de recibos,1
+Ventas,10023,12555,19060,Ventas\Consultas\Cuenta Corriente,Resumen de cuentas,1
+Ventas,10023,17959,17959,Ventas\Consultas\Cuenta Corriente,Consulta de recibos,1
+Ventas,10023,12542,19047,Ventas\Consultas\Cuenta Corriente\Cobranzas masivas,Facturas no exportadas a entidades recaudadoras,1
+Ventas,10023,12546,19051,Ventas\Consultas\Cuenta Corriente\Cobranzas masivas,Historial de exportaciones a entidades recaudadoras,1
+Ventas,10023,12566,19087,Ventas\Consultas\Cuenta Corriente\Cobranzas masivas,Cobranzas por entidad recaudadora,1
+Ventas,10023,12540,19045,Ventas\Consultas\Cuenta Corriente\Cobranzas masivas,Cobranzas no procesadas,1
+Ventas,10023,12544,19049,Ventas\Consultas\Cuenta Corriente\Cobranzas masivas,Historial de generaciones masivas de recibos,1
+Ventas,10023,17954,17954,Ventas\Consultas\Cuenta Corriente,Ranking de morosos,1
+Ventas,10023,17951,17951,Ventas\Consultas\Cuenta Corriente,Ranking de deudores,1
+Ventas,10023,17953,17953,Ventas\Consultas\Cuenta Corriente,Deudas vencidas,1
+Ventas,10023,17955,17955,Ventas\Consultas\Cuenta Corriente,Deudas a vencer,1
+Ventas,10023,17952,17952,Ventas\Consultas\Cuenta Corriente,Cobranzas a realizar,1
+Ventas,10023,17958,17958,Ventas\Consultas\Cuenta Corriente,Cobranzas realizadas,1
+Ventas,10023,12919,19383,Ventas\Consultas\Cuenta Corriente,Cobranzas imputadas,1
+Ventas,10023,17969,17969,Ventas\Consultas\Cuenta Corriente,Cobranzas por medio de pago,1
+Ventas,10023,10921,18198,Ventas\Consultas\Cuenta Corriente,Facturas de crédito,1
+Ventas,10023,17956,17956,Ventas\Consultas\Cuenta Corriente,Diferencias de cambio pendientes de emitir,1
+Ventas,10023,17957,17957,Ventas\Consultas\Cuenta Corriente,C. P. R. pendientes,1
+Ventas,10023,10948,18826,Ventas\Consultas\Cuenta Corriente,Notas de débito de interés por mora,1
+Ventas,10023,19687,20773,Ventas\Consultas\Cuenta Corriente,Comprobantes MiPymes,1
+Ventas,10023,12553,19058,Ventas\Consultas\Tango nexo\Clientes,Clientes que no publican en Tango nexo,1
+Ventas,10023,12554,19059,Ventas\Consultas\Tango nexo\Clientes,Clientes que publican en Tango nexo,1
+Ventas,10023,12522,18982,Ventas\Consultas\Tango nexo\Clientes,Comprobantes pendientes de leer,1
+Ventas,10023,12520,18980,Ventas\Consultas\Tango nexo\Clientes,Comprobantes leídos,1
+Ventas,10023,19933,20856,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,Ficha Live de órdenes de Tango Tiendas,1
+Ventas,10023,12716,19267,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,Ordenes,1
+Ventas,10023,19932,20855,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,Detalle de ordenes,1
+Ventas,10023,19930,20853,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,Ordenes por tienda,1
+Ventas,10023,19912,20843,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,Ordenes pendientes de facturar,1
+Ventas,10023,19914,20845,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,Ordenes pendientes de remitir,1
+Ventas,10023,19924,20847,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,Detalle de ordenes pendientes de facturar,1
+Ventas,10023,19926,20849,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,Detalle de ordenes pendientes de remitir,1
+Ventas,10023,19928,20851,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,Seguimiento de ordenes detallado,1
+Ventas,10023,12813,19338,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,Pagos,1
+Ventas,10023,20190,20984,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,Ordenes canceladas,1
+Ventas,10023,13112,19536,Ventas\Consultas\Tango nexo\Cobranzas,Solicitudes de pago electrónico,1
+Ventas,10023,13106,19487,Ventas\Consultas\Tango nexo\Cobranzas,Pagos no procesados,1
+Ventas,10023,11440,18465,Ventas\Consultas\Contabilidad,Detalle por comprobante,1
+Ventas,10023,11443,18468,Ventas\Consultas\Contabilidad,Detalle por cuenta,1
+Ventas,10023,11444,18469,Ventas\Consultas\Contabilidad,Detalle por auxiliar,1
+Ventas,10023,11445,18470,Ventas\Consultas\Contabilidad,Detalle por subauxiliar,1
+Ventas,10023,11446,18471,Ventas\Consultas\Contabilidad,Contabilización de comprobantes,1
+Ventas,10023,21483,21309,Ventas\Consultas\Contabilidad,Contabilización de comprobantes pendientes de exportar,1
+Ventas,10023,11645,18541,Ventas\Consultas\Contabilidad,Multidimensional de asientos,1
+Ventas,10023,12350,10170,Ventas\Informes\Cotizaciones,por Vendedor,0
+Ventas,10023,12351,10189,Ventas\Informes\Cotizaciones,por Cliente,0
+Ventas,10023,12352,10204,Ventas\Informes\Cotizaciones,por Fecha,0
+Ventas,10023,12353,10219,Ventas\Informes\Cotizaciones,por Artículo,0
+Ventas,10023,12354,10227,Ventas\Informes\Cotizaciones,Seguimiento de Cotizaciones,0
+Ventas,10023,12451,10361,Ventas\Informes\Cotizaciones,Cotizaciones Perdidas,0
+Ventas,10023,12355,10239,Ventas\Informes\Cotizaciones,Nómina de Clientes Potenciales,0
+Ventas,10023,12357,10169,Ventas\Informes\Pedidos,por Cliente,0
+Ventas,10023,12358,10190,Ventas\Informes\Pedidos,por Artículo,0
+Ventas,10023,12359,10203,Ventas\Informes\Pedidos,por Fecha,0
+Ventas,10023,12360,10220,Ventas\Informes\Pedidos,Seguimiento de Pedidos,0
+Ventas,10023,12361,10226,Ventas\Informes\Pedidos,Pendientes Remitidos y Facturados,0
+Ventas,10023,12367,10168,Ventas\Informes\Facturación,I.V.A. Ventas,0
+Ventas,10023,12368,10191,Ventas\Informes\Facturación,Impuestos Registrados,0
+Ventas,10023,12370,10289,Ventas\Informes\Facturación\Resumen de Ventas,por Cliente,0
+Ventas,10023,12371,10292,Ventas\Informes\Facturación\Resumen de Ventas,por Provincia,0
+Ventas,10023,12372,10314,Ventas\Informes\Facturación\Resumen de Ventas,por Vendedor,0
+Ventas,10023,12373,10316,Ventas\Informes\Facturación\Resumen de Ventas,por Zona,0
+Ventas,10023,12374,10321,Ventas\Informes\Facturación\Resumen de Ventas,por Depósito,0
+Ventas,10023,12375,10322,Ventas\Informes\Facturación\Resumen de Ventas,por Provincia / Actividad,0
+Ventas,10023,12376,10323,Ventas\Informes\Facturación\Resumen de Ventas,por Condición de Venta,0
+Ventas,10023,12377,10324,Ventas\Informes\Facturación\Resumen de Ventas,por Transporte,0
+Ventas,10023,12448,10325,Ventas\Informes\Facturación\Resumen de Ventas,por Año,0
+Ventas,10023,12379,10287,Ventas\Informes\Facturación\Ranking de Ventas,por Cliente,0
+Ventas,10023,12380,10293,Ventas\Informes\Facturación\Ranking de Ventas,por Artículo,0
+Ventas,10023,12381,10313,Ventas\Informes\Facturación\Ranking de Ventas,por Cliente - Artículo,0
+Ventas,10023,12382,10317,Ventas\Informes\Facturación\Ranking de Ventas,por Artículo - Cliente,0
+Ventas,10023,12383,10230,Ventas\Informes\Facturación,Comprobantes Emitidos,0
+Ventas,10023,12384,10235,Ventas\Informes\Facturación,Detalle de Comprobantes,0
+Ventas,10023,12386,10284,Ventas\Informes\Facturación\Comisiones a Vendedores,por Porcentaje Individual,0
+Ventas,10023,12387,10296,Ventas\Informes\Facturación\Comisiones a Vendedores,por Artículo,0
+Ventas,10023,12388,10311,Ventas\Informes\Facturación\Comisiones a Vendedores,por Zona,0
+Ventas,10023,12389,10248,Ventas\Informes\Facturación,Facturas Pendientes de Remitir,0
+Ventas,10023,12796,10540,Ventas\Informes\Facturación\Señas,por Cliente,0
+Ventas,10023,12797,10541,Ventas\Informes\Facturación\Señas,por Artículo,0
+Ventas,10023,12798,10542,Ventas\Informes\Facturación\Señas,por Fecha,0
+Ventas,10023,12799,10543,Ventas\Informes\Facturación\Señas,Pendientes de Aplicar,0
+Ventas,10023,12391,10283,Ventas\Informes\Facturación\Remitos,por Cliente,0
+Ventas,10023,12392,10297,Ventas\Informes\Facturación\Remitos,Pendientes de Facturar,0
+Ventas,10023,12394,10318,Ventas\Informes\Facturación\Remitos,Anulados,0
+Ventas,10023,12393,10310,Ventas\Informes\Facturación\Remitos,Devoluciones,0
+Ventas,10023,276,18277,Ventas\Informes\Facturación\Contabilidad,Subdiario de asientos de Ventas,0
+Ventas,10023,499,18695,Ventas\Informes\Facturación\Contabilidad,Listado por imputación contable,0
+Ventas,10023,12398,10261,Ventas\Informes\Facturación,Control de Numeraciones,0
+Ventas,10023,12400,10174,Ventas\Informes\Cuentas Corrientes,Resumen de Cuentas,0
+Ventas,10023,12401,10185,Ventas\Informes\Cuentas Corrientes,Composición de Saldos,0
+Ventas,10023,12402,10208,Ventas\Informes\Cuentas Corrientes,Pendientes de Imputación,0
+Ventas,10023,12403,10217,Ventas\Informes\Cuentas Corrientes,Deudas Vencidas,0
+Ventas,10023,12404,10229,Ventas\Informes\Cuentas Corrientes,Cobranzas a Realizar,0
+Ventas,10023,12405,10236,Ventas\Informes\Cuentas Corrientes,Listado de Saldos,0
+Ventas,10023,12406,10242,Ventas\Informes\Cuentas Corrientes,Recibos Emitidos,0
+Ventas,10023,12407,10249,Ventas\Informes\Cuentas Corrientes,Análisis de Riesgo Crediticio,0
+Ventas,10023,12408,10252,Ventas\Informes\Cuentas Corrientes,Ranking de Deudas,0
+Ventas,10023,12409,10258,Ventas\Informes\Cuentas Corrientes,Vencimiento de Documentos,0
+Ventas,10023,12410,10262,Ventas\Informes\Cuentas Corrientes,Facturas de Crédito,0
+Ventas,10023,12411,10266,Ventas\Informes\Cuentas Corrientes,Libro de Registro de Facturas de Crédito,0
+Ventas,10023,12412,10267,Ventas\Informes\Cuentas Corrientes,Consolidación de Saldos,0
+Ventas,10023,12413,10270,Ventas\Informes\Cuentas Corrientes,Listado de Retenciones,0
+Ventas,10023,12414,10141,Ventas\Informes,Listas de Precios,0
+Ventas,10023,2888,19324,Ventas\Informes\Información impositiva,Información para F 2002- I.V.A. por actividad,0
+Ventas,10023,12416,10172,Ventas\Informes\Información impositiva,Información para S.I.Ap.- I.V.A.,0
+Ventas,10023,12418,10206,Ventas\Informes\Información impositiva,Generación Archivo S.I.Ap.- SICORE,0
+Ventas,10023,12419,10218,Ventas\Informes\Información impositiva,Generación Archivo - Retenciones I.B. Bs.As.,0
+Ventas,10023,12420,10228,Ventas\Informes\Información impositiva,Generación Archivo - Percepciones I.B. Bs.As.,0
+Ventas,10023,12497,10372,Ventas\Informes\Información impositiva,Generación Archivo - Retenciones SI.FE.RE.,0
+Ventas,10023,12884,10636,Ventas\Informes\Información impositiva,Generación Archivo Transp. de Bienes-Rentas Bs.As.,0
+Ventas,10023,12425,10259,Ventas\Informes\Información impositiva,Soporte Magnético I.B. Bs.As. 59/98,0
+Ventas,10023,12421,10237,Ventas\Informes\Información impositiva,Generación Archivo R.G. 1361,0
+Ventas,10023,12422,10241,Ventas\Informes\Información impositiva,Generación Archivo R.G. 1575 - Comprobantes A y M. Régimen de información de operaciones,0
+Ventas,10023,12417,10187,Ventas\Informes\Información impositiva,Generación Archivo DGI - CITI,0
+Ventas,10023,12424,10251,Ventas\Informes\Información impositiva,Soporte Magnético R.G .3115,0
+Ventas,10023,12427,10171,Ventas\Informes\Clientes,Nómina,0
+Ventas,10023,12428,10188,Ventas\Informes\Clientes,Etiquetas,0
+Ventas,10023,12429,10205,Ventas\Informes\Clientes,Últimas Operaciones,0
+Ventas,10023,12775,10523,Ventas\Informes\Auditoría,de Autorizaciones,0
+Ventas,10023,12363,10524,Ventas\Informes\Auditoría,de Pedidos Pendientes de Aprobación,0
+Ventas,10023,12364,10525,Ventas\Informes\Auditoría,de Pedidos Anulados,0
+Ventas,10023,12365,10526,Ventas\Informes\Auditoría,Seguimiento de Aprobaciones de Pedidos,0
+Ventas,10023,2899,19371,Ventas\Análisis de gestión,Evolución de precios,0
+Ventas,10023,12431,10110,Ventas\Análisis de gestión\Análisis Multidimensional,Detalle de Comprobantes,0
+Ventas,10023,12433,10126,Ventas\Análisis de gestión\Análisis Multidimensional,Detalle de Cotizaciones,0
+Stock,10002,87,18651,Stock\Archivos\Actualizaciones,Artículos,1
+Stock,10002,360,18654,Stock\Archivos\Actualizaciones,Valores por defecto para artículos,1
+Stock,10002,357,18652,Stock\Archivos\Actualizaciones,Actualización masiva de artículos,1
+Stock,10002,19646,20749,Stock\Archivos\Actualizaciones\Escalas,Plantillas para escalas,1
+Stock,10002,19654,20751,Stock\Archivos\Actualizaciones\Escalas,Definición de escalas,1
+Stock,10002,19704,20777,Stock\Archivos\Actualizaciones\Escalas,Actualización de artículos y plantillas con escalas,1
+Stock,10002,11972,6142,Stock\Archivos\Actualizaciones\Clasificador de Artículos,Definición,0
+Stock,10002,11973,6143,Stock\Archivos\Actualizaciones\Clasificador de Artículos,Consulta,0
+Stock,10002,2941,19410,Stock\Archivos\Actualizaciones,Depósitos,1
+Stock,10002,3367,20809,Stock\Archivos\Actualizaciones\Fórmulas y kits,Categorías para kits,1
+Stock,10002,2908,19388,Stock\Archivos\Actualizaciones\Fórmulas y kits,Componentes de Costos,1
+Stock,10002,10161,6147,Stock\Archivos\Actualizaciones\Fórmulas y kits,Fórmulas,0
+Stock,10002,2933,19403,Stock\Archivos\Actualizaciones,Precios para Costos,1
+Stock,10002,12119,10045,Stock\Archivos\Actualizaciones,Actualización Masiva de Perfil de Artículos,0
+Stock,10002,12885,10633,Stock\Archivos\Actualizaciones,Actualización Global de Códigos de Rentas Bs. As.,0
+Stock,10002,12952,10716,Stock\Archivos\Actualizaciones,Actualización Global de Códigos de AFIP,0
+Stock,10002,20259,21025,Stock\Archivos\Actualizaciones,Colectoras,1
+Stock,10002,2916,19390,Stock\Archivos\Carga Inicial,Agrupaciones de Artículos,1
+Stock,10002,3297,20656,Stock\Archivos\Carga Inicial,Tipos de comprobante,1
+Stock,10002,13039,17522,Stock\Archivos\Carga Inicial\Perfiles,de Ingresos de Stock,0
+Stock,10002,13042,17525,Stock\Archivos\Carga Inicial\Perfiles,de Egresos de Stock,0
+Stock,10002,13048,17531,Stock\Archivos\Carga Inicial\Perfiles,de Transferencias entre Depósitos,0
+Stock,10002,12457,10342,Stock\Archivos\Carga Inicial\Perfiles,de Toma de Inventario,0
+Stock,10002,13045,17528,Stock\Archivos\Carga Inicial\Perfiles,de Ajustes de Inventario,0
+Stock,10002,13051,17534,Stock\Archivos\Carga Inicial\Perfiles,de Armado,0
+Stock,10002,3309,20659,Stock\Archivos\Carga Inicial\Perfiles,Claves de autorización,1
+Stock,10002,19729,20784,Stock\Archivos\Carga Inicial,Talonarios,1
+Stock,10002,12499,10363,Stock\Archivos\Carga Inicial,Configuración de archivos de importación para toma de inventario,0
+Stock,10002,2109,19041,Stock\Archivos\Carga Inicial,Parámetros de Stock,1
+Stock,10002,56,18068,Stock\Archivos\Parametrización contable,Artículos,1
+Stock,10002,568,18713,Stock\Archivos\Parametrización contable,Actualización global de artículos,1
+Stock,10002,370,18757,Stock\Archivos\Parametrización contable,Valores por defecto para artículos,1
+Stock,10002,10178,6164,Stock\Movimientos,Ingresos de Stock,0
+Stock,10002,10179,6165,Stock\Movimientos,Egresos de Stock,0
+Stock,10002,10180,6166,Stock\Movimientos,Transferencias entre Depósitos,0
+Stock,10002,12460,10339,Stock\Movimientos,Toma de Inventario,0
+Stock,10002,10181,6167,Stock\Movimientos,Ajustes de Inventario,0
+Stock,10002,20213,20991,Stock\Movimientos\Movimientos masivos,Ingresos de Stock,1
+Stock,10002,20214,20992,Stock\Movimientos\Movimientos masivos,Egresos de Stock,1
+Stock,10002,20212,20990,Stock\Movimientos\Movimientos masivos,Toma de inventario,1
+Stock,10002,20306,21051,Stock\Movimientos\Movimientos masivos,Ajustes de Stock,1
+Stock,10002,12206,18829,Stock\Movimientos,Asignación doble unidad de medida,0
+Stock,10002,12234,18833,Stock\Movimientos,Eliminación doble unidad de medida,0
+Stock,10002,12015,6169,Stock\Movimientos\Armado,Proceso de Armado,0
+Stock,10002,12016,6170,Stock\Movimientos\Armado,Modelos para Armado,0
+Stock,10002,12017,6171,Stock\Movimientos\Armado,Armado según Modelo,0
+Stock,10002,3457,20730,Stock\Movimientos\Mantenimiento de Partidas,Modificación de datos de partidas,1
+Stock,10002,10185,6174,Stock\Movimientos\Mantenimiento de Partidas,Actualización de Costos,0
+Stock,10002,10186,6175,Stock\Movimientos\Mantenimiento de Partidas,Consulta de Saldos,0
+Stock,10002,10187,6176,Stock\Movimientos\Mantenimiento de Partidas,Asignación de Partidas,0
+Stock,10002,10188,6177,Stock\Movimientos\Mantenimiento de Partidas,Eliminación de Partidas,0
+Stock,10002,10190,6179,Stock\Movimientos\Mantenimiento de Series,por Artículo,0
+Stock,10002,10191,6180,Stock\Movimientos\Mantenimiento de Series,por Comprobante,0
+Stock,10002,10193,6182,Stock\Movimientos\Registro de Anulaciones,Anulación de Movimientos,0
+Stock,10002,10194,6183,Stock\Movimientos\Registro de Anulaciones,Listado de Comprobantes Anulados,0
+Stock,10002,13011,17454,Stock\Movimientos\Ingreso de movimientos entre sucursales o depósitos,Registración de movimientos de Stock,0
+Stock,10002,13010,17453,Stock\Movimientos\Ingreso de movimientos entre sucursales o depósitos,Movimientos entre sucursales o depósitos con revisión,0
+Stock,10002,13004,17440,Stock\Movimientos\Ingreso de movimientos entre sucursales o depósitos,Movimientos de Stock Importados,0
+Stock,10002,10195,6184,Stock\Movimientos,Consulta de Comprobantes,0
+Stock,10002,2609,19150,Stock\Movimientos,Visor de series y partidas pendientes de relacionar,0
+Stock,10002,21248,21195,Stock\Movimientos,Fraccionamiento de artículos,1
+Stock,10002,10200,6189,Stock\Procesos Periódicos,Balance de Stock,0
+Stock,10002,10201,6190,Stock\Procesos Periódicos,Cierre e Histórico,0
+Stock,10002,10203,6192,Stock\Procesos Periódicos\Precio Promedio Ponderado,Cierre Periódico,0
+Stock,10002,10204,6193,Stock\Procesos Periódicos\Precio Promedio Ponderado,Anulación de Cierre,0
+Stock,10002,10205,6194,Stock\Procesos Periódicos\Precio Promedio Ponderado,Actualización Individual,0
+Stock,10002,2984,19433,Stock\Procesos Periódicos,Recomposición de Saldos,0
+Stock,10002,11349,6196,Stock\Procesos Periódicos,Depuración de Partidas,1
+Stock,10002,10218,18058,Stock\Procesos Periódicos,Actualización de Costos,0
+Stock,10002,14198,18017,Stock\Consultas\Artículos,Ficha Live de artículos,1
+Stock,10002,17671,17671,Stock\Consultas\Artículos,Nómina,1
+Stock,10002,17668,17668,Stock\Consultas\Artículos,Saldos,1
+Stock,10002,17667,17667,Stock\Consultas\Artículos,Stock faltante,1
+Stock,10002,17669,17669,Stock\Consultas\Artículos,Saldos por artículo/cliente,1
+Stock,10002,17670,17670,Stock\Consultas\Artículos,Saldos por artículo/proveedor,1
+Stock,10002,20280,21034,Stock\Consultas\Movimientos,Ficha Live de depósitos,1
+Stock,10002,14202,18021,Stock\Consultas\Movimientos,Ficha Live de movimientos,1
+Stock,10002,20304,21049,Stock\Consultas\Movimientos,Ficha Live de registración de movimientos de stock,1
+Stock,10002,17683,17683,Stock\Consultas\Movimientos,Consulta,1
+Stock,10002,17684,17684,Stock\Consultas\Movimientos,Resumen,1
+Stock,10002,12567,19102,Stock\Consultas\Movimientos,Detalle de movimientos de stock,1
+Stock,10002,17680,17680,Stock\Consultas\Movimientos,Índice de rotación,1
+Stock,10002,17681,17681,Stock\Consultas\Movimientos,Pendientes de ingresar a stock,1
+Stock,10002,17682,17682,Stock\Consultas\Movimientos,Ingresados al stock o rechazados,1
+Stock,10002,20230,21008,Stock\Consultas\Toma de inventario,Ficha Live de toma de inventario,1
+Stock,10002,20231,21009,Stock\Consultas\Toma de inventario,Consulta de toma de inventario,1
+Stock,10002,20204,20982,Stock\Consultas\Toma de inventario,Ajustes por toma de inventario,1
+Stock,10002,14200,18019,Stock\Consultas\Partidas,Ficha Live de partidas,1
+Stock,10002,17687,17687,Stock\Consultas\Partidas,Movimientos,1
+Stock,10002,12574,19120,Stock\Consultas\Partidas,Movimientos detallados por serie,1
+Stock,10002,17686,17686,Stock\Consultas\Partidas,Saldos,1
+Stock,10002,12577,19123,Stock\Consultas\Partidas,Partidas con saldo sin series relacionadas,1
+Stock,10002,14201,18020,Stock\Consultas\Series,Ficha Live de series,1
+Stock,10002,17690,17690,Stock\Consultas\Series,Movimientos,1
+Stock,10002,12575,19121,Stock\Consultas\Series,Movimientos detallados por partida,1
+Stock,10002,17689,17689,Stock\Consultas\Series,Series Activas,1
+Stock,10002,12576,19122,Stock\Consultas\Series,Series activas sin partidas relacionadas,1
+Stock,10002,17677,17677,Stock\Consultas\Valorización\Existencias,Por precio de reposición,1
+Stock,10002,17678,17678,Stock\Consultas\Valorización\Existencias,Por precio de última compra,1
+Stock,10002,17674,17674,Stock\Consultas\Valorización\Rentabilidad bruta,Por precio de reposición,1
+Stock,10002,17675,17675,Stock\Consultas\Valorización\Rentabilidad bruta,Por precio de última compra,1
+Stock,10002,12996,19455,Stock\Consultas\Valorización\Costos,Evolución de costos,1
+Stock,10002,13094,19472,Stock\Consultas\Valorización\Costos,Actuales,1
+Stock,10002,21403,21245,Stock\Consultas\Tango Colectora,Ficha Live de conteos,1
+Stock,10002,21404,21246,Stock\Consultas\Tango Colectora,Detalle de conteos,1
+Stock,10002,10221,6212,Stock\Informes\Artículos,Movimientos,0
+Stock,10002,405,18656,Stock\Informes\Artículos,Ficha de inventario kardex,0
+Stock,10002,10222,6213,Stock\Informes\Artículos,Stock Faltante,0
+Stock,10002,10223,6214,Stock\Informes\Artículos,Precios para Costo,0
+Stock,10002,10224,6215,Stock\Informes\Artículos,Artículos por Proveedor,0
+Stock,10002,10225,6216,Stock\Informes\Artículos,Proveedores por Artículo,0
+Stock,10002,10226,6217,Stock\Informes\Artículos,Catálogo de Artículos,0
+Stock,10002,10227,6218,Stock\Informes\Artículos,Etiquetas,0
+Stock,10002,358,18653,Stock\Informes\Artículos,Generación de etiquetas,0
+Stock,10002,10228,6219,Stock\Informes\Artículos,Movimientos Históricos,0
+Stock,10002,12118,10046,Stock\Informes\Artículos,Stock Inmovilizado,0
+Stock,10002,10230,6221,Stock\Informes\Saldos,Stock por Artículo,0
+Stock,10002,10231,6222,Stock\Informes\Saldos,Stock por Depósito,0
+Stock,10002,10232,6223,Stock\Informes\Saldos,Comparativo,0
+Stock,10002,10233,6224,Stock\Informes\Saldos,Stock hasta Fecha,0
+Stock,10002,10234,6225,Stock\Informes\Saldos,Stock por Agrupación,0
+Stock,10002,10235,6226,Stock\Informes\Saldos,Stock Proyectado,0
+Stock,10002,10236,6227,Stock\Informes\Saldos,Consolidación,0
+Stock,10002,12462,10340,Stock\Informes\Toma de Inventario,Detalle de Toma de Inventario,0
+Stock,10002,12461,10341,Stock\Informes\Toma de Inventario,Auditoría,0
+Stock,10002,10238,6229,Stock\Informes\Valorización,Existencias,0
+Stock,10002,10239,6230,Stock\Informes\Valorización,Stock Mínimo / Máximo / Punto de Pedido,0
+Stock,10002,10240,6231,Stock\Informes\Valorización,Costo de Ventas,0
+Stock,10002,10241,6232,Stock\Informes\Valorización,Rentabilidad Bruta,0
+Stock,10002,10243,6234,Stock\Informes\Partidas,Saldos,0
+Stock,10002,11350,6235,Stock\Informes\Partidas,Costos por Partida,0
+Stock,10002,10244,6236,Stock\Informes\Partidas,Movimientos,0
+Stock,10002,10245,6237,Stock\Informes\Partidas,Saldos Valorizados,0
+Stock,10002,10246,6238,Stock\Informes\Partidas,Costo de Ventas,0
+Stock,10002,13071,17554,Stock\Informes\Auditoría,de Autorización,0
+Stock,10002,10251,6243,Stock\Informes\Armado,Composición de Productos,0
+Stock,10002,10252,6244,Stock\Informes\Armado,Insumos Sumarizados,0
+Stock,10002,10253,6245,Stock\Informes\Armado,Producción Máxima,0
+Stock,10002,10254,6246,Stock\Informes\Armado,Control de Insumos,0
+Stock,10002,10255,6247,Stock\Informes\Armado,Costo Standard,0
+Stock,10002,10256,6248,Stock\Informes\Armado,Hoja de Costos,0
+Stock,10002,10257,6249,Stock\Informes\Armado,Costo de Armado,0
+Stock,10002,12048,6250,Stock\Informes\Armado,Listado de Scrap,0
+Stock,10002,12179,10042,Stock\Análisis Multidimensional,Detalle de Comprobantes,0
+Compras,10003,3142,19575,Compras\Archivos\Actualizaciones,Proveedores,1
+Compras,10003,12156,10052,Compras\Archivos\Actualizaciones\Clasificador de Proveedores,Definición,0
+Compras,10003,12157,10053,Compras\Archivos\Actualizaciones\Clasificador de Proveedores,Consulta,0
+Compras,10003,2664,19167,Compras\Archivos\Actualizaciones,Rubros comerciales,1
+Compras,10003,2656,19164,Compras\Archivos\Actualizaciones,Compradores,1
+Compras,10003,1975,19197,Compras\Archivos\Actualizaciones,Sectores,1
+Compras,10003,2728,19190,Compras\Archivos\Actualizaciones,Provincias,1
+Compras,10003,2748,19194,Compras\Archivos\Actualizaciones,Países,1
+Compras,10003,19759,20799,Compras\Archivos\Actualizaciones,Alícuotas,1
+Compras,10003,2628,19316,Compras\Archivos\Actualizaciones,Conceptos de compra,1
+Compras,10003,2782,19205,Compras\Archivos\Actualizaciones\Precios de Compra,Definición de listas,1
+Compras,10003,2,18027,Compras\Archivos\Actualizaciones\Precios de Compra\Actualización,Administración de precios,0
+Compras,10003,10272,6266,Compras\Archivos\Actualizaciones\Precios de Compra\Actualización,Global,0
+Compras,10003,20170,20955,Compras\Archivos\Actualizaciones\Precios de Compra,Solicitud de precios,1
+Compras,10003,9990,20956,Compras\Archivos\Actualizaciones\Precios de Compra,Gestión de solicitudes de precios,0
+Compras,10003,3479,20741,Compras\Archivos\Actualizaciones,Condiciones de compra,1
+Compras,10003,21885,24544,Compras\Archivos\Actualizaciones,Clasificación para retenciones,1
+Compras,10003,12967,17386,Compras\Archivos\Actualizaciones\Solicitudes de Compra,Artículos Genéricos,0
+Compras,10003,2847,19283,Compras\Archivos\Actualizaciones\Solicitudes de Compra,Solicitantes,1
+Compras,10003,2860,19288,Compras\Archivos\Actualizaciones\Solicitudes de Compra,Clasificaciones,1
+Compras,10003,19706,20779,Compras\Archivos\Actualizaciones,Retenciones,1
+Compras,10003,3275,20650,Compras\Archivos\Actualizaciones,Textos para comprobantes,1
+Compras,10003,2770,19202,Compras\Archivos\Actualizaciones,Motivos,0
+Compras,10003,2874,19318,Compras\Archivos\Actualizaciones,Tipos de gasto,1
+Compras,10003,12968,17387,Compras\Archivos\Altas y Consultas,Artículos Genéricos,0
+Compras,10003,65,18151,Compras\Archivos\Parametrización contable,Proveedores,1
+Compras,10003,601,18721,Compras\Archivos\Parametrización contable,Actualización global de proveedores,1
+Compras,10003,170,18187,Compras\Archivos\Parametrización contable,Conceptos,1
+Compras,10003,620,18726,Compras\Archivos\Parametrización contable,Actualización global de conceptos,1
+Compras,10003,158,18184,Compras\Archivos\Parametrización contable,Tipos de gastos,1
+Compras,10003,138,18179,Compras\Archivos\Parametrización contable,Tipos de comprobantes,1
+Compras,10003,134,18178,Compras\Archivos\Parametrización contable,Modelos de asientos,1
+Compras,10003,96,18167,Compras\Archivos\Parametrización contable,Parámetros contables,1
+Compras,10003,2957,19413,Compras\Archivos\Carga Inicial,Agrupaciones de Proveedores,1
+Compras,10003,2973,19417,Compras\Archivos\Carga Inicial,Tipos de Comprobante,1
+Compras,10003,3158,19579,Compras\Archivos\Carga Inicial,Talonarios,1
+Compras,10003,2688,19216,Compras\Archivos\Carga Inicial,Ítems de autorización para orden de compra,1
+Compras,10003,12961,17381,Compras\Archivos\Carga Inicial\Perfiles,de Solicitud de Compra,1
+Compras,10003,39,18038,Compras\Archivos\Carga Inicial\Perfiles,de Orden de Compra,0
+Compras,10003,27,18034,Compras\Archivos\Carga Inicial\Perfiles,de Factura de Compra,0
+Compras,10003,2792,19214,Compras\Archivos\Carga Inicial\Perfiles,de Autorización de Orden de Compra,1
+Compras,10003,3378,20682,Compras\Archivos\Carga Inicial\Perfiles,de Autorización de comprobantes de compras,1
+Compras,10003,21600,21400,Compras\Archivos\Carga Inicial\Perfiles,Perfiles para el administrador de comprobantes por AI,1
+Compras,10003,10994,6283,Compras\Archivos\Carga Inicial\Formularios,Cancelación de Documentos,0
+Compras,10003,10996,6285,Compras\Archivos\Carga Inicial\Formularios,Cancelación de Factura de Crédito,0
+Compras,10003,2687,19174,Compras\Archivos\Carga Inicial,Parámetros de Compras,1
+Compras,10003,2315,10722,Compras\Solicitudes de compra,Ingreso,0
+Compras,10003,2338,17388,Compras\Solicitudes de compra,Autorización,0
+Compras,10003,2331,10724,Compras\Solicitudes de compra,Actualización,0
+Compras,10003,2334,10725,Compras\Solicitudes de compra,Gestión de solicitudes,0
+Compras,10003,2762,19200,Compras\Ordenes de compra,Ingreso y modificación,0
+Compras,10003,2788,19210,Compras\Ordenes de compra,Autorización,0
+Compras,10003,2789,19211,Compras\Ordenes de compra,Emisión e impresión,0
+Compras,10003,9998,21056,Compras\Ordenes de compra,Cierre masivo de órdenes de compra,0
+Compras,10003,10301,6299,Compras\Comprobantes\Facturas,Factura - Remito,0
+Compras,10003,10302,6300,Compras\Comprobantes\Facturas,Factura,0
+Compras,10003,10303,6301,Compras\Comprobantes\Facturas,Factura de Conceptos,0
+Compras,10003,10305,6303,Compras\Comprobantes\Notas de Crédito,de Artículos,0
+Compras,10003,10306,6304,Compras\Comprobantes\Notas de Crédito,de Conceptos,0
+Compras,10003,10308,6306,Compras\Comprobantes\Notas de Débito,de Artículos,0
+Compras,10003,10309,6307,Compras\Comprobantes\Notas de Débito,de Conceptos,0
+Compras,10003,21397,21239,Compras\Comprobantes\Importación por Excel,Importación masiva de comprobantes por Excel,1
+Compras,10003,21438,21270,Compras\Comprobantes\Comprobantes por AI,Administrador de comprobantes por AI,1
+Compras,10003,21508,21334,Compras\Comprobantes\Comprobantes por AI,Revisión de comprobantes,1
+Compras,10003,21518,21343,Compras\Comprobantes\Comprobantes por AI,Sincronización de comprobantes,1
+Compras,10003,10311,6309,Compras\Comprobantes\Remitos,Ingreso,0
+Compras,10003,20343,21082,Compras\Comprobantes\Remitos,Ingreso por Excel o Colectora,1
+Compras,10003,10312,6310,Compras\Comprobantes\Remitos,Devolución,0
+Compras,10003,10313,6311,Compras\Comprobantes\Remitos,Anulación,0
+Compras,10003,10314,6312,Compras\Comprobantes\Remitos,Imputación,0
+Compras,10003,10315,6313,Compras\Comprobantes\Remitos,Consulta,0
+Compras,10003,10317,6315,Compras\Cuentas Corrientes,Composición Inicial de Saldos,0
+Compras,10003,12168,10047,Compras\Cuentas Corrientes,Autorización de Comprobantes a Pagar,0
+Compras,10003,3134,19573,Compras\Cuentas Corrientes,Pagos,0
+Compras,10003,12904,10707,Compras\Cuentas Corrientes\Pagos Masivos\Administración,Ingreso,0
+Compras,10003,12905,10708,Compras\Cuentas Corrientes\Pagos Masivos\Administración,Modificación,0
+Compras,10003,12906,10710,Compras\Cuentas Corrientes\Pagos Masivos\Administración,Autorización,0
+Compras,10003,12907,10711,Compras\Cuentas Corrientes\Pagos Masivos\Administración,Eliminación,0
+Compras,10003,12909,10712,Compras\Cuentas Corrientes\Pagos Masivos\Administración,Consulta,0
+Compras,10003,21463,21289,Compras\Cuentas Corrientes\Pagos Masivos\Generación,del Pago,1
+Compras,10003,12917,10709,Compras\Cuentas Corrientes\Pagos Masivos\Generación,Anulación del Pago,0
+Compras,10003,3170,19585,Compras\Cuentas Corrientes,Imputación de Comprobantes,0
+Compras,10003,3219,19622,Compras\Cuentas Corrientes,Generación de Comprobantes de Ajustes,0
+Compras,10003,10321,6319,Compras\Cuentas Corrientes\Facturas de Crédito,Cancelación de Facturas de Crédito,0
+Compras,10003,10322,6320,Compras\Cuentas Corrientes\Facturas de Crédito,Actualización de Facturas de Crédito,0
+Compras,10003,10323,6321,Compras\Cuentas Corrientes,Cancelación de Documentos,0
+Compras,10003,10324,6322,Compras\Cuentas Corrientes,Fechas de Documentos,0
+Compras,10003,10325,6323,Compras\Cuentas Corrientes,Baja de Comprobantes,0
+Compras,10003,10326,6324,Compras\Cuentas Corrientes,Modificación de Comprobantes,0
+Compras,10003,10328,6326,Compras\Cuentas Corrientes\Consultas,Comprobantes,0
+Compras,10003,10329,6327,Compras\Cuentas Corrientes\Consultas,Cuentas Corrientes - Actual,0
+Compras,10003,10330,6328,Compras\Cuentas Corrientes\Consultas,Cuentas Corrientes - Histórico,0
+Compras,10003,10333,6331,Compras\Cuentas Corrientes\Registro de Anulaciones,Anulación de Cancelación de Facturas de Crédito,0
+Compras,10003,10334,6332,Compras\Cuentas Corrientes\Registro de Anulaciones,Listado de O/P anuladas,0
+Compras,10003,10335,6333,Compras\Cuentas Corrientes,Actualización de Retenciones,0
+Compras,10003,21671,21436,Compras\Cuentas Corrientes,Administrador de retenciones ARBA,1
+Compras,10003,10339,6336,Compras\Procesos Periódicos,Pasaje a I.V.A.,0
+Compras,10003,10341,6338,Compras\Procesos Periódicos\Cuentas Corrientes,Balance,0
+Compras,10003,10342,6339,Compras\Procesos Periódicos\Cuentas Corrientes,Cierre,0
+Compras,10003,10343,6340,Compras\Procesos Periódicos\Cuentas Corrientes,Histórico,0
+Compras,10003,2992,19436,Compras\Procesos Periódicos\Cuentas Corrientes,Recomposición de Saldos,0
+Compras,10003,3179,19594,Compras\Procesos Periódicos\Cuentas Corrientes,Reconstrucción de Estados,0
+Compras,10003,10346,6343,Compras\Procesos Periódicos,Depuración de Retenciones,1
+Compras,10003,12986,17406,Compras\Procesos Periódicos,Depuración de Solicitudes de Compra,1
+Compras,10003,3043,19459,Compras\Procesos Periódicos,Depuración de Solicitudes de Compra,1
+Compras,10003,3045,19461,Compras\Procesos Periódicos,Depuración de Ordenes de Compra,1
+Compras,10003,12097,18669,Compras\Procesos Periódicos,Depuración de auditoría de baja de comprobantes,1
+Compras,10003,13077,17560,Compras\Procesos Periódicos,Reclasificación de Comprobantes,0
+Compras,10003,12068,9998,Compras\Procesos Periódicos\Retenciones Definibles,Definición de Formato ASCII,0
+Compras,10003,12069,9999,Compras\Procesos Periódicos\Retenciones Definibles,Generación de Archivo ASCII,0
+Compras,10003,2363,17428,Compras\Procesos Periódicos,Actualización de alícuotas de I.I.B.B. según padrón A.R.B.A. Bs. As.,0
+Compras,10003,2492,17497,Compras\Procesos Periódicos,Actualización de alícuotas de I.I.B.B. según padrón A.G.I.P. Bs. As.,0
+Compras,10003,196,18206,Compras\Procesos Periódicos\Contabilización,Generación de asientos contables,0
+Compras,10003,223,18218,Compras\Procesos Periódicos\Contabilización,Eliminación de asientos contables,0
+Compras,10003,226,18224,Compras\Procesos Periódicos\Contabilización\Exportación,Exportación de asientos contables,0
+Compras,10003,229,18227,Compras\Procesos Periódicos\Contabilización\Exportación,Anulación de lotes contables generados,0
+Compras,10003,231,18229,Compras\Procesos Periódicos\Contabilización\Exportación,Lotes contables generados,0
+Compras,10003,410,18674,Compras\Procesos Periódicos\Contabilización,Migración de asientos contables,0
+Compras,10003,9992,21067,Compras\Procesos Periódicos,Mis comprobantes A.F.I.P.,0
+Compras,10003,14116,18000,Compras\Consultas\Proveedores,Ficha Live de proveedores,1
+Compras,10003,17721,17721,Compras\Consultas\Proveedores,Nómina,1
+Compras,10003,13139,19599,Compras\Consultas\Proveedores,Saldos,1
+Compras,10003,14138,18003,Compras\Consultas\Solicitudes de compra,Ficha Live de solicitudes de compra,1
+Compras,10003,17719,17719,Compras\Consultas\Solicitudes de compra,Consulta,1
+Compras,10003,17716,17716,Compras\Consultas\Solicitudes de compra,Resumen por artículo,1
+Compras,10003,17717,17717,Compras\Consultas\Solicitudes de compra,Pendientes de autorizar,1
+Compras,10003,17718,17718,Compras\Consultas\Solicitudes de compra,Pendientes de recibir,1
+Compras,10003,14154,18005,Compras\Consultas\Ordenes de compra,Ficha Live de órdenes de compra,1
+Compras,10003,17702,17702,Compras\Consultas\Ordenes de compra,Consulta,1
+Compras,10003,12500,18923,Compras\Consultas\Ordenes de compra,Detalle,1
+Compras,10003,17703,17703,Compras\Consultas\Ordenes de compra,Resumen por artículo,1
+Compras,10003,17701,17701,Compras\Consultas\Ordenes de compra,Pendientes de autorizar,1
+Compras,10003,12836,19341,Compras\Consultas\Ordenes de compra,Pendientes de recibir,1
+Compras,10003,12861,19343,Compras\Consultas\Ordenes de compra,Pendientes de facturar,1
+Compras,10003,12717,19270,Compras\Consultas\Ordenes de compra,Seguimiento de autorización,1
+Compras,10003,11589,18518,Compras\Consultas\Ordenes de compra,Plan de entrega / recepciones,1
+Compras,10003,12655,19238,Compras\Consultas\Ordenes de compra,Con entregas planificadas vencidas,1
+Compras,10003,20278,21032,Compras\Consultas\Ordenes de compra,Auditoría de modificación de precios,1
+Compras,10003,14162,18007,Compras\Consultas\Facturación,"Ficha Live de facturas, créditos y débitos",1
+Compras,10003,20144,20949,Compras\Consultas\Facturación,Ficha Live de conceptos,1
+Compras,10003,17713,17713,Compras\Consultas\Facturación,Consulta,1
+Compras,10003,17706,17706,Compras\Consultas\Facturación,Ranking de compras,1
+Compras,10003,17707,17707,Compras\Consultas\Facturación,Ranking por artículo,1
+Compras,10003,10091,18051,Compras\Consultas\Facturación,Detalle de comprobantes,1
+Compras,10003,17705,17705,Compras\Consultas\Facturación,Resumen,1
+Compras,10003,17711,17711,Compras\Consultas\Facturación,Resumen por artículo,1
+Compras,10003,17710,17710,Compras\Consultas\Facturación,Comprobantes con diferencias,1
+Compras,10003,12065,18662,Compras\Consultas\Facturación,Comprobantes eliminados,1
+Compras,10003,17708,17708,Compras\Consultas\Facturación,Comparativo,1
+Compras,10003,17712,17712,Compras\Consultas\Facturación,Comparativo por artículo,1
+Compras,10003,17709,17709,Compras\Consultas\Facturación,Por Mes / Año,1
+Compras,10003,10084,18046,Compras\Consultas\Facturación,Consolidado de compras y ventas,1
+Compras,10003,12548,19053,Compras\Consultas\Facturación,Comprobantes no ingresados al Libro IVA de Compras,1
+Compras,10003,12863,19345,Compras\Consultas\Facturación,Facturas pendientes de recibir,1
+Compras,10003,14175,18010,Compras\Consultas\Remitos,Ficha Live de remitos,1
+Compras,10003,17724,17724,Compras\Consultas\Remitos,Consulta,1
+Compras,10003,13185,20738,Compras\Consultas\Remitos,Detalle de comprobantes,1
+Compras,10003,17723,17723,Compras\Consultas\Remitos,Con diferencias,1
+Compras,10003,12066,18663,Compras\Consultas\Remitos,Eliminados,1
+Compras,10003,12869,19352,Compras\Consultas\Remitos,Pendientes de facturar,1
+Compras,10003,14184,18012,Compras\Consultas\Cuenta Corriente,Ficha Live de órdenes de pago,1
+Compras,10003,13142,19602,Compras\Consultas\Cuenta Corriente,Resumen de cuentas,1
+Compras,10003,13149,19616,Compras\Consultas\Cuenta Corriente,Resumen de cuentas - Documentos,1
+Compras,10003,17699,17699,Compras\Consultas\Cuenta Corriente,Consulta de órdenes de pago,1
+Compras,10003,17693,17693,Compras\Consultas\Cuenta Corriente,Ranking de acreedores,1
+Compras,10003,17694,17694,Compras\Consultas\Cuenta Corriente,Deudas vencidas,1
+Compras,10003,17695,17695,Compras\Consultas\Cuenta Corriente,Deudas a vencer,1
+Compras,10003,17696,17696,Compras\Consultas\Cuenta Corriente,Pagos a realizar,1
+Compras,10003,17698,17698,Compras\Consultas\Cuenta Corriente,Pagos realizados,1
+Compras,10003,21766,21502,Compras\Consultas\Cuenta Corriente\Retenciones,Retenciones de Ingresos Brutos - ARBA,1
+Compras,10003,21846,24531,Compras\Consultas\Cuenta Corriente\Retenciones,Retenciones anuladas ARBA,1
+Compras,10003,13145,19605,Compras\Consultas\Cuenta Corriente,Diferencias de cambio pendientes,1
+Compras,10003,17697,17697,Compras\Consultas\Cuenta Corriente,C. P. R. pendientes,1
+Compras,10003,13151,19618,Compras\Consultas\Cuenta Corriente,Diferencia en los estados para proveedores cláusula,1
+Compras,10003,19688,20774,Compras\Consultas\Cuenta Corriente,Comprobantes MiPymes,1
+Compras,10003,10939,18441,Compras\Consultas\Contabilidad,Detalle por comprobante,1
+Compras,10003,10941,18443,Compras\Consultas\Contabilidad,Detalle por cuenta,1
+Compras,10003,10949,18445,Compras\Consultas\Contabilidad,Detalle por auxiliar,1
+Compras,10003,11335,18446,Compras\Consultas\Contabilidad,Detalle por subauxiliar,1
+Compras,10003,10942,18444,Compras\Consultas\Contabilidad,Contabilización de comprobantes,1
+Compras,10003,21494,21320,Compras\Consultas\Contabilidad,Contabilización de comprobantes pendientes de exportar,1
+Compras,10003,11623,18536,Compras\Consultas\Contabilidad,Multidimensional de asientos,1
+Compras,10003,13114,19540,Compras\Consultas\Precios,Por proveedor,1
+Compras,10003,20208,20986,Compras\Consultas\Precios,Solicitudes de precios,1
+Compras,10003,10357,6354,Compras\Informes\Ordenes de Compra,Emitidas,0
+Compras,10003,10359,6356,Compras\Informes\Ordenes de Compra\Pendientes,por Fecha de Entrega,0
+Compras,10003,10360,6357,Compras\Informes\Ordenes de Compra\Pendientes,por Artículo,0
+Compras,10003,10361,6358,Compras\Informes\Ordenes de Compra,No Autorizadas,0
+Compras,10003,10362,6359,Compras\Informes\Ordenes de Compra,No Emitidas,0
+Compras,10003,10363,6360,Compras\Informes\Ordenes de Compra,Anuladas,0
+Compras,10003,10364,6361,Compras\Informes\Ordenes de Compra,Cumplimiento,0
+Compras,10003,10366,6363,Compras\Informes\Comprobantes,I.V.A. Compras,0
+Compras,10003,10367,6364,Compras\Informes\Comprobantes,Impuestos Varios,0
+Compras,10003,10369,6366,Compras\Informes\Comprobantes\Resumen de Compras,por Artículo,0
+Compras,10003,10370,6367,Compras\Informes\Comprobantes\Resumen de Compras,por Concepto,0
+Compras,10003,10371,6368,Compras\Informes\Comprobantes\Resumen de Compras,por Proveedor,0
+Compras,10003,10372,6369,Compras\Informes\Comprobantes\Resumen de Compras,por Sector,0
+Compras,10003,10373,6370,Compras\Informes\Comprobantes\Resumen de Compras,por Condición de Compra,0
+Compras,10003,11352,6371,Compras\Informes\Comprobantes\Resumen de Compras,por Tipo de Gasto,0
+Compras,10003,10375,6373,Compras\Informes\Comprobantes\Ranking de Compras,por Artículo,0
+Compras,10003,10376,6374,Compras\Informes\Comprobantes\Ranking de Compras,por Concepto,0
+Compras,10003,10377,6375,Compras\Informes\Comprobantes\Ranking de Compras,por Proveedor,0
+Compras,10003,10378,6376,Compras\Informes\Comprobantes\Ranking de Compras,por Proveedor / Artículo,0
+Compras,10003,10379,6377,Compras\Informes\Comprobantes\Ranking de Compras,por Artículo / Proveedor,0
+Compras,10003,10380,6378,Compras\Informes\Comprobantes,Comprobantes Ingresados,0
+Compras,10003,10381,6379,Compras\Informes\Comprobantes,Detalle de Comprobantes,0
+Compras,10003,10382,6380,Compras\Informes\Comprobantes,Facturas Pendientes de Remito,0
+Compras,10003,10384,6382,Compras\Informes\Comprobantes\Remitos,por Proveedor,0
+Compras,10003,10385,6383,Compras\Informes\Comprobantes\Remitos,Pendientes de Factura,0
+Compras,10003,10386,6384,Compras\Informes\Comprobantes\Remitos,Devoluciones,0
+Compras,10003,10387,6385,Compras\Informes\Comprobantes\Remitos,Anulados,0
+Compras,10003,262,18273,Compras\Informes\Comprobantes\Contabilidad,Subdiario de asientos de Compras,0
+Compras,10003,555,18698,Compras\Informes\Comprobantes\Contabilidad,Listado por imputación contable,0
+Compras,10003,10392,6390,Compras\Informes\Cuentas Corrientes,Resumen de Cuentas,0
+Compras,10003,10393,6391,Compras\Informes\Cuentas Corrientes,Composición de Saldos,0
+Compras,10003,10394,6392,Compras\Informes\Cuentas Corrientes,Pendientes de Imputación,0
+Compras,10003,10396,6394,Compras\Informes\Cuentas Corrientes,Listado de Saldos,0
+Compras,10003,12161,10051,Compras\Informes\Cuentas Corrientes\Autorización de Comprobantes,Informe de Autorización de Comprobantes,0
+Compras,10003,12162,10054,Compras\Informes\Cuentas Corrientes\Autorización de Comprobantes,Auditoría de Autorizaciones,0
+Compras,10003,10397,6395,Compras\Informes\Cuentas Corrientes,Ordenes de Pago Generadas,0
+Compras,10003,10398,6396,Compras\Informes\Cuentas Corrientes,Facturas de Crédito,0
+Compras,10003,10399,6397,Compras\Informes\Cuentas Corrientes,Consolidación de Saldos,0
+Compras,10003,10400,6398,Compras\Informes\Cuentas Corrientes,Vencimiento de Documentos,0
+Compras,10003,10401,6399,Compras\Informes\Cuentas Corrientes,Listado de Retenciones,0
+Compras,10003,10403,6401,Compras\Informes\Precios,por Proveedor,0
+Compras,10003,10404,6402,Compras\Informes\Precios,Comparativo,0
+Compras,10003,12756,19330,Compras\Informes\Información impositiva,Información para F 2002,1
+Compras,10003,11345,6404,Compras\Informes\Información impositiva,Información para I.V.A.,0
+Compras,10003,12027,6408,Compras\Informes\Información impositiva,Generación Archivo R.G. 1547,0
+Compras,10003,10407,6406,Compras\Informes\Información impositiva,Generación Archivo S.I.Ap.- SICORE,0
+Compras,10003,10409,6410,Compras\Informes\Información impositiva,Generación Archivo - Percepciones I.B. Bs.As.,0
+Compras,10003,12005,6411,Compras\Informes\Información impositiva,Generación Archivo - Retenciones I.B. Bs.As.,0
+Compras,10003,21760,21496,Compras\Informes\Información impositiva,Generación de Archivo - ARBA A-122R - Retenciones por lote,1
+Compras,10003,12491,10364,Compras\Informes\Información impositiva,Generación Archivo - Percepciones SI.FE.RE.,0
+Compras,10003,11991,6407,Compras\Informes\Información impositiva,Generación Archivo R.G. 1361,0
+Compras,10003,10406,6405,Compras\Informes\Información impositiva,Generación Archivo DGI - CITI,0
+Compras,10003,10410,6412,Compras\Informes,Nómina de Proveedores,0
+Compras,10003,10412,6414,Compras\Análisis Multidimensional,Detalle de Comprobantes,0
+Compras,10003,11012,6417,Compras\Análisis Multidimensional\Automáticos,Detalle de Comprobantes,0
+Tesoreria,10005,548,18392,Tesorería\Archivos,Cuentas de Tesorería,1
+Tesoreria,10005,11237,18394,Tesorería\Archivos\Clasificador de cuentas,Definición,0
+Tesoreria,10005,11247,18395,Tesorería\Archivos\Clasificador de cuentas,Consulta,0
+Tesoreria,10005,214,18427,Tesorería\Archivos,Agrupaciones,1
+Tesoreria,10005,218,18213,Tesorería\Archivos,Tipos de comprobante,1
+Tesoreria,10005,59,18144,Tesorería\Archivos,Códigos de operación,1
+Tesoreria,10005,308,18313,Tesorería\Archivos,Códigos de relación,1
+Tesoreria,10005,21564,21377,Tesorería\Archivos,Billeteras virtuales,1
+Tesoreria,10005,259,18265,Tesorería\Archivos\Cheques,Chequeras,1
+Tesoreria,10005,312,18314,Tesorería\Archivos\Cheques,Inhabilitación de cheques,0
+Tesoreria,10005,76,18157,Tesorería\Archivos\Cheques,Subestados de cheques de terceros,0
+Tesoreria,10005,80,18158,Tesorería\Archivos\Cheques,Subestados por cuenta,0
+Tesoreria,10005,183,18202,Tesorería\Archivos\Tarjetas,Tarjetas,1
+Tesoreria,10005,206,18210,Tesorería\Archivos\Tarjetas,Planes,1
+Tesoreria,10005,198,18208,Tesorería\Archivos\Tarjetas,Promociones,1
+Tesoreria,10005,202,18209,Tesorería\Archivos\Tarjetas,Conceptos de gastos,1
+Tesoreria,10005,191,18204,Tesorería\Archivos\Tarjetas,Terminales POS,1
+Tesoreria,10005,187,18203,Tesorería\Archivos\Tarjetas,Host de tarjetas,1
+Tesoreria,10005,255,18264,Tesorería\Archivos\Conciliación,Definición de formato de extracto electrónico,0
+Tesoreria,10005,251,18263,Tesorería\Archivos\Conciliación,Conceptos de conciliación,1
+Tesoreria,10005,594,18490,Tesorería\Archivos\Perfiles,Perfiles para cobranzas y pagos de otros módulos,0
+Tesoreria,10005,20367,21088,Tesorería\Archivos\Perfiles,Perfiles para Tango Banking,1
+Tesoreria,10005,573,18405,Tesorería\Archivos,Modelos de ingreso de comprobantes,0
+Tesoreria,10005,172,18190,Tesorería\Archivos\Parametrización contable,Cuentas de Tesorería,1
+Tesoreria,10005,605,18724,Tesorería\Archivos\Parametrización contable,Actualización global de cuentas de Tesorería,1
+Tesoreria,10005,175,18192,Tesorería\Archivos\Parametrización contable,Tipos de comprobante,1
+Tesoreria,10005,173,18191,Tesorería\Archivos\Parametrización contable,Parámetros contables,1
+Tesoreria,10005,577,18406,Tesorería\Archivos,Parámetros de Tesorería,1
+Tesoreria,10005,581,18407,Tesorería\Comprobantes,Movimientos de Tesorería,0
+Tesoreria,10005,9730,21078,Tesorería\Comprobantes,Ingreso masivo de movimientos de Tesorería,0
+Tesoreria,10005,10533,6551,Tesorería\Comprobantes,Impresión de movimientos de Tesorería,0
+Tesoreria,10005,569,18404,Tesorería\Comprobantes,Modificación de cheques de terceros,0
+Tesoreria,10005,585,18408,Tesorería\Comprobantes,Modificación de cheques propios,0
+Tesoreria,10005,593,18410,Tesorería\Comprobantes,Modificación de cupones,0
+Tesoreria,10005,10540,6559,Tesorería\Comprobantes,Impresión de cheques,0
+Tesoreria,10005,13093,17594,Tesorería\Procesos periódicos\Administración de cajas,Resumen de Caja,0
+Tesoreria,10005,10542,6561,Tesorería\Procesos periódicos\Administración de cajas,Cierre de Caja,0
+Tesoreria,10005,10543,6562,Tesorería\Procesos periódicos\Administración de cajas,Apertura de Caja,0
+Tesoreria,10005,264,18268,Tesorería\Procesos periódicos\Conciliación de cuentas,Conciliación,0
+Tesoreria,10005,597,18413,Tesorería\Procesos periódicos\Conciliación de cuentas,Pendientes de registrar,0
+Tesoreria,10005,598,18414,Tesorería\Procesos periódicos\Conciliación de cuentas,Importación de extractos electrónicos,0
+Tesoreria,10005,599,18415,Tesorería\Procesos periódicos\Conciliación de cuentas,Depuración de extractos electrónicos,1
+Tesoreria,10005,294,18295,Tesorería\Procesos periódicos\Administración de tarjetas,Cierre de lote,0
+Tesoreria,10005,260,18267,Tesorería\Procesos periódicos\Administración de tarjetas,Depósito de cupones manuales,0
+Tesoreria,10005,307,18312,Tesorería\Procesos periódicos\Administración de tarjetas,Conciliación de cupones,0
+Tesoreria,10005,10551,6569,Tesorería\Procesos periódicos\Pasaje a histórico,Comprobantes,1
+Tesoreria,10005,10552,6570,Tesorería\Procesos periódicos\Pasaje a histórico,Cheques,1
+Tesoreria,10005,10553,6571,Tesorería\Procesos periódicos\Pasaje a histórico,Cupones,1
+Tesoreria,10005,10554,6572,Tesorería\Procesos periódicos,Recomposición de saldos,0
+Tesoreria,10005,11952,6577,Tesorería\Procesos periódicos\Operaciones con Ventas Restô,Importación,0
+Tesoreria,10005,13013,17457,Tesorería\Procesos periódicos\Operaciones con Ventas Restô,Depuración de Auditorías,1
+Tesoreria,10005,284,18283,Tesorería\Procesos periódicos\Contabilización,Generación de asientos contables,0
+Tesoreria,10005,285,18284,Tesorería\Procesos periódicos\Contabilización,Eliminación de asientos contables,0
+Tesoreria,10005,286,18286,Tesorería\Procesos periódicos\Contabilización\Exportación,Exportación de asientos contables,0
+Tesoreria,10005,287,18287,Tesorería\Procesos periódicos\Contabilización\Exportación,Anulación de lotes contables generados,0
+Tesoreria,10005,288,18288,Tesorería\Procesos periódicos\Contabilización\Exportación,Lotes contables generados,0
+Tesoreria,10005,426,18677,Tesorería\Procesos periódicos\Contabilización,Migración de apropiaciones contables,0
+Tesoreria,10005,20445,21148,Tesorería\Tango Banking,Configuración de Tango Banking,1
+Tesoreria,10005,20428,21133,Tesorería\Tango Banking,Consulta de saldo y últimos movimientos,1
+Tesoreria,10005,21169,21163,Tesorería\Tango Banking,Saldos por cuenta Tango Banking,1
+Tesoreria,10005,20446,21149,Tesorería\Tango Banking,Comparativo de saldos con Tesorería,1
+Tesoreria,10005,10561,6580,Tesorería\Informes\Saldos,Saldos de Cuentas,0
+Tesoreria,10005,10563,6582,Tesorería\Informes\Saldos,Saldos por Agrupación,0
+Tesoreria,10005,10565,6584,Tesorería\Informes\Movimientos,Subdiario por Cuenta,0
+Tesoreria,10005,10566,6585,Tesorería\Informes\Movimientos,Mayor,0
+Tesoreria,10005,10567,6586,Tesorería\Informes\Movimientos,Movimientos por Operación,0
+Tesoreria,10005,10572,6591,Tesorería\Informes\Cheques,Acreditación de Cheques Propios,0
+Tesoreria,10005,10573,6592,Tesorería\Informes\Cheques,Depósito de Cheques de Terceros,0
+Tesoreria,10005,10575,6594,Tesorería\Informes\Cheques,Proyección de Saldos,0
+Tesoreria,10005,10576,6595,Tesorería\Informes\Cheques,Gráfico Emitidos Vs. Cartera,0
+Tesoreria,10005,10579,6598,Tesorería\Informes\Comprobantes,Detalle de Comprobantes,0
+Tesoreria,10005,10580,6599,Tesorería\Informes\Comprobantes,Seguimiento de Comprobantes,0
+Tesoreria,10005,10585,6604,Tesorería\Informes\Auditoría,Comprobantes Ingresados,0
+Tesoreria,10005,10586,6605,Tesorería\Informes\Auditoría,Comprobantes Revertidos,0
+Tesoreria,10005,10587,6606,Tesorería\Informes\Auditoría,Mayor,0
+Tesoreria,10005,11710,6607,Tesorería\Informes\Auditoría,Cheques de Terceros,0
+Tesoreria,10005,10588,6608,Tesorería\Informes\Auditoría,Cierres Realizados,0
+Tesoreria,10005,10589,6609,Tesorería\Informes\Auditoría,Numeración de Comprobantes,0
+Tesoreria,10005,13014,17458,Tesorería\Informes\Auditoría,Importación de Ventas Restô,0
+Tesoreria,10005,10592,6612,Tesorería\Informes\Histórico,Cheques,0
+Tesoreria,10005,10593,6613,Tesorería\Informes\Histórico,Cupones,0
+Tesoreria,10005,279,18280,Tesorería\Informes\Contabilidad,Subdiario de asientos de Tesorería,0
+Tesoreria,10005,558,18701,Tesorería\Informes\Contabilidad,Listado por imputación contable,0
+Tesoreria,10005,11662,18574,Tesorería\Consultas\Cuentas,Ficha Live de cuentas,1
+Tesoreria,10005,11658,18570,Tesorería\Consultas\Cuentas,Nómina,1
+Tesoreria,10005,17747,17747,Tesorería\Consultas\Cuentas,Saldos,1
+Tesoreria,10005,11664,18576,Tesorería\Consultas\Cheques de terceros,Ficha Live de cheques de terceros,1
+Tesoreria,10005,11583,18512,Tesorería\Consultas\Cheques de terceros,Consulta,1
+Tesoreria,10005,17751,17751,Tesorería\Consultas\Cheques de terceros,Ranking de rechazados,1
+Tesoreria,10005,11823,18636,Tesorería\Consultas\Cheques de terceros,Detalle,1
+Tesoreria,10005,17752,17752,Tesorería\Consultas\Cheques de terceros,Resumen,1
+Tesoreria,10005,11824,18637,Tesorería\Consultas\Cheques de terceros,Por Mes / Año,1
+Tesoreria,10005,12180,18756,Tesorería\Consultas\Cheques de terceros,Detalle por estado,1
+Tesoreria,10005,11665,18577,Tesorería\Consultas\Cheques propios,Ficha Live de cheques propios,1
+Tesoreria,10005,11584,18513,Tesorería\Consultas\Cheques propios,Consulta,1
+Tesoreria,10005,11825,18638,Tesorería\Consultas\Cheques propios,Detalle,1
+Tesoreria,10005,17750,17750,Tesorería\Consultas\Cheques propios,Resumen,1
+Tesoreria,10005,11826,18639,Tesorería\Consultas\Cheques propios,Pendientes de debitar,1
+Tesoreria,10005,10505,18566,Tesorería\Consultas\Cheques propios,Diferidos pendientes de transferir,1
+Tesoreria,10005,11887,18634,Tesorería\Consultas\Cheques propios,Cheques propios por banco,1
+Tesoreria,10005,11666,18578,Tesorería\Consultas\Cupones,Ficha Live de cupones,1
+Tesoreria,10005,11668,18580,Tesorería\Consultas\Cupones,Ficha Live de liquidaciones,1
+Tesoreria,10005,11585,18514,Tesorería\Consultas\Cupones,Consulta,1
+Tesoreria,10005,11647,18543,Tesorería\Consultas\Cupones,Consulta de liquidaciones,1
+Tesoreria,10005,17756,17756,Tesorería\Consultas\Cupones,Resumen,1
+Tesoreria,10005,11654,18564,Tesorería\Consultas\Cupones,Proyección de acreditaciones,1
+Tesoreria,10005,11663,18575,Tesorería\Consultas\Comprobantes,Ficha Live de comprobantes,1
+Tesoreria,10005,11667,18579,Tesorería\Consultas\Comprobantes,Ficha Live de clasificación de comprobantes,1
+Tesoreria,10005,21512,21338,Tesorería\Consultas\Comprobantes,Ficha Live de comprobantes históricos,1
+Tesoreria,10005,11591,18520,Tesorería\Consultas\Comprobantes,Consulta,1
+Tesoreria,10005,12480,18874,Tesorería\Consultas\Comprobantes,Detalle,1
+Tesoreria,10005,11659,18571,Tesorería\Consultas\Comprobantes,Clasificación,1
+Tesoreria,10005,10558,18567,Tesorería\Consultas\Comprobantes,Resumen,1
+Tesoreria,10005,11656,18568,Tesorería\Consultas\Comprobantes,Resumen por cuenta,1
+Tesoreria,10005,17748,17748,Tesorería\Consultas\Comprobantes,Resumen por tipo de operación,1
+Tesoreria,10005,11660,18572,Tesorería\Consultas\Comprobantes,Ingresos y egresos por cuenta,1
+Tesoreria,10005,11620,18562,Tesorería\Consultas\Comprobantes,Movimientos conciliados,1
+Tesoreria,10005,11892,18635,Tesorería\Consultas\Comprobantes,Movimientos no conciliados,1
+Tesoreria,10005,11621,18563,Tesorería\Consultas\Comprobantes,Pendientes de registrar,1
+Tesoreria,10005,11657,18569,Tesorería\Consultas\Comprobantes,Histórico de comprobantes,1
+Tesoreria,10005,11669,18581,Tesorería\Consultas\Comprobantes,Histórico de comprobantes por cuenta,1
+Tesoreria,10005,20442,21145,Tesorería\Consultas\Comprobantes,Auditoría ingreso masivo de movimientos de Tesorería,1
+Tesoreria,10005,11249,18526,Tesorería\Consultas\Transferencia de valores desde sucursales,Valores pendientes de registrar,1
+Tesoreria,10005,17787,17787,Tesorería\Consultas\Transferencia de valores desde sucursales,Valores ingresados,1
+Tesoreria,10005,11617,18524,Tesorería\Consultas\Contabilidad,Detalle por comprobante,1
+Tesoreria,10005,11456,18478,Tesorería\Consultas\Contabilidad,Detalle por cuenta,1
+Tesoreria,10005,11500,18480,Tesorería\Consultas\Contabilidad,Detalle por auxiliar,1
+Tesoreria,10005,11504,18481,Tesorería\Consultas\Contabilidad,Detalle por subauxiliar,1
+Tesoreria,10005,11457,18479,Tesorería\Consultas\Contabilidad,Contabilización de comprobantes,1
+Tesoreria,10005,21497,21323,Tesorería\Consultas\Contabilidad,Contabilización de comprobantes pendientes de exportar,1
+Tesoreria,10005,11643,18539,Tesorería\Consultas\Contabilidad,Multidimensional de asientos,1
+Tesoreria,10005,21260,21201,Tesorería\Consultas\Conciliación,Consulta de extractos importados,1
+CashFlow,10006,10602,6625,Cash Flow\Archivos,Modelos de Cash Flow,0
+CashFlow,10006,10604,6627,Cash Flow\Archivos\Conceptos Presupuestados,Ingresos Individual,0
+CashFlow,10006,10605,6628,Cash Flow\Archivos\Conceptos Presupuestados,Egresos Individual,0
+CashFlow,10006,10606,6629,Cash Flow\Archivos\Conceptos Presupuestados,Ingresos y Egresos Global,0
+CashFlow,10006,10607,6630,Cash Flow\Archivos,Modelos de Análisis de Gestión,0
+CashFlow,10006,10609,6632,Cash Flow\Archivos\Modelos Comparativos,Definición de Modelos Comparativos,0
+CashFlow,10006,10610,6633,Cash Flow\Archivos\Modelos Comparativos,Definición de Comparaciones,0
+CashFlow,10006,10611,6634,Cash Flow\Archivos,Depuración de Cash Flow,0
+CashFlow,10006,10613,6636,Cash Flow\Reportes y Análisis,Generación de Cash Flow,0
+CashFlow,10006,10614,6637,Cash Flow\Reportes y Análisis,Consulta de Cash Flow,0
+CashFlow,10006,10615,6638,Cash Flow\Reportes y Análisis,Análisis de Gestión,0
+CashFlow,10006,10616,6639,Cash Flow\Reportes y Análisis,Análisis Comparativo,0
+Contabilidad,6,1626,2035,Contabilidad\Archivos\Cuentas,Cuentas contables,1
+Contabilidad,6,1684,2052,Contabilidad\Archivos\Cuentas,Jerarquías,0
+Contabilidad,6,7980,19650,Contabilidad\Archivos\Cuentas,Importación de plan contable,0
+Contabilidad,6,1442,2026,Contabilidad\Archivos\Ejercicios contables,Ejercicios,1
+Contabilidad,6,1646,2043,Contabilidad\Archivos\Ejercicios contables,Períodos,0
+Contabilidad,6,1688,2053,Contabilidad\Archivos,Modelos de asientos,0
+Contabilidad,6,1670,2048,Contabilidad\Archivos,Monedas contables,1
+Contabilidad,6,1618,2032,Contabilidad\Archivos\Unidades adicionales,Unidades adicionales,1
+Contabilidad,6,1610,2030,Contabilidad\Archivos\Unidades adicionales,Tipos de valorización,1
+Contabilidad,6,1652,2045,Contabilidad\Archivos\Unidades adicionales,Valorización de unidades adicionales,1
+Contabilidad,6,1779,2113,Contabilidad\Archivos\Análisis contable,Indicadores para análisis contable,0
+Contabilidad,6,1601,2122,Contabilidad\Archivos\Análisis contable,Clases para análisis contable,1
+Contabilidad,6,1745,2079,Contabilidad\Archivos\Variables de Contabilidad,Definición de variables contables,0
+Contabilidad,6,1704,2055,Contabilidad\Archivos\Variables de Contabilidad,Grupos para variables contables,1
+Contabilidad,6,2223,10337,Contabilidad\Archivos,Modelos de consolidación de saldos,0
+Contabilidad,6,1642,2041,Contabilidad\Archivos,Parámetros de Contabilidad,1
+Contabilidad,6,1664,2050,Contabilidad\Asientos,Asientos contables,1
+Contabilidad,6,1600,2061,Contabilidad\Asientos,Asientos extracontables,1
+Contabilidad,6,2339,10729,Contabilidad\Asientos,Generación masiva de asientos,1
+Contabilidad,6,1705,2063,Contabilidad\Asientos,Eliminación masiva de asientos,1
+Contabilidad,6,1747,2081,Contabilidad\Asientos,Reasignación de apropiaciones,0
+Contabilidad,6,1726,2064,Contabilidad\Asientos,Cambio de estado de asientos,1
+Contabilidad,6,1750,2084,Contabilidad\Asientos\Asientos resumen,Generación de asientos resumen,1
+Contabilidad,6,1751,2085,Contabilidad\Asientos\Asientos resumen,Consulta de asientos resumen,1
+Contabilidad,6,21610,21403,Contabilidad\Asientos\Asientos resumen,Eliminación de asientos resumen,1
+Contabilidad,6,1748,2082,Contabilidad\Asientos,Renumeración de asientos,1
+Contabilidad,6,1856,7856,Contabilidad\Asientos\Transporte de otros módulos,Importación de asientos contables,0
+Contabilidad,6,2156,10333,Contabilidad\Asientos\Transporte de otros módulos,Lotes contables recibidos,0
+Contabilidad,6,1752,2086,Contabilidad\Procesos periódicos,Ajuste por inflación,0
+Contabilidad,6,1754,2088,Contabilidad\Procesos periódicos,Resultado por tenencia,0
+Contabilidad,6,1756,2090,Contabilidad\Procesos periódicos,Cierre y apertura,0
+Contabilidad,6,1758,2092,Contabilidad\Procesos periódicos,Conversión a moneda extranjera contable,0
+Contabilidad,6,2290,10389,Contabilidad\Procesos periódicos,Exportación a Estados Contables,0
+Contabilidad,6,14232,18863,Contabilidad\Consultas\Cuentas,Ficha Live de cuentas contables,1
+Contabilidad,6,562,18705,Contabilidad\Consultas\Cuentas,Nómina,1
+Contabilidad,6,647,18746,Contabilidad\Consultas\Cuentas,Jerarquías,1
+Contabilidad,6,648,18747,Contabilidad\Consultas\Cuentas,Cuentas no asignadas,1
+Contabilidad,6,559,18702,Contabilidad\Consultas\Asientos analíticos,Detalle por asiento,1
+Contabilidad,6,448,18684,Contabilidad\Consultas\Asientos analíticos,Detalle por cuenta,1
+Contabilidad,6,560,18703,Contabilidad\Consultas\Asientos analíticos,Detalle por auxiliar,1
+Contabilidad,6,561,18704,Contabilidad\Consultas\Asientos analíticos,Detalle por subauxiliar,1
+Contabilidad,6,649,18748,Contabilidad\Consultas\Asientos analíticos,Contabilización de comprobantes,1
+Contabilidad,6,21714,21470,Contabilidad\Consultas\Asientos resumen,Detalle por asiento,1
+Contabilidad,6,21715,21471,Contabilidad\Consultas\Asientos resumen,Detalle por cuenta,1
+Contabilidad,6,21716,21472,Contabilidad\Consultas\Asientos resumen,Detalle por auxiliar,1
+Contabilidad,6,21717,21473,Contabilidad\Consultas\Asientos resumen,Detalle por subauxiliar,1
+Contabilidad,6,1766,2100,Contabilidad\Informes,Libro Diario,0
+Contabilidad,6,2727,19189,Contabilidad\Informes,Libro Mayor (Básico),0
+Contabilidad,6,1767,2101,Contabilidad\Informes,Libro Mayor,0
+Contabilidad,6,1768,2102,Contabilidad\Informes\Balances,Balance,0
+Contabilidad,6,1769,2103,Contabilidad\Informes\Balances,Balance de comprobación,0
+Contabilidad,6,1771,2105,Contabilidad\Informes\Balances,Comparativo histórico vs. ajustado,0
+Contabilidad,6,1773,2107,Contabilidad\Informes\Balances,Saldos bimonetarios,0
+Contabilidad,6,1770,2104,Contabilidad\Informes\Balances,Balance comparativo entre ejercicios,0
+Contabilidad,6,1945,10026,Contabilidad\Informes\Balances,Estado de situación patrimonial,0
+Contabilidad,6,1775,2109,Contabilidad\Informes\Balances,Consolidación de saldos,0
+Contabilidad,6,1996,19097,Contabilidad\Informes\Balances,Papeles de trabajo,0
+Contabilidad,6,1764,2098,Contabilidad\Informes,Listado de cuentas contables,1
+Contabilidad,6,1772,2106,Contabilidad\Informes,Listado de asientos,0
+Contabilidad,6,1300,7852,Contabilidad\Informes,Control de asientos revertidos,0
+Contabilidad,6,1763,2097,Contabilidad\Análisis de gestión,Tablero de Contabilidad,0
+Contabilidad,6,1781,2115,Contabilidad\Análisis de gestión,Multidimensional de asientos,0
+Contabilidad,6,1761,2095,Contabilidad\Análisis de gestión,Análisis de indicadores contables,0
+Sueldos,8,1038,187,Sueldos\Archivos\Empleados,Legajos de Sueldos,1
+Sueldos,8,1039,188,Sueldos\Archivos\Empleados,Familiares,1
+Sueldos,8,1041,190,Sueldos\Archivos\Empleados\Familiares a liquidar,Actualización manual de cantidades,1
+Sueldos,8,1042,191,Sueldos\Archivos\Empleados\Familiares a liquidar,Actualización automática de cantidades,0
+Sueldos,8,1296,310,Sueldos\Archivos\Empleados\Conceptos particulares,Actualización individual de conceptos particulares,0
+Sueldos,8,1059,238,Sueldos\Archivos\Empleados\Conceptos particulares,Actualización global de conceptos particulares,0
+Sueldos,8,1060,239,Sueldos\Archivos\Empleados\Acumulados del empleado,Acumulados fijos,1
+Sueldos,8,1061,240,Sueldos\Archivos\Empleados\Acumulados del empleado,Acumulados definibles,1
+Sueldos,8,2316,10645,Sueldos\Archivos\Empleados,Administración de sueldos,0
+Sueldos,8,1044,196,Sueldos\Archivos\Empleados,Actualización masiva de sueldos,1
+Sueldos,8,1149,298,Sueldos\Archivos\Empleados,Historial laboral,1
+Sueldos,8,1062,241,Sueldos\Archivos\Empleados eventuales,Legajos eventuales,1
+Sueldos,8,1063,242,Sueldos\Archivos\Empleados eventuales,Empresas de servicios eventuales,1
+Sueldos,8,1012,172,Sueldos\Archivos\Liquidación,Conceptos de liquidación,1
+Sueldos,8,1145,294,Sueldos\Archivos\Liquidación,Fórmulas de liquidación,1
+Sueldos,8,1377,326,Sueldos\Archivos\Liquidación\Variables,Definición de variables,1
+Sueldos,8,1386,327,Sueldos\Archivos\Liquidación\Variables,Grupos para variables,1
+Sueldos,8,2321,10648,Sueldos\Archivos\Liquidación,Adicionales,1
+Sueldos,8,2320,10647,Sueldos\Archivos\Liquidación,Cargas sociales,1
+Sueldos,8,1569,2008,Sueldos\Archivos\Liquidación,Multitablas auxiliares,1
+Sueldos,8,1032,181,Sueldos\Archivos\Liquidación,Tablas auxiliares,1
+Sueldos,8,1033,182,Sueldos\Archivos\Liquidación,Matrices auxiliares,1
+Sueldos,8,1034,183,Sueldos\Archivos\Liquidación,Matrices de sueldos,1
+Sueldos,8,1013,173,Sueldos\Archivos\Liquidación,Tipos de conceptos,1
+Sueldos,8,1440,1154,Sueldos\Archivos\Liquidación,Habilitación de rangos de conceptos,1
+Sueldos,8,1245,309,Sueldos\Archivos\Liquidación,Tipos de liquidación,1
+Sueldos,8,1036,185,Sueldos\Archivos\Liquidación,Billetes,1
+Sueldos,8,1863,7860,Sueldos\Archivos\Liquidación,Definición de listados de conceptos y totales liquidados,0
+Sueldos,8,412,18678,Sueldos\Archivos\Liquidación,Equivalencias para listador de conceptos y totales,1
+Sueldos,8,587,18719,Sueldos\Archivos\Liquidación,Definición de archivos ASCII,1
+Sueldos,8,21278,21210,Sueldos\Archivos\Liquidación,Asignación masiva de subtipos,1
+Sueldos,8,1152,306,Sueldos\Archivos\Impuesto a las ganancias,Tramos de imposición,1
+Sueldos,8,2383,17423,Sueldos\Archivos\Impuesto a las ganancias,Organismos para el pago de deducciones,1
+Sueldos,8,1344,318,Sueldos\Archivos\Impuesto a las ganancias,Topes de deducciones,1
+Sueldos,8,2603,19144,Sueldos\Archivos\Impuesto a las ganancias,Configuración de deducciones,1
+Sueldos,8,21262,21203,Sueldos\Archivos\Impuesto a las ganancias\Tablas anuales,Tramos de imposición anuales,1
+Sueldos,8,21266,21204,Sueldos\Archivos\Impuesto a las ganancias\Tablas anuales,Topes de deducciones anuales,1
+Sueldos,8,1074,245,Sueldos\Archivos\Contratos,Modalidades de contratación,1
+Sueldos,8,1045,197,Sueldos\Archivos\Contratos,Contratos por empleado,0
+Sueldos,8,1089,251,Sueldos\Archivos\Novedades,Novedades,1
+Sueldos,8,1401,2002,Sueldos\Archivos\Novedades,Grupos para novedades,1
+Sueldos,8,2342,10738,Sueldos\Archivos\Novedades,Ajustes afectados al mejor sueldo,1
+Sueldos,8,21152,21152,Sueldos\Archivos\Novedades,Detalle salario mínimo vital y móvil,1
+Sueldos,8,21270,21205,Sueldos\Archivos\Novedades,Topes para bases imponibles,1
+Sueldos,8,1066,243,Sueldos\Archivos\Agrupaciones del empleado,Convenios,1
+Sueldos,8,1070,244,Sueldos\Archivos\Agrupaciones del empleado,Categorías,1
+Sueldos,8,1078,246,Sueldos\Archivos\Agrupaciones del empleado,Grupos jerárquicos,1
+Sueldos,8,1082,247,Sueldos\Archivos\Agrupaciones del empleado,Lugares de trabajo,1
+Sueldos,8,1031,180,Sueldos\Archivos\Agrupaciones del empleado,Códigos de situación de revista,1
+Sueldos,8,1058,237,Sueldos\Archivos\Organismos,Art,1
+Sueldos,8,1083,248,Sueldos\Archivos\Organismos,Obras sociales,1
+Sueldos,8,1086,250,Sueldos\Archivos\Organismos,Sindicatos,1
+Sueldos,8,1420,1106,Sueldos\Archivos\Organismos\ARCA,Situaciones ARCA,1
+Sueldos,8,1419,1105,Sueldos\Archivos\Organismos\ARCA,Condiciones ARCA,1
+Sueldos,8,1148,297,Sueldos\Archivos\Organismos\ARCA,Actividades ARCA para empleados,1
+Sueldos,8,1084,249,Sueldos\Archivos\Organismos\ARCA,Obras sociales D.G.I.,1
+Sueldos,8,1067,307,Sueldos\Archivos\Organismos\ARCA,Zonas ARCA,1
+Sueldos,8,1706,10624,Sueldos\Archivos\Organismos\ARCA,Localidades D.G.I.,1
+Sueldos,8,1539,1204,Sueldos\Archivos\Organismos\ARCA,Incapacidades ARCA,1
+Sueldos,8,1913,10627,Sueldos\Archivos\Organismos\ARCA,Nivel de estudios D.G.I.,1
+Sueldos,8,1711,10626,Sueldos\Archivos\Organismos\ARCA,Juzgados D.G.I.,1
+Sueldos,8,2295,10628,Sueldos\Archivos\Organismos\ARCA,Tipos de eventos D.G.I.,1
+Sueldos,8,2302,10629,Sueldos\Archivos\Organismos\ARCA,Tipos de documentación D.G.I.,1
+Sueldos,8,2308,10630,Sueldos\Archivos\Organismos\ARCA,Tipos de documentación en el exterior D.G.I.,1
+Sueldos,8,20255,21024,Sueldos\Archivos\Organismos\ARCA,Tipos de servicios ARCA,1
+Sueldos,8,1597,1233,Sueldos\Archivos\Parametrización contable\Reglas de apropiación habituales,Actualización individual de apropiaciones habituales,1
+Sueldos,8,1849,1237,Sueldos\Archivos\Parametrización contable\Reglas de apropiación habituales,Actualización global de apropiaciones habituales,1
+Sueldos,8,1853,1238,Sueldos\Archivos\Parametrización contable\Reglas de apropiación ocasionales,Actualización individual de apropiaciones ocasionales,1
+Sueldos,8,1851,1239,Sueldos\Archivos\Parametrización contable\Reglas de apropiación ocasionales,Actualización global de apropiaciones ocasionales,1
+Sueldos,8,20250,21023,Sueldos\Archivos\Parametrización contable,Cuentas por defecto para modelos de asientos,1
+Sueldos,8,1842,1236,Sueldos\Archivos\Parametrización contable,Modelos de asientos,1
+Sueldos,8,1144,186,Sueldos\Archivos,Parámetros de Sueldos,1
+Sueldos,8,1154,303,Sueldos\Novedades\Novedades para conceptos,Novedades registradas,1
+Sueldos,8,1155,304,Sueldos\Novedades\Novedades para conceptos,Actualización global de novedades,1
+Sueldos,8,1434,1121,Sueldos\Novedades\Novedades para conceptos,Generación automática de novedades,1
+Sueldos,8,2335,10739,Sueldos\Novedades\Novedades para conceptos,Actualización de ajustes afectados al mejor sueldo,0
+Sueldos,8,1346,321,Sueldos\Novedades\Novedades para el impuesto a las ganancias,Pagos por deducciones generales,1
+Sueldos,8,1345,320,Sueldos\Novedades\Novedades para el impuesto a las ganancias,Otros ingresos - Empleos externos,1
+Sueldos,8,20246,21022,Sueldos\Novedades\Novedades para el impuesto a las ganancias,Otros ingresos - Otros legajos,1
+Sueldos,8,2122,19063,Sueldos\Novedades\Novedades para el impuesto a las ganancias,"Retenciones, Percepciones y Pagos a cuenta",1
+Sueldos,8,2126,19064,Sueldos\Novedades\Novedades para el impuesto a las ganancias,Importación de novedades de SiRADIG,1
+Sueldos,8,3187,19608,Sueldos\Novedades\Novedades para el impuesto a las ganancias,Actualización del impuesto a retener/devolver,1
+Sueldos,8,1584,2011,Sueldos\Novedades\Novedades para multitablas,Actualización individual de multitablas auxiliares,0
+Sueldos,8,1585,2012,Sueldos\Novedades\Novedades para multitablas,Actualización global de multitablas auxiliares,0
+Sueldos,8,1112,324,Sueldos\Novedades,Detalle de licencias,1
+Sueldos,8,20350,21086,Sueldos\Novedades,Vacaciones,1
+Sueldos,8,1395,342,Sueldos\Novedades,Generación masiva de vacaciones,1
+Sueldos,8,2832,19227,Sueldos\Novedades,Embargos y obligaciones,1
+Sueldos,8,1093,253,Sueldos\Liquidación,Datos fijos de la liquidación,1
+Sueldos,8,1097,255,Sueldos\Liquidación\Conceptos,Liquidación de conceptos individual,1
+Sueldos,8,1098,256,Sueldos\Liquidación\Conceptos,Liquidación de conceptos global,1
+Sueldos,8,21171,21164,Sueldos\Liquidación\Conceptos,Plantillas para liquidación de conceptos,1
+Sueldos,8,1102,258,Sueldos\Liquidación\Impuesto a las ganancias,Liquidación de ganancias individual,1
+Sueldos,8,1105,259,Sueldos\Liquidación\Impuesto a las ganancias,Liquidación de ganancias global,1
+Sueldos,8,21157,21154,Sueldos\Liquidación\Impuesto a las ganancias,Anulación de liquidaciones de ganancias,1
+Sueldos,8,1106,260,Sueldos\Liquidación,Autorización de liquidaciones,1
+Sueldos,8,1109,261,Sueldos\Liquidación,Simulación de liquidación,1
+Sueldos,8,1113,262,Sueldos\Liquidación,Simulación de sueldo bruto,1
+Sueldos,8,1114,263,Sueldos\Liquidación,Consulta de liquidaciones,1
+Sueldos,8,1117,264,Sueldos\Liquidación,Anulación de liquidaciones,1
+Sueldos,8,1446,1111,Sueldos\Liquidación,Emisión de recibos,0
+Sueldos,8,1556,1210,Sueldos\Procesos periódicos,Generación a SICOSS - Declaración en Línea,0
+Sueldos,8,1537,1202,Sueldos\Procesos periódicos,Generación al S.I.Ap. - SICORE,0
+Sueldos,8,2306,10631,Sueldos\Procesos periódicos,Generación al S.I.Ap. - MiSimplificación,0
+Sueldos,8,2314,10644,Sueldos\Procesos periódicos\Pago automático de haberes,Control de acreditación de haberes,1
+Sueldos,8,1397,343,Sueldos\Procesos periódicos\Pago automático de haberes,Generación de archivo ASCII para acreditación de haberes,1
+Sueldos,8,21499,21325,Sueldos\Procesos periódicos\Pago automático de haberes,Eliminación de acreditación de haberes,1
+Sueldos,8,1273,325,Sueldos\Procesos periódicos\Pago automático de haberes,Definición de formato de archivo ASCII,1
+Sueldos,8,1857,1241,Sueldos\Procesos periódicos\Contabilización,Generación de asientos contables,0
+Sueldos,8,2152,10028,Sueldos\Procesos periódicos\Contabilización,Eliminación de asientos contables,0
+Sueldos,8,1829,4038,Sueldos\Procesos periódicos\Contabilización\Exportación,Exportación de asientos contables,0
+Sueldos,8,1830,4039,Sueldos\Procesos periódicos\Contabilización\Exportación,Anulación de lotes contables de liquidaciones,0
+Sueldos,8,1950,10027,Sueldos\Procesos periódicos\Contabilización\Exportación,Lotes contables generados,0
+Sueldos,8,1150,299,Sueldos\Procesos periódicos,Generación de historial laboral,1
+Sueldos,8,1121,265,Sueldos\Procesos periódicos,Depuración de Sueldos,0
+Sueldos,8,563,18706,Sueldos\Procesos periódicos,Generación de archivos ASCII,0
+Sueldos,8,2846,19274,Sueldos\Procesos periódicos,Generación del Libro de Sueldos Digital,0
+Sueldos,8,3449,20725,Sueldos\Procesos periódicos,Generación de novedades para F. 1357 y F. 1359,0
+Sueldos,8,21650,21418,Sueldos\Procesos periódicos,Notificaciones para período de prueba,1
+Sueldos,8,21719,21475,Sueldos\Procesos periódicos,Actualización de modalidades de contratación,1
+Sueldos,8,790,18822,Sueldos\Consultas\Legajos,Nómina,1
+Sueldos,8,2630,19155,Sueldos\Consultas\Legajos,Nómina (legajos eventuales),1
+Sueldos,8,2631,19156,Sueldos\Consultas\Legajos,Conceptos particulares,1
+Sueldos,8,20241,21019,Sueldos\Consultas\Legajos,Apropiaciones habituales,1
+Sueldos,8,20242,21020,Sueldos\Consultas\Legajos,Apropiaciones ocasionales,1
+Sueldos,8,20079,20925,Sueldos\Consultas\Conceptos de liquidación,Nómina,1
+Sueldos,8,17606,17606,Sueldos\Consultas\Sueldo bruto y cargas sociales,Sueldo bruto y costo estimado,1
+Sueldos,8,17607,17607,Sueldos\Consultas\Sueldo bruto y cargas sociales,Detalle de adicionales al sueldo del empleado,1
+Sueldos,8,17608,17608,Sueldos\Consultas\Sueldo bruto y cargas sociales,Detalle de tickets,1
+Sueldos,8,12709,19257,Sueldos\Consultas\Novedades,Ficha Live de embargos,1
+Sueldos,8,17612,17612,Sueldos\Consultas\Novedades,Mejor sueldo,1
+Sueldos,8,17613,17613,Sueldos\Consultas\Novedades,Ajustes registrados,1
+Sueldos,8,17614,17614,Sueldos\Consultas\Novedades,Novedades registradas,1
+Sueldos,8,21616,21407,Sueldos\Consultas\Novedades,Mejor sueldo por tramo laboral,1
+Sueldos,8,21597,21397,Sueldos\Consultas\Novedades,Novedades registradas por departamento,1
+Sueldos,8,2836,19256,Sueldos\Consultas\Novedades,Embargos y obligaciones,1
+Sueldos,8,2806,19260,Sueldos\Consultas\Novedades,Vencimientos de embargos y obligaciones,1
+Sueldos,8,21501,21326,Sueldos\Consultas\Novedades,Retenciones de embargos y obligaciones,1
+Sueldos,8,20312,21057,Sueldos\Consultas\Novedades,Saldos disponibles por novedad,1
+Sueldos,8,20402,21108,Sueldos\Consultas\Novedades\Vacaciones,Saldos de vacaciones,1
+Sueldos,8,20403,21109,Sueldos\Consultas\Novedades\Vacaciones,Tramos de vacaciones,1
+Sueldos,8,20207,20985,Sueldos\Consultas\Totales liquidados,Detalle,1
+Sueldos,8,17597,17597,Sueldos\Consultas\Totales liquidados,Resumen por departamento,1
+Sueldos,8,17598,17598,Sueldos\Consultas\Totales liquidados,Comparativo,1
+Sueldos,8,17599,17599,Sueldos\Consultas\Totales liquidados,Mes/Año,1
+Sueldos,8,2094,19028,Sueldos\Consultas\Totales liquidados,Mes/Año (Costo laboral y sueldo neto),1
+Sueldos,8,2095,19029,Sueldos\Consultas\Totales liquidados,Evolución por departamento,1
+Sueldos,8,2096,19030,Sueldos\Consultas\Totales liquidados,Evolución por grupo jerárquico,1
+Sueldos,8,17600,17600,Sueldos\Consultas\Totales liquidados,Sueldo nominal vs. Sueldo liquidado,1
+Sueldos,8,20210,20988,Sueldos\Consultas\Conceptos liquidados,Detalle,1
+Sueldos,8,17602,17602,Sueldos\Consultas\Conceptos liquidados,Resumen,1
+Sueldos,8,17603,17603,Sueldos\Consultas\Conceptos liquidados,Comparativo,1
+Sueldos,8,17604,17604,Sueldos\Consultas\Conceptos liquidados,Mes/Año,1
+Sueldos,8,17610,17610,Sueldos\Consultas\Acreditación de haberes,Resumen,1
+Sueldos,8,21517,21342,Sueldos\Consultas\Acreditación de haberes,Detalle de acreditaciones eliminadas,1
+Sueldos,8,2087,19021,Sueldos\Consultas\Impuesto a las ganancias,Deducciones,1
+Sueldos,8,2088,19022,Sueldos\Consultas\Impuesto a las ganancias,Pagos de deducciones generales,1
+Sueldos,8,2097,19088,Sueldos\Consultas\Impuesto a las ganancias,"Retenciones, Percepciones y Pagos a cuenta",1
+Sueldos,8,2090,19024,Sueldos\Consultas\Impuesto a las ganancias,Tramos de imposición,1
+Sueldos,8,20080,20926,Sueldos\Consultas\Impuesto a las ganancias,Análisis remuneraciones RG 5008,1
+Sueldos,8,20194,20978,Sueldos\Consultas\Impuesto a las ganancias,Detalle de ajuste anual,1
+Sueldos,8,20287,21041,Sueldos\Consultas\Impuesto a las ganancias,Detalle de ajustes de impuesto a las ganancias,1
+Sueldos,8,20427,21132,Sueldos\Consultas\Impuesto a las ganancias,Detalle Bonos / Fallos de cajas / Similar naturaleza liquidados,1
+Sueldos,8,20420,21125,Sueldos\Consultas\Impuesto a las ganancias,Novedades importadas de SiRADIG,1
+Sueldos,8,20437,21139,Sueldos\Consultas\Impuesto a las ganancias,Ultimas novedades importadas de SiRADIG,1
+Sueldos,8,20429,21134,Sueldos\Consultas\Impuesto a las ganancias,Detalles compensación análoga,1
+Sueldos,8,21396,21238,Sueldos\Consultas\Impuesto a las ganancias,Conceptos imposibles de informar en F.1359,1
+Sueldos,8,21398,21240,Sueldos\Consultas\Impuesto a las ganancias,Importes en empleos externos imposibles de informar en F.1359,1
+Sueldos,8,21424,21260,Sueldos\Consultas\Impuesto a las ganancias,Importes en otros legajos imposibles de informar en F.1359,1
+Sueldos,8,21425,21261,Sueldos\Consultas\Impuesto a las ganancias,Importes en acumulados fijos imposibles de informar en F.1359,1
+Sueldos,8,336,18602,Sueldos\Consultas\Contabilidad,Detalle por cuenta,1
+Sueldos,8,352,18603,Sueldos\Consultas\Contabilidad,Detalle por auxiliar,1
+Sueldos,8,353,18604,Sueldos\Consultas\Contabilidad,Detalle por subauxiliar,1
+Sueldos,8,21598,21398,Sueldos\Consultas\Contabilidad,Contabilización de liquidaciones,1
+Sueldos,8,21599,21399,Sueldos\Consultas\Contabilidad,Contabilización de liquidaciones pendientes de exportar,1
+Sueldos,8,637,18739,Sueldos\Consultas\Indices y estadísticas,Rotación de Personal General,1
+Sueldos,8,592,18720,Sueldos\Consultas\Indices y estadísticas,Rotación de Personal por Categorías,1
+Sueldos,8,638,18740,Sueldos\Consultas\Indices y estadísticas,Rotación de Personal por Departamentos,1
+Sueldos,8,639,18741,Sueldos\Consultas\Indices y estadísticas,Rotación de Personal por Grupos jerárquicos,1
+Sueldos,8,640,18742,Sueldos\Consultas\Indices y estadísticas,Rotación de Personal por Lugar de trabajo,1
+Sueldos,8,641,18743,Sueldos\Consultas\Indices y estadísticas,Rotación de Personal por Agrupaciones,1
+Sueldos,8,642,18744,Sueldos\Consultas\Indices y estadísticas,Rotación de Personal por Tipos de convenios,1
+Sueldos,8,21948,24579,Sueldos\Consultas\Período de prueba,Legajos con período de prueba notificado,1
+Sueldos,8,21949,24580,Sueldos\Consultas\Período de prueba,Legajos con modalidad de contratación actualizada,1
+Sueldos,8,1447,1146,Sueldos\Informes\Empleados,Fichas de legajos,0
+Sueldos,8,1136,1153,Sueldos\Informes\Empleados,Fichas de legajos eventuales,0
+Sueldos,8,1472,1170,Sueldos\Informes\Empleados,Vencimiento de contratos de empleados,0
+Sueldos,8,1479,1174,Sueldos\Informes\Empleados,Vencimiento de asignaciones familiares,0
+Sueldos,8,1501,1184,Sueldos\Informes\Empleados,Historial laboral de empleados,0
+Sueldos,8,1524,1193,Sueldos\Informes\Empleados,Certificación de servicios y remuneraciones,0
+Sueldos,8,1453,1155,Sueldos\Informes\Novedades,Novedades registradas,0
+Sueldos,8,1457,1157,Sueldos\Informes\Novedades,Notificación del período vacacional,0
+Sueldos,8,21608,21402,Sueldos\Informes\Novedades,Notificación de pago de embargos y obligaciones,1
+Sueldos,8,1470,7867,Sueldos\Informes\Liquidación\Conceptos y totales,Conceptos y totales liquidados,0
+Sueldos,8,1859,7868,Sueldos\Informes\Liquidación\Conceptos y totales,Generación de listados de conceptos y totales liquidados,0
+Sueldos,8,1507,1183,Sueldos\Informes\Liquidación,Control de liquidaciones,0
+Sueldos,8,1474,1171,Sueldos\Informes\Liquidación,Sueldos y jornales a pagar,0
+Sueldos,8,1188,1158,Sueldos\Informes\Liquidación,Billetes para pago de haberes,0
+Sueldos,8,1458,1135,Sueldos\Informes\Liquidación,Libroley,0
+Sueldos,8,2999,19439,Sueldos\Informes\Liquidación,Liquidación de Impuesto a las Ganancias - 4ta. Categoría,0
+Sueldos,8,21394,21237,Sueldos\Informes\Liquidación,Borrador de liquidaciones,1
+Sueldos,8,1592,2144,Sueldos\Informes\Contabilización,Subdiario de asientos de Sueldos,0
+Sueldos,8,1809,4035,Sueldos\Informes\Contabilización,Control de contabilización de liquidaciones,0
+Sueldos,8,1560,1218,Sueldos\Análisis de gestión,Tablero de Sueldos,0
+Sueldos,8,2325,10670,Sueldos\Análisis de gestión,Evolución del sueldo,0
+Sueldos,8,1436,1108,Sueldos\Análisis de gestión\Análisis multidimensional,Multidimensional de novedades,0
+Sueldos,8,1391,329,Sueldos\Análisis de gestión\Análisis multidimensional,Multidimensional de liquidaciones,0
+ControlDePersonal,9,1127,271,Control de personal\Archivos,Legajos de Control de personal,1
+ControlDePersonal,9,1017,149,Control de personal\Archivos\Horarios,Definición de horarios,0
+ControlDePersonal,9,1055,89,Control de personal\Archivos\Horarios,Tipos de hora,1
+ControlDePersonal,9,1071,87,Control de personal\Archivos\Relojes,Definición de relojes,0
+ControlDePersonal,9,1283,83,Control de personal\Archivos\Relojes,Modelos de reloj,0
+ControlDePersonal,9,1075,88,Control de personal\Archivos\Relojes,Tareas,1
+ControlDePersonal,9,1043,81,Control de personal\Archivos,Conceptos de justificación,1
+ControlDePersonal,9,1025,85,Control de personal\Archivos,Motivos de fichada manual,1
+ControlDePersonal,9,1005,141,Control de personal\Archivos,Modelos de integración con Sueldos,0
+ControlDePersonal,9,1326,86,Control de personal\Archivos,Parámetros de Control de personal,1
+ControlDePersonal,9,1331,142,Control de personal\Novedades,Autorización a horas extras,0
+ControlDePersonal,9,1336,312,Control de personal\Novedades,Cambios de horario,0
+ControlDePersonal,9,1011,146,Control de personal\Novedades,Previsión de ausencias,0
+ControlDePersonal,9,1008,144,Control de personal\Novedades,Previsión de anormalidades,0
+ControlDePersonal,9,1009,143,Control de personal\Novedades\Actualizaciones masivas,Actualización masiva de autorización a horas extras,0
+ControlDePersonal,9,1462,1163,Control de personal\Novedades\Actualizaciones masivas,Actualización masiva de cambios de horario,0
+ControlDePersonal,9,1322,147,Control de personal\Novedades\Actualizaciones masivas,Actualización masiva de previsión de ausencias,0
+ControlDePersonal,9,1320,145,Control de personal\Novedades\Actualizaciones masivas,Actualización masiva de previsión de anormalidades,0
+ControlDePersonal,9,1024,1160,Control de personal\Fichadas,Lectura de fichadas,1
+ControlDePersonal,9,1004,140,Control de personal\Fichadas,Fichadas registradas,0
+ControlDePersonal,9,1132,1161,Control de personal\Fichadas,Fichadas rechazadas,0
+ControlDePersonal,9,1480,148,Control de personal\Partes diarios,Generación de partes,0
+ControlDePersonal,9,1497,1159,Control de personal\Partes diarios,Revisión de partes,0
+ControlDePersonal,9,1142,348,Control de personal\Partes diarios,Anulación de partes,0
+ControlDePersonal,9,1341,316,Control de personal\Partes diarios,Compensación de partes,0
+ControlDePersonal,9,1347,319,Control de personal\Partes diarios,Anulación de compensaciones,0
+ControlDePersonal,9,1133,277,Control de personal\Partes diarios,Actualización masiva de estados,0
+ControlDePersonal,9,1134,278,Control de personal\Procesos periódicos,Generación de novedades a Sueldos,0
+ControlDePersonal,9,1342,315,Control de personal\Procesos periódicos,Depuración de Control de personal,0
+ControlDePersonal,9,21414,21253,Control de personal\Consultas\Legajos,Nómina,1
+ControlDePersonal,9,21444,21273,Control de personal\Consultas\Partes diarios,Resumen por departamento,1
+ControlDePersonal,9,21453,21279,Control de personal\Consultas\Partes diarios\Horas,Resumen por departamento,1
+ControlDePersonal,9,21454,21280,Control de personal\Consultas\Partes diarios\Horas,Resumen por horario,1
+ControlDePersonal,9,21461,21287,Control de personal\Consultas\Partes diarios\Anormalidades y ausencias,Resumen de reales,1
+ControlDePersonal,9,21467,21293,Control de personal\Consultas\Partes diarios\Anormalidades y ausencias,Detalle de reales,1
+ControlDePersonal,9,21462,21288,Control de personal\Consultas\Partes diarios\Anormalidades y ausencias,Resumen de computadas,1
+ControlDePersonal,9,21468,21294,Control de personal\Consultas\Partes diarios\Anormalidades y ausencias,Detalle de computadas,1
+ControlDePersonal,9,21470,21296,Control de personal\Consultas\Partes diarios\Compensaciones,Resumen,1
+ControlDePersonal,9,21481,21307,Control de personal\Consultas\Partes diarios\Compensaciones,Detalle de descuentos compensados por día,1
+ControlDePersonal,9,21471,21297,Control de personal\Consultas\Partes diarios\Compensaciones,Detalle de horas pendientes a compensar,1
+ControlDePersonal,9,21475,21301,Control de personal\Consultas\Partes diarios\Compensaciones,Detalle de horas extras sobrantes,1
+ControlDePersonal,9,21476,21302,Control de personal\Consultas\Partes diarios\Compensaciones,Detalle de horas extras eliminadas,1
+ControlDePersonal,9,21485,21311,Control de personal\Consultas\Partes diarios\Horas extras computadas,Resumen por departamento,1
+ControlDePersonal,9,21486,21312,Control de personal\Consultas\Partes diarios\Horas extras computadas,Detalle por departamento,1
+ControlDePersonal,9,21487,21313,Control de personal\Consultas\Partes diarios\Horas extras computadas,Resumen por horario,1
+ControlDePersonal,9,21488,21314,Control de personal\Consultas\Partes diarios\Horas extras computadas,Detalle por horario,1
+ControlDePersonal,9,21490,21316,Control de personal\Consultas\Partes diarios\Tareas realizadas,Resumen por departamento,1
+ControlDePersonal,9,21492,21318,Control de personal\Consultas\Partes diarios\Tareas realizadas,Detalle por departamento,1
+ControlDePersonal,9,21491,21317,Control de personal\Consultas\Partes diarios\Tareas realizadas,Resumen por horario,1
+ControlDePersonal,9,21493,21319,Control de personal\Consultas\Partes diarios\Tareas realizadas,Detalle por horario,1
+ControlDePersonal,9,21446,21275,Control de personal\Consultas\Fichadas,Resumen,1
+ControlDePersonal,9,21451,21277,Control de personal\Consultas\Fichadas,Resumen de rechazadas,1
+ControlDePersonal,9,1538,1203,Control de personal\Informes\Informes de control,Presentismo,0
+ControlDePersonal,9,1533,1199,Control de personal\Informes\Informes de control,Situación esperada,0
+ControlDePersonal,9,1496,1180,Control de personal\Informes\Informes de control,Partes a revisar,0
+ControlDePersonal,9,1552,1208,Control de personal\Informes\Informes de control,Partes no generados,0
+ControlDePersonal,9,1519,1191,Control de personal\Informes\Informes de control,Control de horas extras,0
+ControlDePersonal,9,1554,1209,Control de personal\Informes\Informes de control,Control de horas toleradas,0
+ControlDePersonal,9,1550,1207,Control de personal\Informes\Informes de control,Control de horas no computadas,0
+ControlDePersonal,9,1498,1181,Control de personal\Informes\Partes diarios,Resumen de partes,0
+ControlDePersonal,9,1544,1205,Control de personal\Informes\Partes diarios,Resumen de horas,0
+ControlDePersonal,9,1509,1186,Control de personal\Informes\Partes diarios,Resumen de anormalidades y ausencias,0
+ControlDePersonal,9,1511,1187,Control de personal\Informes\Partes diarios,Resumen de compensaciones,0
+ControlDePersonal,9,1522,1192,Control de personal\Informes\Partes diarios,Horas extras computadas,0
+ControlDePersonal,9,1548,1206,Control de personal\Informes\Partes diarios,Tareas realizadas,0
+ControlDePersonal,9,1451,1179,Control de personal\Informes\Fichadas,Fichadas procesadas,0
+ControlDePersonal,9,1504,1182,Control de personal\Informes\Fichadas,Fichadas de empleados flexibles,0
+ControlDePersonal,9,1526,1194,Control de personal\Informes,Horarios de la empresa,0
+ControlDePersonal,9,1503,1185,Control de personal\Informes,Modelos de integración con Sueldos,0
+ControlDePersonal,9,1558,1211,Control de personal\Análisis de gestión,Tablero de Control de personal,0
+ControlDePersonal,9,1138,282,Control de personal\Análisis de gestión\Análisis multidimensional,Multidimensional de horas,0
+ControlDePersonal,9,1139,283,Control de personal\Análisis de gestión\Análisis multidimensional,Multidimensional de anormalidades,0
+ProcesosGenerales,11,1030,99,Procesos generales\Tablas generales,Provincias,1
+ProcesosGenerales,11,1096,96,Procesos generales\Tablas generales,Países,1
+ProcesosGenerales,11,1115,98,Procesos generales\Tablas generales,Nacionalidades,1
+ProcesosGenerales,11,1110,102,Procesos generales\Tablas generales,Tipos de documento,1
+ProcesosGenerales,11,1125,269,Procesos generales\Tablas generales,Bancos,1
+ProcesosGenerales,11,1366,103,Procesos generales\Tablas generales,Feriados,1
+ProcesosGenerales,11,1660,2047,Procesos generales\Tablas generales\Monedas,Monedas,1
+ProcesosGenerales,11,1614,2031,Procesos generales\Tablas generales\Monedas,Tipos de cotización,1
+ProcesosGenerales,11,1648,2044,Procesos generales\Tablas generales\Monedas,Cotizaciones,1
+ProcesosGenerales,11,1630,2036,Procesos generales\Tablas generales,Indices,1
+ProcesosGenerales,11,1443,2027,Procesos generales\Tablas generales,Unidades de medida,1
+ProcesosGenerales,11,7981,20934,Procesos generales\Tablas generales,Reemplazo de unidad de medida,0
+ProcesosGenerales,11,326,18529,Procesos generales\Tablas generales,Clasificación de comprobantes,1
+ProcesosGenerales,11,1050,280,Procesos generales\Tablas generales\Empresa,Datos de la empresa,1
+ProcesosGenerales,11,540,18390,Procesos generales\Tablas generales\Empresa,Sucursales,1
+ProcesosGenerales,11,1023,101,Procesos generales\Tablas generales\Empresa,Departamentos,1
+ProcesosGenerales,11,1020,97,Procesos generales\Tablas generales\Empresa,Actividades ARCA para empresas,1
+ProcesosGenerales,11,7305,20759,Procesos generales\Tablas generales\Empresa,Certificados de ARCA,0
+ProcesosGenerales,11,2132,19137,Procesos generales\Tablas generales\Formularios,Variables de impresión para campos adicionales,1
+ProcesosGenerales,11,523,18385,Procesos generales\Tablas generales\Formularios,Tesorería,0
+ProcesosGenerales,11,2369,17433,Procesos generales\Tablas generales\Formularios,Sueldos,0
+ProcesosGenerales,11,365,18655,Procesos generales\Tablas generales\Formularios,Stock,0
+ProcesosGenerales,11,1977,18946,Procesos generales\Tablas generales\Formularios,Ventas,0
+ProcesosGenerales,11,3166,19581,Procesos generales\Tablas generales\Formularios,Compras,0
+ProcesosGenerales,11,21390,21236,Procesos generales\Tablas generales\Formularios gráficos,Formularios gráficos de Ventas,1
+ProcesosGenerales,11,21472,21298,Procesos generales\Tablas generales\Formularios gráficos,Formularios gráficos de Stock,1
+ProcesosGenerales,11,21447,21276,Procesos generales\Tablas generales\Formularios gráficos,Formularios gráficos de Compras,1
+ProcesosGenerales,11,21591,21394,Procesos generales\Tablas generales\Formularios gráficos,Formularios gráficos de Sueldos,1
+ProcesosGenerales,11,408,18658,Procesos generales\Tablas generales,Fechas de cierre,1
+ProcesosGenerales,11,780,18812,Procesos generales\Tablas generales,Parámetros de correo electrónico,1
+ProcesosGenerales,11,1575,2119,Procesos generales\Datos contables\Cuentas,Cuentas contables,1
+ProcesosGenerales,11,1746,2080,Procesos generales\Datos contables\Cuentas,Actualización masiva de cuentas contables,1
+ProcesosGenerales,11,1634,2037,Procesos generales\Datos contables,Clases de cuentas,1
+ProcesosGenerales,11,1588,2120,Procesos generales\Datos contables,Leyendas para encabezados de asientos,1
+ProcesosGenerales,11,1598,2121,Procesos generales\Datos contables,Leyendas para líneas de asientos,1
+ProcesosGenerales,11,1656,2046,Procesos generales\Datos contables\Auxiliares contables,Tipos de auxiliares,1
+ProcesosGenerales,11,1668,2051,Procesos generales\Datos contables\Auxiliares contables,Reglas de apropiación,1
+ProcesosGenerales,11,1733,2065,Procesos generales\Datos contables\Auxiliares contables,Actualización individual de auxiliares contables,1
+ProcesosGenerales,11,1731,2066,Procesos generales\Datos contables\Auxiliares contables,Actualización global de auxiliares contables,1
+ProcesosGenerales,11,1640,2039,Procesos generales\Datos contables,Agrupaciones de tipos de asiento,1
+ProcesosGenerales,11,1622,2033,Procesos generales\Datos contables,Tipos de asiento,1
+ProcesosGenerales,11,2162,10330,Procesos generales\Datos contables,Herramientas para integración contable,0
+ProcesosGenerales,11,1729,2138,Procesos generales\Datos contables\Informes,Informe de cuentas contables,0
+ProcesosGenerales,11,1765,2099,Procesos generales\Datos contables\Informes,Listado de auxiliares contables,1
+ProcesosGenerales,11,1878,17579,Procesos generales\Datos contables\Informes,Lotes contables generados,0
+ProcesosGenerales,11,1638,2038,Procesos generales\Datos contables,Parámetros contables,1
+ProcesosGenerales,11,1124,268,Procesos generales\Empleados,Legajos,1
+ProcesosGenerales,11,1021,1152,Procesos generales\Empleados,Plantillas para legajos,1
+ProcesosGenerales,11,1016,1175,Procesos generales\Empleados,Actualización masiva de legajos,1
+ProcesosGenerales,11,19767,20801,Procesos generales\Empleados,Filtros de seguridad de legajos,1
+ProcesosGenerales,11,1707,10625,Procesos generales\Empleados,Puestos desempeñados,1
+ProcesosGenerales,11,1022,100,Procesos generales\Empleados,Agrupaciones auxiliares,0
+ProcesosGenerales,11,1118,104,Procesos generales\Empleados,Motivos de egreso,1
+ProcesosGenerales,11,1832,4041,Procesos generales\Empleados,Novedades de Sueldos,1
+ProcesosGenerales,11,1467,1169,Procesos generales\Empleados\Informes,Antigüedad de empleados,0
+ProcesosGenerales,11,1515,1190,Procesos generales\Empleados\Informes,"Empleados activos, altas y bajas",0
+ProcesosGenerales,11,544,18391,Procesos generales\Transferencias,Parámetros de transferencias,1
+ProcesosGenerales,11,20082,20929,Procesos generales\Transferencias,Vinculación a Tangonet,1
+ProcesosGenerales,11,1873,17574,Procesos generales\Transferencias,Configuración de exportación de cuentas de efectivo,1
+ProcesosGenerales,11,301,18303,Procesos generales\Transferencias\Exportación\Tablas,Artículos,1
+ProcesosGenerales,11,302,18304,Procesos generales\Transferencias\Exportación\Tablas,Clientes,1
+ProcesosGenerales,11,439,18356,Procesos generales\Transferencias\Exportación\Tablas,Proveedores,1
+ProcesosGenerales,11,303,18305,Procesos generales\Transferencias\Exportación\Tablas,Precios de venta,1
+ProcesosGenerales,11,443,18357,Procesos generales\Transferencias\Exportación\Tablas,Precios de compra,1
+ProcesosGenerales,11,447,18358,Procesos generales\Transferencias\Exportación\Tablas,Precios de costos,1
+ProcesosGenerales,11,334,18552,Procesos generales\Transferencias\Exportación\Tablas,Datos contables,1
+ProcesosGenerales,11,455,18360,Procesos generales\Transferencias\Exportación\Tablas,Tablas generales,1
+ProcesosGenerales,11,464,18363,Procesos generales\Transferencias\Exportación\Informes y estadística,Comprobantes,1
+ProcesosGenerales,11,468,18364,Procesos generales\Transferencias\Exportación\Informes y estadística,Saldos actuales,1
+ProcesosGenerales,11,9994,20939,Procesos generales\Transferencias\Exportación\Informes y estadística,Precios para costos,1
+ProcesosGenerales,11,342,18558,Procesos generales\Transferencias\Exportación\Informes y estadística,Artículos para clasificador central,1
+ProcesosGenerales,11,344,18559,Procesos generales\Transferencias\Exportación\Informes y estadística,Clientes  para clasificador central,1
+ProcesosGenerales,11,2931,19401,Procesos generales\Transferencias\Exportación\Informes y estadística,Resumen de cierres de caja (Solo Facturador),1
+ProcesosGenerales,11,3126,19568,Procesos generales\Transferencias\Exportación\Informes y estadística,Información para R.G. 3685 - Registración de operaciones,1
+ProcesosGenerales,11,7310,20788,Procesos generales\Transferencias\Exportación\Informes y estadística,Información para R.G. 4597 - Libro de IVA digital,1
+ProcesosGenerales,11,474,18367,Procesos generales\Transferencias\Exportación\Gestión central\Ventas,Pedidos,1
+ProcesosGenerales,11,480,18370,Procesos generales\Transferencias\Exportación\Gestión central\Ventas,Remitos,1
+ProcesosGenerales,11,484,18371,Procesos generales\Transferencias\Exportación\Gestión central\Ventas,Comprobantes de facturación,1
+ProcesosGenerales,11,489,18375,Procesos generales\Transferencias\Exportación\Gestión central\Compras,Ordenes de compra,1
+ProcesosGenerales,11,493,18376,Procesos generales\Transferencias\Exportación\Gestión central\Compras,Remitos,1
+ProcesosGenerales,11,497,18377,Procesos generales\Transferencias\Exportación\Gestión central\Compras,Comprobantes de facturación,1
+ProcesosGenerales,11,501,18378,Procesos generales\Transferencias\Exportación\Gestión central\Stock,Movimientos de Stock,1
+ProcesosGenerales,11,505,18379,Procesos generales\Transferencias\Exportación\Gestión central\Tesorería,Transferencia de valores,1
+ProcesosGenerales,11,3225,19624,Procesos generales\Transferencias\Exportación\Gestión central\Tesorería,Transferencia de valores (solo Restô),1
+ProcesosGenerales,11,510,18381,Procesos generales\Transferencias\Importación,Tablas generales,1
+ProcesosGenerales,11,515,18383,Procesos generales\Transferencias\Importación,Saldos actuales,1
+ProcesosGenerales,11,21692,21448,Procesos generales\Transferencias\Importación\Gestión central\Ventas,Pedidos,1
+ProcesosGenerales,11,21693,21449,Procesos generales\Transferencias\Importación\Gestión central\Ventas,Remitos,1
+ProcesosGenerales,11,21694,21450,Procesos generales\Transferencias\Importación\Gestión central\Ventas,Comprobantes de facturación,1
+ProcesosGenerales,11,21698,21454,Procesos generales\Transferencias\Importación\Gestión central\Compras,Ordenes de compra,1
+ProcesosGenerales,11,21699,21455,Procesos generales\Transferencias\Importación\Gestión central\Compras,Remitos,1
+ProcesosGenerales,11,21700,21456,Procesos generales\Transferencias\Importación\Gestión central\Compras,Comprobantes de facturación,1
+ProcesosGenerales,11,519,18384,Procesos generales\Transferencias\Importación,Movimientos de stock,1
+ProcesosGenerales,11,651,18750,Procesos generales\Transferencias\Automatización,Generación de asientos,0
+ProcesosGenerales,11,652,18751,Procesos generales\Transferencias\Automatización,Exportación de asientos,0
+ProcesosGenerales,11,653,18752,Procesos generales\Transferencias\Automatización,Importación de asientos,0
+ProcesosGenerales,11,2704,19180,Procesos generales\Transferencias\Depuración,Depuración de transferencias,1
+ProcesosGenerales,11,1517,1215,Procesos generales\Auditoría,Consulta de auditoría,0
+ProcesosGenerales,11,1518,1216,Procesos generales\Auditoría,Configuración de auditoría,0
+ProcesosGenerales,11,1559,1217,Procesos generales\Auditoría,Depuración de auditoría,0
+ProcesosGenerales,11,21535,21351,Procesos generales\WhatsApp,Teléfonos,1
+ProcesosGenerales,11,21254,21198,Procesos generales\WhatsApp,Parámetros de WhatsApp,1
+ProcesosGenerales,11,21539,21352,Procesos generales\WhatsApp,Chat,1
+ProcesosGenerales,11,21667,21434,Procesos generales\Tango AI,Parámetros de Tango AI,1
+ProcesosGenerales,11,21532,21348,Procesos generales\Tango AI,Chat,1
+ProcesosGenerales,11,21810,21513,Procesos generales\Padrones,Actualización de alícuotas de I.I.B.B. según padrón Santa Fe,1
+ProcesosGenerales,11,21708,21464,Procesos generales\Padrones,Depuración de padrones de IIBB,1
+ProcesosGenerales,11,14230,18861,Procesos generales\Consultas\Legajos,Ficha Live de legajos,1
+ProcesosGenerales,11,17974,18584,Procesos generales\Consultas\Transferencia,Auditoría,1
+ProcesosGenerales,11,2011,18970,Procesos generales\Consultas\Transferencia,Auditoría de transferencia de promociones,1
+ProcesosGenerales,11,20282,21036,Procesos generales\Consultas\Transferencia,Ficha Live de sucursales,1
+ProcesosGenerales,11,655,18754,Procesos generales\Consultas\Contabilidad,Comprobantes con asientos exportados,1
+ProcesosGenerales,11,656,18755,Procesos generales\Consultas\Contabilidad,Comprobantes con asientos importados,1
+ProcesosGenerales,11,2726,19188,Procesos generales\Informes\Soporte magnético,R.G. 3572 - Sujetos vinculados,0
+ProcesosGenerales,11,2866,19305,Procesos generales\Informes\Soporte magnético,R.G. 3685 - Duplicados electrónicos y registración de operaciones,0
+ProcesosGenerales,11,3129,19571,Procesos generales\Informes\Soporte magnético,R.G. 3971 - Reintegro de IVA a turistas del extranjero,0
+ProcesosGenerales,11,21516,21341,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple,Generación de archivos para Portal IVA - IVA Simple,1
+ProcesosGenerales,11,21550,21363,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Gestión,Operaciones que generan Débito fiscal,1
+ProcesosGenerales,11,21551,21364,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Gestión,Operaciones que generan restitución Débito fiscal,1
+ProcesosGenerales,11,21552,21365,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Gestión,Operaciones que generan Crédito fiscal,1
+ProcesosGenerales,11,21553,21366,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Gestión,Operaciones que generan restitución Crédito fiscal,1
+ProcesosGenerales,11,21554,21367,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Gestión,Retenciones,1
+ProcesosGenerales,11,21555,21368,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Gestión,Percepciones,1
+ProcesosGenerales,11,21556,21369,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Gestión,Percepciones aduaneras,1
+ProcesosGenerales,11,21653,21420,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Central,Operaciones que generan Débito fiscal,1
+ProcesosGenerales,11,21655,21422,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Central,Operaciones que generan restitución Débito fiscal,1
+ProcesosGenerales,11,21661,21428,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Central,Operaciones que generan Crédito fiscal,1
+ProcesosGenerales,11,21659,21426,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Central,Operaciones que generan restitución Crédito fiscal,1
+ProcesosGenerales,11,21657,21424,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Central,Retenciones,1
+ProcesosGenerales,11,21663,21430,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Central,Percepciones,1
+ProcesosGenerales,11,21665,21432,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Central,Percepciones aduaneras,1
+ProcesosGenerales,11,21544,21357,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Liquidador de IVA,Operaciones que generan Débito fiscal,1
+ProcesosGenerales,11,21546,21359,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Liquidador de IVA,Operaciones que generan restitución Débito fiscal,1
+ProcesosGenerales,11,21545,21358,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Liquidador de IVA,Operaciones que generan Crédito fiscal,1
+ProcesosGenerales,11,21547,21360,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Liquidador de IVA,Operaciones que generan restitución Crédito fiscal,1
+ProcesosGenerales,11,21543,21356,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Liquidador de IVA,Retenciones,1
+ProcesosGenerales,11,21541,21354,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Liquidador de IVA,Percepciones,1
+ProcesosGenerales,11,21542,21355,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Liquidador de IVA,Percepciones aduaneras,1
+ProcesosGenerales,11,21669,21435,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple,Configuración de relaciones para libro IVA digital,1
+ProcesosGenerales,11,2764,19268,Procesos generales\Informes\Soporte magnético,Resolución nro. 745 AGIP - Ingresos Brutos,0
+Live,53,-10002,1,Live\Mis consultas externas,PEDIDO/COTIZACION,1
+Live,53,-10002,2,Live\Mis consultas externas,"PEDIDOS, COTIZACIONES CON FECHAS",1
+Live,53,-10002,3,Live\Mis consultas externas,COTIZACIONES - 2030 GESTION,1
+Live,53,-10002,4,Live\Mis consultas externas,COTIZACIONES - FZERO CORP,1
+Live,53,-10002,5,Live\Mis consultas externas,COTIZACIONES - FZERO SRL,1
+Live,53,-10002,7,Live\Mis consultas externas,OP/FACTURA - FZERO SRL,1
+Live,53,-10002,8,Live\Mis consultas externas,OP_FAC_AUX - 2030_GESTION,1
+Live,53,-10002,9,Live\Mis consultas externas,OP_FAC_AUX_FZERO_CORP,1
+Live,53,-10002,10,Live\Mis consultas externas,OP_FAC_AUX_FZERO_SRL,1
+Live,53,-10002,11,Live\Mis consultas externas,OP_FAC_AUX_GRINI,1
+Live,53,-10002,12,Live\Mis consultas externas,2030 - FECHAS DE INGRESO Y EGRESO,1
+Live,53,-10002,13,Live\Mis consultas externas,FZERO - FECHAS DE INGRESO Y EGRESO,1
+Live,53,21169,21163,Live,Saldos por cuenta Tango Banking,1
+Live,53,20446,21149,Live,Comparativo de saldos con Tesorería,1
+Live,53,2394,17447,Live,Live,1
+Live,53,11663,18575,Live\Tesorería\Comprobantes,Ficha Live de comprobantes,1
+Live,53,13749,17975,Live\Ventas\Clientes,Ficha Live de clientes,1
+Live,53,11667,18579,Live\Tesorería\Comprobantes,Ficha Live de clasificación de comprobantes,1
+Live,53,11665,18577,Live\Tesorería\Cheques propios,Ficha Live de cheques propios,1
+Live,53,11664,18576,Live\Tesorería\Cheques de terceros,Ficha Live de cheques de terceros,1
+Live,53,14198,18017,Live\Stock\Artículos,Ficha Live de artículos,1
+Live,53,20207,20985,Live\Sueldos\Totales liquidados,Detalle,1
+Live,53,20280,21034,Live\Stock\Movimientos,Ficha Live de depósitos,1
+Live,53,20210,20988,Live\Sueldos\Conceptos liquidados,Detalle,1
+Live,53,14138,18003,Live\Compras\Solicitudes de compra,Ficha Live de solicitudes de compra,1
+Live,53,14201,18020,Live\Stock\Series,Ficha Live de series,1
+Live,53,14093,17991,Live\Ventas\Remitos,Ficha Live de remitos,1
+Live,53,14175,18010,Live\Compras\Remitos,Ficha Live de remitos,1
+Live,53,14116,18000,Live\Compras\Proveedores,Ficha Live de proveedores,1
+Live,53,14070,17986,Live\Ventas\Pedidos,Ficha Live de pedidos,1
+Live,53,14200,18019,Live\Stock\Partidas,Ficha Live de partidas,1
+Live,53,14184,18012,Live\Compras\Cuenta Corriente,Ficha Live de órdenes de pago,1
+Live,53,14154,18005,Live\Compras\Ordenes de compra,Ficha Live de órdenes de compra,1
+Live,53,14202,18021,Live\Stock\Movimientos,Ficha Live de movimientos,1
+Live,53,11668,18580,Live\Tesorería\Cupones,Ficha Live de liquidaciones,1
+Live,53,14230,18861,Live\Procesos generales\Legajos,Ficha Live de legajos,1
+Live,53,14077,17988,Live\Ventas\Facturación,"Ficha Live de facturas, créditos y débitos",1
+Live,53,14162,18007,Live\Compras\Facturación,"Ficha Live de facturas, créditos y débitos",1
+Live,53,12709,19257,Live\Sueldos\Novedades,Ficha Live de embargos,1
+Live,53,11666,18578,Live\Tesorería\Cupones,Ficha Live de cupones,1
+Live,53,14232,18863,Live\Contabilidad\Cuentas,Ficha Live de cuentas contables,1
+Live,53,11662,18574,Live\Tesorería\Cuentas,Ficha Live de cuentas,1
+Live,53,14062,17985,Live\Ventas\Cotizaciones,Ficha Live de cotizaciones,1
+Live,53,21403,21245,Live\Stock\Tango Colectora,Ficha Live de conteos,1
+Live,53,21404,21246,Live\Stock\Tango Colectora,Detalle de conteos,1
+Live,53,21512,21338,Live\Tesorería\Comprobantes,Ficha Live de comprobantes históricos,1
+Live,53,21948,24579,Live\Sueldos\Período de prueba,Legajos con período de prueba notificado,1
+Live,53,21714,21470,Live\Contabilidad\Asientos resumen,Detalle por asiento,1
+Live,53,20144,20949,Live\Compras\Facturación,Ficha Live de conceptos,1
+Live,53,14105,17994,Live\Ventas\Cuenta Corriente,Ficha Live de recibos,1
+Live,53,14000,17982,Live\Ventas\Facturación,Ficha Live de vendedores,1
+Live,53,20230,21008,Live\Stock\Toma de inventario,Ficha Live de toma de inventario,1
+Live,53,20304,21049,Live\Stock\Movimientos,Ficha Live de registración de movimientos de stock,1
+Live,53,20295,21046,Live\Ventas\Clientes,Ficha Live de clientes potenciales,1
+Live,53,21260,21201,Live\Tesorería\Conciliación,Consulta de extractos importados,1
+Live,53,20186,20969,Live\Administrador\Planificador,Copias de seguridad,1
+Live,53,21446,21275,Live\Control de personal\Fichadas,Resumen,1
+Live,53,21444,21273,Live\Control de personal\Partes diarios,Resumen por departamento,1
+Live,53,21414,21253,Live\Control de personal\Legajos,Nómina,1
+Live,53,20177,20960,Live\Administrador\Sistema,Empresas,1
+Live,53,17606,17606,Live\Sueldos\Sueldo bruto y cargas sociales,Sueldo bruto y costo estimado,1
+Live,53,17610,17610,Live\Sueldos\Acreditación de haberes,Resumen,1
+Live,53,17597,17597,Live\Sueldos\Totales liquidados,Resumen por departamento,1
+Live,53,17602,17602,Live\Sueldos\Conceptos liquidados,Resumen,1
+Live,53,17612,17612,Live\Sueldos\Novedades,Mejor sueldo,1
+Live,53,17965,17965,Live\Ventas\Remitos,Consulta,1
+Live,53,17930,17930,Live\Ventas\Pedidos,Consulta,1
+Live,53,17948,17948,Live\Ventas\Cotizaciones,Consulta,1
+Live,53,17942,17942,Live\Ventas\Facturación,Consulta,1
+Live,53,17671,17671,Live\Stock\Artículos,Nómina,1
+Live,53,17690,17690,Live\Stock\Series,Movimientos,1
+Live,53,17721,17721,Live\Compras\Proveedores,Nómina,1
+Live,53,17724,17724,Live\Compras\Remitos,Consulta,1
+Live,53,17687,17687,Live\Stock\Partidas,Movimientos,1
+Live,53,17702,17702,Live\Compras\Ordenes de compra,Consulta,1
+Live,53,17719,17719,Live\Compras\Solicitudes de compra,Consulta,1
+Live,53,11583,18512,Live\Tesorería\Cheques de terceros,Consulta,1
+Live,53,11584,18513,Live\Tesorería\Cheques propios,Consulta,1
+Live,53,11585,18514,Live\Tesorería\Cupones,Consulta,1
+Live,53,10348,18062,Live\Ventas\Precios,por Artículo,1
+Live,53,11440,18465,Live\Ventas\Contabilidad,Detalle por comprobante,1
+Live,53,10939,18441,Live\Compras\Contabilidad,Detalle por comprobante,1
+Live,53,11617,18524,Live\Tesorería\Contabilidad,Detalle por comprobante,1
+Live,53,11658,18570,Live\Tesorería\Cuentas,Nómina,1
+Live,53,17974,18584,Live\Procesos generales\Transferencia,Auditoría,1
+Live,53,336,18602,Live\Sueldos\Contabilidad,Detalle por cuenta,1
+Live,53,559,18702,Live\Contabilidad\Asientos analíticos,Detalle por asiento,1
+Live,53,21327,21327,Live\Contabilidad\Asientos analíticos,Asientos modificados por lote,0
+Live,53,637,18739,Live\Sueldos\Indices y estadísticas,Rotación de Personal General,1
+Live,53,562,18705,Live\Contabilidad\Cuentas,Nómina,1
+Live,53,655,18754,Live\Procesos generales\Contabilidad,Comprobantes con asientos exportados,1
+Live,53,790,18822,Live\Sueldos\Legajos,Nómina,1
+Live,53,12555,19060,Live\Ventas\Cuenta Corriente,Resumen de cuentas,1
+Live,53,12756,19330,Live,Información para F 2002,1
+Live,53,13114,19540,Live\Compras\Precios,Por proveedor,1
+Live,53,13142,19602,Live\Compras\Cuenta Corriente,Resumen de cuentas,1
+Live,53,20079,20925,Live\Sueldos\Conceptos de liquidación,Nómina,1
+Live,53,13183,20736,Live\Ventas\Remitos,Detalle de comprobantes,1
+Live,53,13185,20738,Live\Compras\Remitos,Detalle de comprobantes,1
+Live,53,20208,20986,Live\Compras\Precios,Solicitudes de precios,1
+Live,53,13149,19616,Live\Compras\Cuenta Corriente,Resumen de cuentas - Documentos,1
+Live,53,13139,19599,Live\Compras\Proveedores,Saldos,1
+Live,53,12574,19120,Live\Stock\Partidas,Movimientos detallados por serie,1
+Live,53,12575,19121,Live\Stock\Series,Movimientos detallados por partida,1
+Live,53,2630,19155,Live\Sueldos\Legajos,Nómina (legajos eventuales),1
+Live,53,2087,19021,Live\Sueldos\Impuesto a las ganancias,Deducciones,1
+Live,53,656,18755,Live\Procesos generales\Contabilidad,Comprobantes con asientos importados,1
+Live,53,12481,18922,Live\Ventas\Cotizaciones,Detalle,1
+Live,53,12500,18923,Live\Compras\Ordenes de compra,Detalle,1
+Live,53,2011,18970,Live\Procesos generales\Transferencia,Auditoría de transferencia de promociones,1
+Live,53,12517,18975,Live\Ventas\Precios,Promociones,1
+Live,53,592,18720,Live\Sueldos\Indices y estadísticas,Rotación de Personal por Categorías,1
+Live,53,647,18746,Live\Contabilidad\Cuentas,Jerarquías,1
+Live,53,11825,18638,Live\Tesorería\Cheques propios,Detalle,1
+Live,53,448,18684,Live\Contabilidad\Asientos analíticos,Detalle por cuenta,1
+Live,53,352,18603,Live\Sueldos\Contabilidad,Detalle por auxiliar,1
+Live,53,11456,18478,Live\Tesorería\Contabilidad,Detalle por cuenta,1
+Live,53,10941,18443,Live\Compras\Contabilidad,Detalle por cuenta,1
+Live,53,11591,18520,Live\Tesorería\Comprobantes,Consulta,1
+Live,53,11443,18468,Live\Ventas\Contabilidad,Detalle por cuenta,1
+Live,53,17959,17959,Live\Ventas\Cuenta Corriente,Consulta de recibos,1
+Live,53,11647,18543,Live\Tesorería\Cupones,Consulta de liquidaciones,1
+Live,53,17683,17683,Live\Stock\Movimientos,Consulta,1
+Live,53,17713,17713,Live\Compras\Facturación,Consulta,1
+Live,53,17961,17961,Live\Ventas\Clientes,Nómina,1
+Live,53,17613,17613,Live\Sueldos\Novedades,Ajustes registrados,1
+Live,53,17716,17716,Live\Compras\Solicitudes de compra,Resumen por artículo,1
+Live,53,17598,17598,Live\Sueldos\Totales liquidados,Comparativo,1
+Live,53,17607,17607,Live\Sueldos\Sueldo bruto y cargas sociales,Detalle de adicionales al sueldo del empleado,1
+Live,53,17603,17603,Live\Sueldos\Conceptos liquidados,Comparativo,1
+Live,53,17668,17668,Live\Stock\Artículos,Saldos,1
+Live,53,17751,17751,Live\Tesorería\Cheques de terceros,Ranking de rechazados,1
+Live,53,20231,21009,Live\Stock\Toma de inventario,Consulta de toma de inventario,1
+Live,53,17928,17928,Live\Ventas\Pedidos,Pendientes de facturar,1
+Live,53,17747,17747,Live\Tesorería\Cuentas,Saldos,1
+Live,53,17938,17938,Live\Ventas\Facturación,Ranking de ventas,1
+Live,53,20178,20961,Live\Administrador\Sistema,Servidores,1
+Live,53,20187,20970,Live\Administrador\Planificador,Depuración,1
+Live,53,21451,21277,Live\Control de personal\Fichadas,Resumen de rechazadas,1
+Live,53,21715,21471,Live\Contabilidad\Asientos resumen,Detalle por cuenta,1
+Live,53,21949,24580,Live\Sueldos\Período de prueba,Legajos con modalidad de contratación actualizada,1
+Live,53,21517,21342,Live\Sueldos\Acreditación de haberes,Detalle de acreditaciones eliminadas,1
+Live,53,21716,21472,Live\Contabilidad\Asientos resumen,Detalle por auxiliar,1
+Live,53,20179,20962,Live\Administrador\Sistema,Usuarios,1
+Live,53,17963,17963,Live\Ventas\Remitos,Pendientes de facturar,1
+Live,53,17945,17945,Live\Ventas\Cotizaciones,Resumen,1
+Live,53,17686,17686,Live\Stock\Partidas,Saldos,1
+Live,53,17935,17935,Live\Ventas\Facturación,Ranking por artículo,1
+Live,53,17927,17927,Live\Ventas\Pedidos,Pendientes de remitir,1
+Live,53,20188,20971,Live\Administrador\Planificador,Tareas de automatización contable,1
+Live,53,11823,18636,Live\Tesorería\Cheques de terceros,Detalle,1
+Live,53,17667,17667,Live\Stock\Artículos,Stock faltante,1
+Live,53,17750,17750,Live\Tesorería\Cheques propios,Resumen,1
+Live,53,17706,17706,Live\Compras\Facturación,Ranking de compras,1
+Live,53,17604,17604,Live\Sueldos\Conceptos liquidados,Mes/Año,1
+Live,53,17599,17599,Live\Sueldos\Totales liquidados,Mes/Año,1
+Live,53,17756,17756,Live\Tesorería\Cupones,Resumen,1
+Live,53,17608,17608,Live\Sueldos\Sueldo bruto y cargas sociales,Detalle de tickets,1
+Live,53,17689,17689,Live\Stock\Series,Series Activas,1
+Live,53,17717,17717,Live\Compras\Solicitudes de compra,Pendientes de autorizar,1
+Live,53,17614,17614,Live\Sueldos\Novedades,Novedades registradas,1
+Live,53,17723,17723,Live\Compras\Remitos,Con diferencias,1
+Live,53,17703,17703,Live\Compras\Ordenes de compra,Resumen por artículo,1
+Live,53,17699,17699,Live\Compras\Cuenta Corriente,Consulta de órdenes de pago,1
+Live,53,17684,17684,Live\Stock\Movimientos,Resumen,1
+Live,53,11444,18469,Live\Ventas\Contabilidad,Detalle por auxiliar,1
+Live,53,10949,18445,Live\Compras\Contabilidad,Detalle por auxiliar,1
+Live,53,11500,18480,Live\Tesorería\Contabilidad,Detalle por auxiliar,1
+Live,53,353,18604,Live\Sueldos\Contabilidad,Detalle por subauxiliar,1
+Live,53,560,18703,Live\Contabilidad\Asientos analíticos,Detalle por auxiliar,1
+Live,53,648,18747,Live\Contabilidad\Cuentas,Cuentas no asignadas,1
+Live,53,638,18740,Live\Sueldos\Indices y estadísticas,Rotación de Personal por Departamentos,1
+Live,53,2088,19022,Live\Sueldos\Impuesto a las ganancias,Pagos de deducciones generales,1
+Live,53,12205,18828,Live\Ventas\Clientes,Saldos,1
+Live,53,12480,18874,Live\Tesorería\Comprobantes,Detalle,1
+Live,53,12529,18989,Live\Ventas\Precios,Promociones por sucursal,1
+Live,53,2631,19156,Live\Sueldos\Legajos,Conceptos particulares,1
+Live,53,20204,20982,Live\Stock\Toma de inventario,Ajustes por toma de inventario,1
+Live,53,12720,19276,Live\Ventas\Precios,Historial de precios,1
+Live,53,12576,19122,Live\Stock\Series,Series activas sin partidas relacionadas,1
+Live,53,12577,19123,Live\Stock\Partidas,Partidas con saldo sin series relacionadas,1
+Live,53,2097,19088,Live\Sueldos\Impuesto a las ganancias,"Retenciones, Percepciones y Pagos a cuenta",1
+Live,53,12567,19102,Live\Stock\Movimientos,Detalle de movimientos de stock,1
+Live,53,2094,19028,Live\Sueldos\Totales liquidados,Mes/Año (Costo laboral y sueldo neto),1
+Live,53,639,18741,Live\Sueldos\Indices y estadísticas,Rotación de Personal por Grupos jerárquicos,1
+Live,53,561,18704,Live\Contabilidad\Asientos analíticos,Detalle por subauxiliar,1
+Live,53,12066,18663,Live\Compras\Remitos,Eliminados,1
+Live,53,11826,18639,Live\Tesorería\Cheques propios,Pendientes de debitar,1
+Live,53,11504,18481,Live\Tesorería\Contabilidad,Detalle por subauxiliar,1
+Live,53,11659,18571,Live\Tesorería\Comprobantes,Clasificación,1
+Live,53,11654,18564,Live\Tesorería\Cupones,Proyección de acreditaciones,1
+Live,53,11335,18446,Live\Compras\Contabilidad,Detalle por subauxiliar,1
+Live,53,11445,18470,Live\Ventas\Contabilidad,Detalle por subauxiliar,1
+Live,53,17949,17949,Live\Ventas\Cotizaciones,Resumen por artículo,1
+Live,53,17718,17718,Live\Compras\Solicitudes de compra,Pendientes de recibir,1
+Live,53,17669,17669,Live\Stock\Artículos,Saldos por artículo/cliente,1
+Live,53,17964,17964,Live\Ventas\Remitos,Electrónicos (C.O.T),1
+Live,53,17707,17707,Live\Compras\Facturación,Ranking por artículo,1
+Live,53,17752,17752,Live\Tesorería\Cheques de terceros,Resumen,1
+Live,53,17926,17926,Live\Ventas\Pedidos,Pendientes de aprobación,1
+Live,53,20241,21019,Live\Sueldos\Legajos,Apropiaciones habituales,1
+Live,53,17936,17936,Live\Ventas\Facturación,Facturas pendientes de remitir,1
+Live,53,17693,17693,Live\Compras\Cuenta Corriente,Ranking de acreedores,1
+Live,53,17701,17701,Live\Compras\Ordenes de compra,Pendientes de autorizar,1
+Live,53,17954,17954,Live\Ventas\Cuenta Corriente,Ranking de morosos,1
+Live,53,20180,20963,Live\Administrador\Sistema,Campos adicionales,1
+Live,53,21597,21397,Live\Sueldos\Novedades,Novedades registradas por departamento,1
+Live,53,20389,21097,Live\Administrador\Planificador,Suscripciones,1
+Live,53,21717,21473,Live\Contabilidad\Asientos resumen,Detalle por subauxiliar,1
+Live,53,21616,21407,Live\Sueldos\Novedades,Mejor sueldo por tramo laboral,1
+Live,53,21598,21398,Live\Sueldos\Contabilidad,Contabilización de liquidaciones,1
+Live,53,21599,21399,Live\Sueldos\Contabilidad,Contabilización de liquidaciones pendientes de exportar,1
+Live,53,17946,17946,Live\Ventas\Cotizaciones,Comparativo,1
+Live,53,17951,17951,Live\Ventas\Cuenta Corriente,Ranking de deudores,1
+Live,53,20242,21020,Live\Sueldos\Legajos,Apropiaciones ocasionales,1
+Live,53,17680,17680,Live\Stock\Movimientos,Índice de rotación,1
+Live,53,17694,17694,Live\Compras\Cuenta Corriente,Deudas vencidas,1
+Live,53,17670,17670,Live\Stock\Artículos,Saldos por artículo/proveedor,1
+Live,53,17943,17943,Live\Ventas\Facturación,Detalle de comprobantes,1
+Live,53,10081,18043,Live\Ventas\Pedidos,Detalle de pedidos,1
+Live,53,10091,18051,Live\Compras\Facturación,Detalle de comprobantes,1
+Live,53,10942,18444,Live\Compras\Contabilidad,Contabilización de comprobantes,1
+Live,53,11446,18471,Live\Ventas\Contabilidad,Contabilización de comprobantes,1
+Live,53,10505,18566,Live\Tesorería\Cheques propios,Diferidos pendientes de transferir,1
+Live,53,11457,18479,Live\Tesorería\Contabilidad,Contabilización de comprobantes,1
+Live,53,10558,18567,Live\Tesorería\Comprobantes,Resumen,1
+Live,53,11824,18637,Live\Tesorería\Cheques de terceros,Por Mes / Año,1
+Live,53,640,18742,Live\Sueldos\Indices y estadísticas,Rotación de Personal por Lugar de trabajo,1
+Live,53,649,18748,Live\Contabilidad\Asientos analíticos,Contabilización de comprobantes,1
+Live,53,2095,19029,Live\Sueldos\Totales liquidados,Evolución por departamento,1
+Live,53,12836,19341,Live\Compras\Ordenes de compra,Pendientes de recibir,1
+Live,53,12861,19343,Live\Compras\Ordenes de compra,Pendientes de facturar,1
+Live,53,12869,19352,Live\Compras\Remitos,Pendientes de facturar,1
+Live,53,12742,19307,Live\Ventas\Precios,Precios vigentes a una fecha,1
+Live,53,20080,20926,Live\Sueldos\Impuesto a las ganancias,Análisis remuneraciones RG 5008,1
+Live,53,2096,19030,Live\Sueldos\Totales liquidados,Evolución por grupo jerárquico,1
+Live,53,2090,19024,Live\Sueldos\Impuesto a las ganancias,Tramos de imposición,1
+Live,53,641,18743,Live\Sueldos\Indices y estadísticas,Rotación de Personal por Agrupaciones,1
+Live,53,12180,18756,Live\Tesorería\Cheques de terceros,Detalle por estado,1
+Live,53,11656,18568,Live\Tesorería\Comprobantes,Resumen por cuenta,1
+Live,53,11887,18634,Live\Tesorería\Cheques propios,Cheques propios por banco,1
+Live,53,17681,17681,Live\Stock\Movimientos,Pendientes de ingresar a stock,1
+Live,53,17947,17947,Live\Ventas\Cotizaciones,Por Mes / Año,1
+Live,53,17695,17695,Live\Compras\Cuenta Corriente,Deudas a vencer,1
+Live,53,17929,17929,Live\Ventas\Pedidos,Resumen,1
+Live,53,17933,17933,Live\Ventas\Facturación,Resumen,1
+Live,53,17705,17705,Live\Compras\Facturación,Resumen,1
+Live,53,17953,17953,Live\Ventas\Cuenta Corriente,Deudas vencidas,1
+Live,53,20183,20966,Live\Administrador\Sistema,Roles,1
+Live,53,21497,21323,Live\Tesorería\Contabilidad,Contabilización de comprobantes pendientes de exportar,1
+Live,53,21494,21320,Live\Compras\Contabilidad,Contabilización de comprobantes pendientes de exportar,1
+Live,53,21483,21309,Live\Ventas\Contabilidad,Contabilización de comprobantes pendientes de exportar,1
+Live,53,20184,20967,Live\Administrador\Sistema,Permisos,1
+Live,53,21277,21209,Live\Ventas\Pedidos,Resumen por totales,1
+Live,53,17934,17934,Live\Ventas\Facturación,Resumen por artículo,1
+Live,53,17696,17696,Live\Compras\Cuenta Corriente,Pagos a realizar,1
+Live,53,17955,17955,Live\Ventas\Cuenta Corriente,Deudas a vencer,1
+Live,53,17682,17682,Live\Stock\Movimientos,Ingresados al stock o rechazados,1
+Live,53,17600,17600,Live\Sueldos\Totales liquidados,Sueldo nominal vs. Sueldo liquidado,1
+Live,53,17748,17748,Live\Tesorería\Comprobantes,Resumen por tipo de operación,1
+Live,53,17711,17711,Live\Compras\Facturación,Resumen por artículo,1
+Live,53,11645,18541,Live\Ventas\Contabilidad,Multidimensional de asientos,1
+Live,53,11623,18536,Live\Compras\Contabilidad,Multidimensional de asientos,1
+Live,53,11643,18539,Live\Tesorería\Contabilidad,Multidimensional de asientos,1
+Live,53,642,18744,Live\Sueldos\Indices y estadísticas,Rotación de Personal por Tipos de convenios,1
+Live,53,12717,19270,Live\Compras\Ordenes de compra,Seguimiento de autorización,1
+Live,53,2836,19256,Live\Sueldos\Novedades,Embargos y obligaciones,1
+Live,53,2806,19260,Live\Sueldos\Novedades,Vencimientos de embargos y obligaciones,1
+Live,53,20194,20978,Live\Sueldos\Impuesto a las ganancias,Detalle de ajuste anual,1
+Live,53,12158,18734,Live\Ventas\Facturación,Resumen por kits,1
+Live,53,12648,19232,Live\Ventas\Pedidos,Resumen por kits,1
+Live,53,11249,18526,Live\Tesorería\Transferencia de valores desde sucursales,Valores pendientes de registrar,1
+Live,53,11660,18572,Live\Tesorería\Comprobantes,Ingresos y egresos por cuenta,1
+Live,53,11589,18518,Live\Compras\Ordenes de compra,Plan de entrega / recepciones,1
+Live,53,17698,17698,Live\Compras\Cuenta Corriente,Pagos realizados,1
+Live,53,17931,17931,Live\Ventas\Pedidos,Resumen por artículo,1
+Live,53,17710,17710,Live\Compras\Facturación,Comprobantes con diferencias,1
+Live,53,17952,17952,Live\Ventas\Cuenta Corriente,Cobranzas a realizar,1
+Live,53,20240,21018,Live\Administrador\Sistema,Permisos de usuarios,1
+Live,53,20287,21041,Live\Sueldos\Impuesto a las ganancias,Detalle de ajustes de impuesto a las ganancias,1
+Live,53,17787,17787,Live\Tesorería\Transferencia de valores desde sucursales,Valores ingresados,1
+Live,53,17940,17940,Live\Ventas\Facturación,Por medio de pago,1
+Live,53,21501,21326,Live\Sueldos\Novedades,Retenciones de embargos y obligaciones,1
+Live,53,17958,17958,Live\Ventas\Cuenta Corriente,Cobranzas realizadas,1
+Live,53,11620,18562,Live\Tesorería\Comprobantes,Movimientos conciliados,1
+Live,53,12065,18662,Live\Compras\Facturación,Comprobantes eliminados,1
+Live,53,12655,19238,Live\Compras\Ordenes de compra,Con entregas planificadas vencidas,1
+Live,53,12919,19383,Live\Ventas\Cuenta Corriente,Cobranzas imputadas,1
+Live,53,11892,18635,Live\Tesorería\Comprobantes,Movimientos no conciliados,1
+Live,53,11586,18515,Live\Ventas\Pedidos,Entregas pactadas / reales,1
+Live,53,17708,17708,Live\Compras\Facturación,Comparativo,1
+Live,53,17937,17937,Live\Ventas\Facturación,Comparativo,1
+Live,53,20278,21032,Live\Compras\Ordenes de compra,Auditoría de modificación de precios,1
+Live,53,20312,21057,Live\Sueldos\Novedades,Saldos disponibles por novedad,1
+Live,53,20420,21125,Live\Sueldos\Impuesto a las ganancias,Novedades importadas de SiRADIG,1
+Live,53,20427,21132,Live\Sueldos\Impuesto a las ganancias,Detalle Bonos / Fallos de cajas / Similar naturaleza liquidados,1
+Live,53,20437,21139,Live\Sueldos\Impuesto a las ganancias,Ultimas novedades importadas de SiRADIG,1
+Live,53,20429,21134,Live\Sueldos\Impuesto a las ganancias,Detalles compensación análoga,1
+Live,53,11621,18563,Live\Tesorería\Comprobantes,Pendientes de registrar,1
+Live,53,17941,17941,Live\Ventas\Facturación,Comparativo por artículo,1
+Live,53,17712,17712,Live\Compras\Facturación,Comparativo por artículo,1
+Live,53,17969,17969,Live\Ventas\Cuenta Corriente,Cobranzas por medio de pago,1
+Live,53,12651,19236,Live\Ventas\Pedidos,Pedidos con kits sin detalle de composición,1
+Live,53,13145,19605,Live\Compras\Cuenta Corriente,Diferencias de cambio pendientes,1
+Live,53,13157,19630,Live\Ventas\Pedidos,Pedidos por origen,1
+Live,53,17697,17697,Live\Compras\Cuenta Corriente,C. P. R. pendientes,1
+Live,53,10083,18045,Live\Ventas\Facturación,Consolidado de compras y ventas,1
+Live,53,11657,18569,Live\Tesorería\Comprobantes,Histórico de comprobantes,1
+Live,53,10921,18198,Live\Ventas\Cuenta Corriente,Facturas de crédito,1
+Live,53,21396,21238,Live\Sueldos\Impuesto a las ganancias,Conceptos imposibles de informar en F.1359,1
+Live,53,17709,17709,Live\Compras\Facturación,Por Mes / Año,1
+Live,53,17956,17956,Live\Ventas\Cuenta Corriente,Diferencias de cambio pendientes de emitir,1
+Live,53,17939,17939,Live\Ventas\Facturación,Por Mes / Año,1
+Live,53,21398,21240,Live\Sueldos\Impuesto a las ganancias,Importes en empleos externos imposibles de informar en F.1359,1
+Live,53,20393,21099,Live\Ventas\Pedidos,Pedidos con promociones fuera de vigencia,1
+Live,53,11669,18581,Live\Tesorería\Comprobantes,Histórico de comprobantes por cuenta,1
+Live,53,10084,18046,Live\Compras\Facturación,Consolidado de compras y ventas,1
+Live,53,13151,19618,Live\Compras\Cuenta Corriente,Diferencia en los estados para proveedores cláusula,1
+Live,53,19688,20774,Live\Compras\Cuenta Corriente,Comprobantes MiPymes,1
+Live,53,17957,17957,Live\Ventas\Cuenta Corriente,C. P. R. pendientes,1
+Live,53,12548,19053,Live\Compras\Facturación,Comprobantes no ingresados al Libro IVA de Compras,1
+Live,53,20394,21100,Live\Ventas\Pedidos,Pedidos con promociones pendientes de facturar,1
+Live,53,21424,21260,Live\Sueldos\Impuesto a las ganancias,Importes en otros legajos imposibles de informar en F.1359,1
+Live,53,20442,21145,Live\Tesorería\Comprobantes,Auditoría ingreso masivo de movimientos de Tesorería,1
+Live,53,21425,21261,Live\Sueldos\Impuesto a las ganancias,Importes en acumulados fijos imposibles de informar en F.1359,1
+Live,53,20395,21101,Live\Ventas\Pedidos,Pedidos con promociones por estado,1
+Live,53,10948,18826,Live\Ventas\Cuenta Corriente,Notas de débito de interés por mora,1
+Live,53,12863,19345,Live\Compras\Facturación,Facturas pendientes de recibir,1
+Live,53,20396,21102,Live\Ventas\Pedidos,Pedidos con promociones por tipo,1
+Live,53,19687,20773,Live\Ventas\Cuenta Corriente,Comprobantes MiPymes,1
+Live,53,20282,21036,Live\Procesos generales\Transferencia,Ficha Live de sucursales,1
+Live,53,12895,19360,Live\Ventas\Facturación,Resumen semanal de ventas por medio de pago,1
+Live,53,12898,19364,Live\Ventas\Facturación,Resumen semanal de comprobantes con más de una venta,1
+Live,53,19936,20859,Live\Ventas\Facturación,Ventas por origen,1
+Live,53,20192,20976,Live\Ventas\Facturación,Cantidad de comprobantes por tipo de talonario,1
+Live,53,12916,19379,Live\Ventas\Facturación,Ticket promedio diario,1
+Live,53,20330,21075,Live\Ventas\Pedidos\Pedidos automáticos,Ficha Live de modelos de pedidos,1
+Live,53,19933,20856,Live\Ventas\Tango nexo\Pedidos de Tango Tiendas,Ficha Live de órdenes de Tango Tiendas,1
+Live,53,20402,21108,Live\Sueldos\Novedades\Vacaciones,Saldos de vacaciones,1
+Live,53,20426,21131,Live\Ventas\Pedidos\Pedidos automáticos,Detalle de modelos,1
+Live,53,21453,21279,Live\Control de personal\Partes diarios\Horas,Resumen por departamento,1
+Live,53,17677,17677,Live\Stock\Valorización\Existencias,Por precio de reposición,1
+Live,53,17674,17674,Live\Stock\Valorización\Rentabilidad bruta,Por precio de reposición,1
+Live,53,21490,21316,Live\Control de personal\Partes diarios\Tareas realizadas,Resumen por departamento,1
+Live,53,21485,21311,Live\Control de personal\Partes diarios\Horas extras computadas,Resumen por departamento,1
+Live,53,21470,21296,Live\Control de personal\Partes diarios\Compensaciones,Resumen,1
+Live,53,21461,21287,Live\Control de personal\Partes diarios\Anormalidades y ausencias,Resumen de reales,1
+Live,53,13112,19536,Live\Ventas\Tango nexo\Cobranzas,Solicitudes de pago electrónico,1
+Live,53,12716,19267,Live\Ventas\Tango nexo\Pedidos de Tango Tiendas,Ordenes,1
+Live,53,12553,19058,Live\Ventas\Tango nexo\Clientes,Clientes que no publican en Tango nexo,1
+Live,53,12534,19039,Live\Ventas\Facturación\Facturador,Notas de crédito por promoción de tarjetas,1
+Live,53,12542,19047,Live\Ventas\Cuenta Corriente\Cobranzas masivas,Facturas no exportadas a entidades recaudadoras,1
+Live,53,12546,19051,Live\Ventas\Cuenta Corriente\Cobranzas masivas,Historial de exportaciones a entidades recaudadoras,1
+Live,53,12554,19059,Live\Ventas\Tango nexo\Clientes,Clientes que publican en Tango nexo,1
+Live,53,12616,19223,Live\Ventas\Facturación\Facturador,Notas de crédito pendientes de generar por pago con tarjeta de regalo,1
+Live,53,13106,19487,Live\Ventas\Tango nexo\Cobranzas,Pagos no procesados,1
+Live,53,19932,20855,Live\Ventas\Tango nexo\Pedidos de Tango Tiendas,Detalle de ordenes,1
+Live,53,21454,21280,Live\Control de personal\Partes diarios\Horas,Resumen por horario,1
+Live,53,21467,21293,Live\Control de personal\Partes diarios\Anormalidades y ausencias,Detalle de reales,1
+Live,53,21492,21318,Live\Control de personal\Partes diarios\Tareas realizadas,Detalle por departamento,1
+Live,53,21481,21307,Live\Control de personal\Partes diarios\Compensaciones,Detalle de descuentos compensados por día,1
+Live,53,21486,21312,Live\Control de personal\Partes diarios\Horas extras computadas,Detalle por departamento,1
+Live,53,17675,17675,Live\Stock\Valorización\Rentabilidad bruta,Por precio de última compra,1
+Live,53,17678,17678,Live\Stock\Valorización\Existencias,Por precio de última compra,1
+Live,53,20403,21109,Live\Sueldos\Novedades\Vacaciones,Tramos de vacaciones,1
+Live,53,20320,21065,Live\Ventas\Pedidos\Pedidos automáticos,Detalle de novedades,1
+Live,53,20318,21063,Live\Ventas\Pedidos\Pedidos automáticos,Modelos por cliente,1
+Live,53,21471,21297,Live\Control de personal\Partes diarios\Compensaciones,Detalle de horas pendientes a compensar,1
+Live,53,21487,21313,Live\Control de personal\Partes diarios\Horas extras computadas,Resumen por horario,1
+Live,53,21491,21317,Live\Control de personal\Partes diarios\Tareas realizadas,Resumen por horario,1
+Live,53,21462,21288,Live\Control de personal\Partes diarios\Anormalidades y ausencias,Resumen de computadas,1
+Live,53,19930,20853,Live\Ventas\Tango nexo\Pedidos de Tango Tiendas,Ordenes por tienda,1
+Live,53,12566,19087,Live\Ventas\Cuenta Corriente\Cobranzas masivas,Cobranzas por entidad recaudadora,1
+Live,53,12522,18982,Live\Ventas\Tango nexo\Clientes,Comprobantes pendientes de leer,1
+Live,53,12657,19241,Live\Ventas\Facturación\Facturador,Promociones facturadas por código de promoción,1
+Live,53,12658,19242,Live\Ventas\Facturación\Facturador,Promociones facturadas por tipo de promoción,1
+Live,53,12540,19045,Live\Ventas\Cuenta Corriente\Cobranzas masivas,Cobranzas no procesadas,1
+Live,53,12520,18980,Live\Ventas\Tango nexo\Clientes,Comprobantes leídos,1
+Live,53,19912,20843,Live\Ventas\Tango nexo\Pedidos de Tango Tiendas,Ordenes pendientes de facturar,1
+Live,53,12996,19455,Live\Stock\Valorización\Costos,Evolución de costos,1
+Live,53,21468,21294,Live\Control de personal\Partes diarios\Anormalidades y ausencias,Detalle de computadas,1
+Live,53,21475,21301,Live\Control de personal\Partes diarios\Compensaciones,Detalle de horas extras sobrantes,1
+Live,53,21488,21314,Live\Control de personal\Partes diarios\Horas extras computadas,Detalle por horario,1
+Live,53,21493,21319,Live\Control de personal\Partes diarios\Tareas realizadas,Detalle por horario,1
+Live,53,20440,21143,Live\Ventas\Pedidos\Pedidos automáticos,Clientes sin modelo,1
+Live,53,20441,21144,Live\Ventas\Pedidos\Pedidos automáticos,Clientes sin modelo vigente,1
+Live,53,21476,21302,Live\Control de personal\Partes diarios\Compensaciones,Detalle de horas extras eliminadas,1
+Live,53,13094,19472,Live\Stock\Valorización\Costos,Actuales,1
+Live,53,19914,20845,Live\Ventas\Tango nexo\Pedidos de Tango Tiendas,Ordenes pendientes de remitir,1
+Live,53,12544,19049,Live\Ventas\Cuenta Corriente\Cobranzas masivas,Historial de generaciones masivas de recibos,1
+Live,53,12662,19243,Live\Ventas\Facturación\Facturador,Promociones facturadas por año / mes / día,1
+Live,53,12663,19244,Live\Ventas\Facturación\Facturador,Resumen por artículo con promociones,1
+Live,53,19924,20847,Live\Ventas\Tango nexo\Pedidos de Tango Tiendas,Detalle de ordenes pendientes de facturar,1
+Live,53,20372,21093,Live\Ventas\Pedidos\Pedidos automáticos,Pendientes de generar,1
+Live,53,20326,21071,Live\Ventas\Pedidos\Pedidos automáticos,Historial de generación de pedidos,1
+Live,53,19926,20849,Live\Ventas\Tango nexo\Pedidos de Tango Tiendas,Detalle de ordenes pendientes de remitir,1
+Live,53,12664,19245,Live\Ventas\Facturación\Facturador,Resumen de ventas con tarjetas de regalo,1
+Live,53,19928,20851,Live\Ventas\Tango nexo\Pedidos de Tango Tiendas,Seguimiento de ordenes detallado,1
+Live,53,12889,19357,Live\Ventas\Facturación\Facturador,Resumen semanal de ventas,1
+Live,53,12734,19296,Live\Ventas\Precios\Auditoría,Cotizaciones,1
+Live,53,12738,19300,Live\Ventas\Precios\Auditoría,Pedidos,1
+Live,53,12813,19338,Live\Ventas\Tango nexo\Pedidos de Tango Tiendas,Pagos,1
+Live,53,12729,19290,Live\Ventas\Precios\Auditoría,Facturación,1
+Live,53,20190,20984,Live\Ventas\Tango nexo\Pedidos de Tango Tiendas,Ordenes canceladas,1
+Live,53,13118,19555,Live\Ventas\Facturación\Facturador,Reportes fiscales (Nueva tecnología),1
+Live,53,21766,21502,Live\Compras\Cuenta Corriente\Retenciones,Retenciones de Ingresos Brutos - ARBA,1
+Live,53,21846,24531,Live\Compras\Cuenta Corriente\Retenciones,Retenciones anuladas ARBA,1
+Live,53,19965,20883,Live\Ventas\Facturación\Facturador,Resultados de facturación automática de pedidos de Tango Tiendas,1
+Live,53,21234,21187,Live\Ventas\Facturación\Facturador\Procesos de cierre,Resumen de saldos por caja,1
+Live,53,21237,21190,Live\Ventas\Facturación\Facturador\Procesos de cierre,Resumen de cierres de caja,1
+Live,53,12974,19420,Live\Ventas\Facturación\Facturador\Procesos de cierre,Resumen de cierres Z,1
+Live,53,12975,19421,Live\Ventas\Facturación\Facturador\Procesos de cierre,Diferencias con cierres Z,1
+Live,53,21653,21420,Live,Operaciones que generan Débito fiscal,1
+Live,53,21550,21363,Live,Operaciones que generan Débito fiscal,1
+Live,53,21544,21357,Live,Operaciones que generan Débito fiscal,1
+Live,53,21551,21364,Live,Operaciones que generan restitución Débito fiscal,1
+Live,53,21546,21359,Live,Operaciones que generan restitución Débito fiscal,1
+Live,53,21655,21422,Live,Operaciones que generan restitución Débito fiscal,1
+Live,53,21661,21428,Live,Operaciones que generan Crédito fiscal,1
+Live,53,21552,21365,Live,Operaciones que generan Crédito fiscal,1
+Live,53,21545,21358,Live,Operaciones que generan Crédito fiscal,1
+Live,53,21547,21360,Live,Operaciones que generan restitución Crédito fiscal,1
+Live,53,21553,21366,Live,Operaciones que generan restitución Crédito fiscal,1
+Live,53,21659,21426,Live,Operaciones que generan restitución Crédito fiscal,1
+Live,53,21657,21424,Live,Retenciones,1
+Live,53,21554,21367,Live,Retenciones,1
+Live,53,21543,21356,Live,Retenciones,1
+Live,53,21541,21354,Live,Percepciones,1
+Live,53,21555,21368,Live,Percepciones,1
+Live,53,21663,21430,Live,Percepciones,1
+Live,53,21665,21432,Live,Percepciones aduaneras,1
+Live,53,21556,21369,Live,Percepciones aduaneras,1
+Live,53,21542,21355,Live,Percepciones aduaneras,1
+Live,53,-10001,-10001,Live,Administrador de mis carpetas personalizadas,1
+Live,53,-4,-4,Live,Mis suscripciones,1
+Live,53,-3000,-3000,Live,Live desktop,0
+Administrador,51,1821,2125,Administrador\Seguridad,Usuarios,1
+Administrador,51,1570,2127,Administrador\Seguridad,Roles,1
+Administrador,51,1714,2133,Administrador\Seguridad,Permisos,1
+Administrador,51,3346,20672,Administrador\Licencia,Instalar licencia,1
+Administrador,51,19840,20824,Administrador\Licencia,Datos de Licencia,1
+Administrador,51,3437,20704,Administrador\Licencia,Ingresar cuota,1
+Administrador,51,3438,20705,Administrador\Licencia,Habilitación de telellave,1
+Administrador,51,19805,20811,Administrador\Licencia,Habilitación de Llave Virtual Offline,1
+Administrador,51,1418,2126,Administrador\Empresas,Empresas,1
+Administrador,51,3359,20678,Administrador\Empresas,Compactar base de datos,1
+Administrador,51,3358,20677,Administrador\Empresas\Copia de seguridad,Crear nueva copia de seguridad,1
+Administrador,51,19785,20807,Administrador\Empresas\Copia de seguridad,Restaurar empresa,1
+Administrador,51,3366,20679,Administrador\Empresas,Restablecer configuración técnica,1
+Administrador,51,3434,20701,Administrador\Empresas,Configuración de decimales,1
+Administrador,51,3435,20702,Administrador\Empresas,Convertir,1
+Administrador,51,3436,20703,Administrador\Empresas,Instalar actualizaciones,1
+Administrador,51,1593,2131,Administrador\Empresas,Servidores de bases de datos,1
+Administrador,51,19771,20802,Administrador\Empresas,Verificar estructura,1
+Administrador,51,20077,20923,Administrador\Empresas,Copiar campos adicionales,1
+Administrador,51,19780,20805,Administrador\Servicios,Monitoreo de servicios,1
+Administrador,51,3237,19638,Administrador\Servicios\Planificador,Frecuencias,1
+Administrador,51,19735,20787,Administrador\Servicios\Planificador,Tareas de automatización de Factura de crédito de compras,1
+Administrador,51,19781,20806,Administrador\Servicios\Planificador,Tareas de automatización de Factura de crédito de ventas,1
+Administrador,51,19786,20808,Administrador\Servicios\Planificador,Tareas de automatización de Central,1
+Administrador,51,3263,19648,Administrador\Servicios\Planificador,Tareas de copia de seguridad,1
+Administrador,51,3267,20648,Administrador\Servicios\Planificador,Tareas de automatización de listas de precios de ventas,1
+Administrador,51,3271,20649,Administrador\Servicios\Planificador,Tareas de depuración,1
+Administrador,51,3283,20652,Administrador\Servicios\Planificador,Terminales para tareas,1
+Administrador,51,20195,20979,Administrador\Servicios\Planificador,Tareas de automatización de obtención de CAEA,1
+Administrador,51,20199,20980,Administrador\Servicios\Planificador,Tareas de automatización de informar CAEA,1
+Administrador,51,20390,21098,Administrador\Servicios\Planificador,Suscripciones,1
+Administrador,51,20177,20960,Administrador\Consultas\Sistema,Empresas,1
+Administrador,51,20178,20961,Administrador\Consultas\Sistema,Servidores,1
+Administrador,51,20179,20962,Administrador\Consultas\Sistema,Usuarios,1
+Administrador,51,20180,20963,Administrador\Consultas\Sistema,Campos adicionales,1
+Administrador,51,20183,20966,Administrador\Consultas\Sistema,Roles,1
+Administrador,51,20184,20967,Administrador\Consultas\Sistema,Permisos,1
+Administrador,51,20240,21018,Administrador\Consultas\Sistema,Permisos de usuarios,1
+Administrador,51,20186,20969,Administrador\Consultas\Planificador,Copias de seguridad,1
+Administrador,51,20187,20970,Administrador\Consultas\Planificador,Depuración,1
+Administrador,51,20188,20971,Administrador\Consultas\Planificador,Tareas de automatización contable,1
+Administrador,51,20389,21097,Administrador\Consultas\Planificador,Suscripciones,1
+Administrador,51,2299,10567,Administrador\Herramientas,Consultas externas,0
+Administrador,51,5012,20912,Administrador\Herramientas\Mis consultas,Exportar,0
+Administrador,51,5013,20913,Administrador\Herramientas\Mis consultas,Importar,0
+Administrador,51,1728,2135,Administrador\Herramientas,Impresoras,0
+Administrador,51,1595,2132,Administrador\Herramientas,Fuentes de actualización,1
+Administrador,51,1571,2128,Administrador\Herramientas,Monitoreo de terminales,0
+Administrador,51,1417,2136,Administrador\Herramientas,Bases de datos,0
+Administrador,51,1858,7858,Administrador\Herramientas,Reportes,0
+Administrador,51,5000,20793,Administrador\Herramientas,Transferencia de información entre empresas,0
+Administrador,51,5018,20927,Administrador\Herramientas,Verificar campos adicionales,0
+Administrador,51,5030,21021,Administrador\Herramientas,Copia de campos adicionales (procesos no migrados),0
+AplicacionesNexo,10026,19668,20766,Aplicaciones nexo,Backup,1
+AplicacionesNexo,10026,19663,20761,Aplicaciones nexo,Clientes,1
+AplicacionesNexo,10026,19669,20767,Aplicaciones nexo,Cobranzas,1
+AplicacionesNexo,10026,19672,20770,Aplicaciones nexo,Connect,1
+AplicacionesNexo,10026,20154,20953,Aplicaciones nexo,Empleados,1
+AplicacionesNexo,10026,19665,20763,Aplicaciones nexo,Fichadas,1
+AplicacionesNexo,10026,19664,20762,Aplicaciones nexo,Reportes,1
+AplicacionesNexo,10026,19667,20765,Aplicaciones nexo,Tablero,1
+AplicacionesNexo,10026,19671,20769,Aplicaciones nexo,Tangonet,1
+AplicacionesNexo,10026,19670,20768,Aplicaciones nexo,Tiendas,1
+AplicacionesNexo,10026,19666,20764,Aplicaciones nexo,Update,1

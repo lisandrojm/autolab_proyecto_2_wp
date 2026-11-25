@@ -1,0 +1,349 @@
+{
+  "title": "Percepciones",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"PERCEPCION_VENTAS\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_PERCEPCION_VENTAS\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_PERCEPCION_VENTAS\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 2,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESCRIPCIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 30,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIP_IMPUES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 2,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_REGIM\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"JUR_IMPUES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_GVA18\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"LEYENDA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_GVA147\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CODIGO_AFIP_PERCEPCION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"MIN_NO_IMP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"MIN_IMPUES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"METODO_MINIMO_PERCEPCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ACUMULA_BASE_CALCULO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"CM_COEFICIENTE_MINIMO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"ES_PERCEP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIP_CALCU\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_IMPUES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 2,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"PERCEPCION_VENTAS_BASE_CALCULO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/PERCEPCION_VENTAS_BASE_CALCULO\"\r\n      }\r\n    },\r\n    \"PERCEPCION_VENTAS_ALICUOTA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/PERCEPCION_VENTAS_ALICUOTA\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"PERCEPCION_VENTAS_BASE_CALCULO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_BASE_CALCULO_PERCEPCION\",\r\n        \"MINIMO_BASE_CALCULO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_BASE_CALCULO_PERCEPCION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"MINIMO_BASE_CALCULO\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"IMP_FIJO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"ID_PERCEPCION_VENTAS_RELACIONADO\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_GVA150\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"PERCEPCION_VENTAS_ALICUOTA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"COD_ALICUO\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"DES_ALICUO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 30,\r\n          \"minLength\": 0\r\n        },\r\n        \"PORCENTAJE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"PADRON\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"GRUPO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 2,\r\n          \"minLength\": 0\r\n        },\r\n        \"LETRA_SIRCIP\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class PERCEPCION_VENTAS_BASE_CALCULO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_BASE_CALCULO_PERCEPCION\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_BASE_CALCULO_PERCEPCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MINIMO_BASE_CALCULO\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal MINIMO_BASE_CALCULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMP_FIJO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMP_FIJO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERCEPCION_VENTAS_RELACIONADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_PERCEPCION_VENTAS_RELACIONADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA150\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA150 { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class PERCEPCION_VENTAS_ALICUOTA\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_ALICUO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? COD_ALICUO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DES_ALICUO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string DES_ALICUO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORCENTAJE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORCENTAJE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PADRON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? PADRON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GRUPO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string GRUPO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LETRA_SIRCIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string LETRA_SIRCIP { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class PERCEPCION_VENTAS\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_PERCEPCION_VENTAS\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string COD_PERCEPCION_VENTAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESCRIPCIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string DESCRIPCIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIP_IMPUES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string TIP_IMPUES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_REGIM\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_REGIM { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"JUR_IMPUES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string JUR_IMPUES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA18\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA18 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string LEYENDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA147\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA147 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CODIGO_AFIP_PERCEPCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CODIGO_AFIP_PERCEPCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MIN_NO_IMP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? MIN_NO_IMP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MIN_IMPUES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? MIN_IMPUES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"METODO_MINIMO_PERCEPCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string METODO_MINIMO_PERCEPCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACUMULA_BASE_CALCULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string ACUMULA_BASE_CALCULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CM_COEFICIENTE_MINIMO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CM_COEFICIENTE_MINIMO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ES_PERCEP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string ES_PERCEP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIP_CALCU\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIP_CALCU { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_IMPUES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string COD_IMPUES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERCEPCION_VENTAS_BASE_CALCULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<PERCEPCION_VENTAS_BASE_CALCULO> PERCEPCION_VENTAS_BASE_CALCULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERCEPCION_VENTAS_ALICUOTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<PERCEPCION_VENTAS_ALICUOTA> PERCEPCION_VENTAS_ALICUOTA { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface PERCEPCION_VENTAS_BASE_CALCULO {\n    ID_BASE_CALCULO_PERCEPCION: number;\n    MINIMO_BASE_CALCULO: number;\n    IMP_FIJO: number | undefined;\n    ID_PERCEPCION_VENTAS_RELACIONADO: number | undefined;\n    ID_GVA150: number | undefined;\n}\n\nexport interface PERCEPCION_VENTAS_ALICUOTA {\n    COD_ALICUO: number | undefined;\n    DES_ALICUO: string | undefined;\n    PORCENTAJE: number | undefined;\n    PADRON: number | undefined;\n    GRUPO: string | undefined;\n    LETRA_SIRCIP: string | undefined;\n}\n\nexport interface PERCEPCION_VENTAS {\n    COD_PERCEPCION_VENTAS: string;\n    DESCRIPCIO: string | undefined;\n    TIP_IMPUES: string | undefined;\n    COD_REGIM: string | undefined;\n    JUR_IMPUES: string | undefined;\n    ID_GVA18: number | undefined;\n    LEYENDA: string | undefined;\n    ID_GVA147: number | undefined;\n    ID_CODIGO_AFIP_PERCEPCION: number | undefined;\n    MIN_NO_IMP: number | undefined;\n    MIN_IMPUES: number | undefined;\n    METODO_MINIMO_PERCEPCION: string | undefined;\n    ACUMULA_BASE_CALCULO: string | undefined;\n    CM_COEFICIENTE_MINIMO: number | undefined;\n    ES_PERCEP: string | undefined;\n    TIP_CALCU: string | undefined;\n    COD_IMPUES: string | undefined;\n    OBSERVACIONES: string | undefined;\n    PERCEPCION_VENTAS_BASE_CALCULO: PERCEPCION_VENTAS_BASE_CALCULO[] | undefined;\n    PERCEPCION_VENTAS_ALICUOTA: PERCEPCION_VENTAS_ALICUOTA[] | undefined;\n}",
+          "example": {
+            "COD_PERCEPCION_VENTAS": "",
+            "DESCRIPCIO": "",
+            "TIP_IMPUES": "IB",
+            "COD_REGIM": "",
+            "JUR_IMPUES": "P",
+            "ID_GVA18": 0,
+            "LEYENDA": "",
+            "ID_GVA147": 0,
+            "ID_CODIGO_AFIP_PERCEPCION": 0,
+            "MIN_NO_IMP": 0,
+            "MIN_IMPUES": 0,
+            "METODO_MINIMO_PERCEPCION": "A",
+            "ACUMULA_BASE_CALCULO": "N",
+            "CM_COEFICIENTE_MINIMO": 0,
+            "ES_PERCEP": "S",
+            "TIP_CALCU": "",
+            "COD_IMPUES": null,
+            "OBSERVACIONES": null,
+            "PERCEPCION_VENTAS_BASE_CALCULO": [
+              {
+                "ID_BASE_CALCULO_PERCEPCION": 0,
+                "MINIMO_BASE_CALCULO": 0,
+                "IMP_FIJO": 0,
+                "ID_PERCEPCION_VENTAS_RELACIONADO": 0,
+                "ID_GVA150": 0
+              }
+            ],
+            "PERCEPCION_VENTAS_ALICUOTA": [
+              {
+                "COD_ALICUO": 0,
+                "DES_ALICUO": null,
+                "PORCENTAJE": 0,
+                "PADRON": 0,
+                "GRUPO": null,
+                "LETRA_SIRCIP": null
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"PERCEPCION_VENTAS\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_PERCEPCION_VENTAS\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_PERCEPCION_VENTAS\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_PERCEPCION_VENTAS\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 2,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESCRIPCIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 30,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIP_IMPUES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 2,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_REGIM\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"JUR_IMPUES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_GVA18\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"LEYENDA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_GVA147\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CODIGO_AFIP_PERCEPCION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"MIN_NO_IMP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"MIN_IMPUES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"METODO_MINIMO_PERCEPCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ACUMULA_BASE_CALCULO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"CM_COEFICIENTE_MINIMO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"ES_PERCEP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIP_CALCU\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_IMPUES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 2,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"PERCEPCION_VENTAS_BASE_CALCULO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/PERCEPCION_VENTAS_BASE_CALCULO\"\r\n      }\r\n    },\r\n    \"PERCEPCION_VENTAS_ALICUOTA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/PERCEPCION_VENTAS_ALICUOTA\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"PERCEPCION_VENTAS_BASE_CALCULO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_BASE_CALCULO_PERCEPCION\",\r\n        \"MINIMO_BASE_CALCULO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_PERCEPCION_VENTAS_BASE_CALCULO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_BASE_CALCULO_PERCEPCION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"MINIMO_BASE_CALCULO\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"IMP_FIJO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"ID_PERCEPCION_VENTAS_RELACIONADO\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_GVA150\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"PERCEPCION_VENTAS_ALICUOTA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_PERCEPCION_VENTAS_ALICUOTA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_ALICUO\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"DES_ALICUO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 30,\r\n          \"minLength\": 0\r\n        },\r\n        \"PORCENTAJE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"PADRON\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"GRUPO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 2,\r\n          \"minLength\": 0\r\n        },\r\n        \"LETRA_SIRCIP\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class PERCEPCION_VENTAS_BASE_CALCULO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_PERCEPCION_VENTAS_BASE_CALCULO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERCEPCION_VENTAS_BASE_CALCULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_BASE_CALCULO_PERCEPCION\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_BASE_CALCULO_PERCEPCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MINIMO_BASE_CALCULO\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal MINIMO_BASE_CALCULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMP_FIJO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMP_FIJO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERCEPCION_VENTAS_RELACIONADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_PERCEPCION_VENTAS_RELACIONADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA150\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA150 { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class PERCEPCION_VENTAS_ALICUOTA\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_PERCEPCION_VENTAS_ALICUOTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERCEPCION_VENTAS_ALICUOTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_ALICUO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? COD_ALICUO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DES_ALICUO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string DES_ALICUO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORCENTAJE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORCENTAJE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PADRON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? PADRON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GRUPO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string GRUPO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LETRA_SIRCIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string LETRA_SIRCIP { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class PERCEPCION_VENTAS\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_PERCEPCION_VENTAS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERCEPCION_VENTAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_PERCEPCION_VENTAS\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string COD_PERCEPCION_VENTAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESCRIPCIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string DESCRIPCIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIP_IMPUES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string TIP_IMPUES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_REGIM\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_REGIM { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"JUR_IMPUES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string JUR_IMPUES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA18\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA18 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string LEYENDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA147\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA147 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CODIGO_AFIP_PERCEPCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CODIGO_AFIP_PERCEPCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MIN_NO_IMP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? MIN_NO_IMP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MIN_IMPUES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? MIN_IMPUES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"METODO_MINIMO_PERCEPCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string METODO_MINIMO_PERCEPCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACUMULA_BASE_CALCULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string ACUMULA_BASE_CALCULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CM_COEFICIENTE_MINIMO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CM_COEFICIENTE_MINIMO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ES_PERCEP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string ES_PERCEP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIP_CALCU\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIP_CALCU { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_IMPUES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string COD_IMPUES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERCEPCION_VENTAS_BASE_CALCULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<PERCEPCION_VENTAS_BASE_CALCULO> PERCEPCION_VENTAS_BASE_CALCULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERCEPCION_VENTAS_ALICUOTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<PERCEPCION_VENTAS_ALICUOTA> PERCEPCION_VENTAS_ALICUOTA { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface PERCEPCION_VENTAS_BASE_CALCULO {\n    ID_PERCEPCION_VENTAS_BASE_CALCULO: number;\n    ID_BASE_CALCULO_PERCEPCION: number;\n    MINIMO_BASE_CALCULO: number;\n    IMP_FIJO: number | undefined;\n    ID_PERCEPCION_VENTAS_RELACIONADO: number | undefined;\n    ID_GVA150: number | undefined;\n}\n\nexport interface PERCEPCION_VENTAS_ALICUOTA {\n    ID_PERCEPCION_VENTAS_ALICUOTA: number;\n    COD_ALICUO: number | undefined;\n    DES_ALICUO: string | undefined;\n    PORCENTAJE: number | undefined;\n    PADRON: number | undefined;\n    GRUPO: string | undefined;\n    LETRA_SIRCIP: string | undefined;\n}\n\nexport interface PERCEPCION_VENTAS {\n    ID_PERCEPCION_VENTAS: number;\n    COD_PERCEPCION_VENTAS: string;\n    DESCRIPCIO: string | undefined;\n    TIP_IMPUES: string | undefined;\n    COD_REGIM: string | undefined;\n    JUR_IMPUES: string | undefined;\n    ID_GVA18: number | undefined;\n    LEYENDA: string | undefined;\n    ID_GVA147: number | undefined;\n    ID_CODIGO_AFIP_PERCEPCION: number | undefined;\n    MIN_NO_IMP: number | undefined;\n    MIN_IMPUES: number | undefined;\n    METODO_MINIMO_PERCEPCION: string | undefined;\n    ACUMULA_BASE_CALCULO: string | undefined;\n    CM_COEFICIENTE_MINIMO: number | undefined;\n    ES_PERCEP: string | undefined;\n    TIP_CALCU: string | undefined;\n    COD_IMPUES: string | undefined;\n    OBSERVACIONES: string | undefined;\n    PERCEPCION_VENTAS_BASE_CALCULO: PERCEPCION_VENTAS_BASE_CALCULO[] | undefined;\n    PERCEPCION_VENTAS_ALICUOTA: PERCEPCION_VENTAS_ALICUOTA[] | undefined;\n}",
+          "example": {
+            "ID_PERCEPCION_VENTAS": 0,
+            "COD_PERCEPCION_VENTAS": "",
+            "DESCRIPCIO": "",
+            "TIP_IMPUES": "IB",
+            "COD_REGIM": "",
+            "JUR_IMPUES": "P",
+            "ID_GVA18": 0,
+            "LEYENDA": "",
+            "ID_GVA147": 0,
+            "ID_CODIGO_AFIP_PERCEPCION": 0,
+            "MIN_NO_IMP": 0,
+            "MIN_IMPUES": 0,
+            "METODO_MINIMO_PERCEPCION": "A",
+            "ACUMULA_BASE_CALCULO": "N",
+            "CM_COEFICIENTE_MINIMO": 0,
+            "ES_PERCEP": "S",
+            "TIP_CALCU": "",
+            "COD_IMPUES": null,
+            "OBSERVACIONES": null,
+            "PERCEPCION_VENTAS_BASE_CALCULO": [
+              {
+                "ID_PERCEPCION_VENTAS_BASE_CALCULO": 0,
+                "ID_BASE_CALCULO_PERCEPCION": 0,
+                "MINIMO_BASE_CALCULO": 0,
+                "IMP_FIJO": 0,
+                "ID_PERCEPCION_VENTAS_RELACIONADO": 0,
+                "ID_GVA150": 0
+              }
+            ],
+            "PERCEPCION_VENTAS_ALICUOTA": [
+              {
+                "ID_PERCEPCION_VENTAS_ALICUOTA": 0,
+                "COD_ALICUO": 0,
+                "DES_ALICUO": null,
+                "PORCENTAJE": 0,
+                "PADRON": 0,
+                "GRUPO": null,
+                "LETRA_SIRCIP": null
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "PERCEPCION_VENTAS": [
+      "PERCEPCION_VENTAS_BASE_CALCULO",
+      "PERCEPCION_VENTAS_ALICUOTA",
+      "COD_PERCEPCION_VENTAS",
+      "DESCRIPCIO",
+      "TIP_IMPUES",
+      "COD_REGIM",
+      "JUR_IMPUES",
+      "ID_GVA18",
+      "LEYENDA",
+      "ID_GVA147",
+      "ID_CODIGO_AFIP_PERCEPCION",
+      "MIN_NO_IMP",
+      "MIN_IMPUES",
+      "METODO_MINIMO_PERCEPCION",
+      "ACUMULA_BASE_CALCULO",
+      "CM_COEFICIENTE_MINIMO",
+      "ES_PERCEP",
+      "TIP_CALCU",
+      "COD_IMPUES",
+      "OBSERVACIONES"
+    ],
+    "PERCEPCION_VENTAS_BASE_CALCULO": [
+      "ID_BASE_CALCULO_PERCEPCION",
+      "MINIMO_BASE_CALCULO",
+      "IMP_FIJO",
+      "ID_PERCEPCION_VENTAS_RELACIONADO",
+      "ID_GVA150"
+    ],
+    "PERCEPCION_VENTAS_ALICUOTA": [
+      "COD_ALICUO",
+      "DES_ALICUO",
+      "PORCENTAJE",
+      "PADRON",
+      "GRUPO",
+      "LETRA_SIRCIP"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

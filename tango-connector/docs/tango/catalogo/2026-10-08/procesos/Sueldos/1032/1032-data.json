@@ -1,0 +1,46 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_TABLA": 1,
+        "coD_TABLA": "Z1242_2013",
+        "desC_TABLA": "ZONA DGI",
+        "unidaD_VALOR1": "Pertenece",
+        "unidaD_VALOR2": "Valor2",
+        "canT_DECIMAL_VALOR1": 2,
+        "canT_DECIMAL_VALOR2": 2,
+        "roW_VERSION": "AAAAAADP+KQ="
+      },
+      {
+        "iD_TABLA": 2,
+        "coD_TABLA": "T1242_2013",
+        "desC_TABLA": "Remuneracion maxima segun DTO 1242/2013",
+        "unidaD_VALOR1": "Max. Rem.",
+        "unidaD_VALOR2": "Nuevo empleado",
+        "canT_DECIMAL_VALOR1": 2,
+        "canT_DECIMAL_VALOR2": 2,
+        "roW_VERSION": "AAAAAADP+KI="
+      },
+      {
+        "iD_TABLA": 3,
+        "coD_TABLA": "T3770_2015",
+        "desC_TABLA": "Remuneracion maxima segun RG 3770/2015",
+        "unidaD_VALOR1": "Max. Rem.",
+        "unidaD_VALOR2": "Valor2",
+        "canT_DECIMAL_VALOR1": 2,
+        "canT_DECIMAL_VALOR2": 2,
+        "roW_VERSION": "AAAAAADP+KM="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

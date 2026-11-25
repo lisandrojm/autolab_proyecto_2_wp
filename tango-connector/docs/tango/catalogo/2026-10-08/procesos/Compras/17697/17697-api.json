@@ -1,0 +1,118 @@
+{
+  "title": "C. P. R. Pendientes",
+  "moduleId": 10003,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "CompraseImportacionesCPRPendientesModel": [
+      "COD_PROVEEDOR",
+      "RAZON_SOCIAL",
+      "CUIT",
+      "FECHA_CPR",
+      "COD_CPR",
+      "NRO_CERTIFICADO",
+      "IMPORTE_CPR",
+      "FECHA_CHEQUE",
+      "FECHA_VENCIMIENTO_CHEQUE",
+      "FECHA_DEL_DOCUMENTO",
+      "FECHA_DE_VENCIMIENTO_DOCUMENTO",
+      "TIPO_DE_COMPROBANTE",
+      "DESC_TIPO_COMPROBANTE",
+      "NRO_COMPROBANTE",
+      "TIPO_COMP_PAGO",
+      "NRO_COMP_PAGO",
+      "TELEFONO",
+      "TELEFONO_2",
+      "MOVIL",
+      "EMAIL",
+      "EMAIL_COMPROBANTES",
+      "EMAILS_ENVIO_ORDEN_COMPRA",
+      "MOVILES_ENVIO_ORDEN_COMPRA",
+      "EMAILS_ENVIO_ORDEN_PAGOS",
+      "MOVILES_ENVIO_ORDEN_PAGOS",
+      "ID_CPA01"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

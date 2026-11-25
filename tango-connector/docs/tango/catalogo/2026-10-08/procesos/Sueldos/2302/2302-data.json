@@ -1,0 +1,130 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 1,
+        "coD_TIPO_DOCUMENTACION_DGI": "01",
+        "desC_TIPO_DOCUMENTACION_DGI": "Partida de nacimiento",
+        "roW_VERSION": "AAAAAADPSAc="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 2,
+        "coD_TIPO_DOCUMENTACION_DGI": "03",
+        "desC_TIPO_DOCUMENTACION_DGI": "Partida de matrimonio",
+        "roW_VERSION": "AAAAAADPSAg="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 3,
+        "coD_TIPO_DOCUMENTACION_DGI": "11",
+        "desC_TIPO_DOCUMENTACION_DGI": "Pa/Ce/Ac.ext. Nacimiento",
+        "roW_VERSION": "AAAAAADPSAk="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 4,
+        "coD_TIPO_DOCUMENTACION_DGI": "13",
+        "desC_TIPO_DOCUMENTACION_DGI": "Pa/Ce/Ac.ext. Matrimonio",
+        "roW_VERSION": "AAAAAADPSAo="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 5,
+        "coD_TIPO_DOCUMENTACION_DGI": "20",
+        "desC_TIPO_DOCUMENTACION_DGI": "Sentencia de adopción",
+        "roW_VERSION": "AAAAAADPSAs="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 6,
+        "coD_TIPO_DOCUMENTACION_DGI": "21",
+        "desC_TIPO_DOCUMENTACION_DGI": "Sentencia de guarda",
+        "roW_VERSION": "AAAAAADPSAw="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 7,
+        "coD_TIPO_DOCUMENTACION_DGI": "22",
+        "desC_TIPO_DOCUMENTACION_DGI": "Sentencia de tenencia",
+        "roW_VERSION": "AAAAAADPSA0="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 8,
+        "coD_TIPO_DOCUMENTACION_DGI": "23",
+        "desC_TIPO_DOCUMENTACION_DGI": "Sentencia de tutela",
+        "roW_VERSION": "AAAAAADPSA4="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 9,
+        "coD_TIPO_DOCUMENTACION_DGI": "24",
+        "desC_TIPO_DOCUMENTACION_DGI": "Sentencia de divorcio",
+        "roW_VERSION": "AAAAAADPSA8="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 10,
+        "coD_TIPO_DOCUMENTACION_DGI": "28",
+        "desC_TIPO_DOCUMENTACION_DGI": "Sentencia de convivencia",
+        "roW_VERSION": "AAAAAADPSBA="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 11,
+        "coD_TIPO_DOCUMENTACION_DGI": "36",
+        "desC_TIPO_DOCUMENTACION_DGI": "DDJJ persona a cargo Obra Social",
+        "roW_VERSION": "AAAAAADPSBI="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 12,
+        "coD_TIPO_DOCUMENTACION_DGI": "39",
+        "desC_TIPO_DOCUMENTACION_DGI": "DDJJ hijo/a cónyuge o conviviente",
+        "roW_VERSION": "AAAAAADPSBQ="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 13,
+        "coD_TIPO_DOCUMENTACION_DGI": "58",
+        "desC_TIPO_DOCUMENTACION_DGI": "Sentencia de curatela a las personas",
+        "roW_VERSION": "AAAAAADPSBY="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 14,
+        "coD_TIPO_DOCUMENTACION_DGI": "62",
+        "desC_TIPO_DOCUMENTACION_DGI": "Sentencia de tenencia con renuncia",
+        "roW_VERSION": "AAAAAADPSBc="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 15,
+        "coD_TIPO_DOCUMENTACION_DGI": "72",
+        "desC_TIPO_DOCUMENTACION_DGI": "DDJJ baja persona a cargo Obra Social",
+        "roW_VERSION": "AAAAAADPSBg="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 16,
+        "coD_TIPO_DOCUMENTACION_DGI": "73",
+        "desC_TIPO_DOCUMENTACION_DGI": "DDJJ baja hijo/a cónyuge o conviviente",
+        "roW_VERSION": "AAAAAADPSBk="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 17,
+        "coD_TIPO_DOCUMENTACION_DGI": "31",
+        "desC_TIPO_DOCUMENTACION_DGI": "DD JJ testimonial de Convivencia",
+        "roW_VERSION": "AAAAAADPSBE="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 18,
+        "coD_TIPO_DOCUMENTACION_DGI": "38",
+        "desC_TIPO_DOCUMENTACION_DGI": "DD JJ de tenencia con renuncio",
+        "roW_VERSION": "AAAAAADPSBM="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_DGI": 19,
+        "coD_TIPO_DOCUMENTACION_DGI": "41",
+        "desC_TIPO_DOCUMENTACION_DGI": "Información Sumaria de convivencia",
+        "roW_VERSION": "AAAAAADPSBU="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

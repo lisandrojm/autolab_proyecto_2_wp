@@ -1,0 +1,916 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_ZONA_DGI": 1,
+        "desC_ZONA_DGI": "Capital Federal",
+        "iD_PROVINCIA": 1,
+        "coD_ZONA_DGI": "01",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSYQ="
+      },
+      {
+        "iD_ZONA_DGI": 2,
+        "desC_ZONA_DGI": "Buenos Aires - Almte. Brown",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSWM="
+      },
+      {
+        "iD_ZONA_DGI": 3,
+        "desC_ZONA_DGI": "Buenos Aires - Avellaneda",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSWQ="
+      },
+      {
+        "iD_ZONA_DGI": 4,
+        "desC_ZONA_DGI": "Buenos Aires - Berazategui",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSWU="
+      },
+      {
+        "iD_ZONA_DGI": 5,
+        "desC_ZONA_DGI": "Buenos Aires - Esteban Echeverria",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSWs="
+      },
+      {
+        "iD_ZONA_DGI": 6,
+        "desC_ZONA_DGI": "Buenos Aires - Florencio Varela",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSWw="
+      },
+      {
+        "iD_ZONA_DGI": 7,
+        "desC_ZONA_DGI": "Buenos Aires - Gral. San Martín",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSW4="
+      },
+      {
+        "iD_ZONA_DGI": 8,
+        "desC_ZONA_DGI": "Buenos Aires - Gral. Sarmiento",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSW8="
+      },
+      {
+        "iD_ZONA_DGI": 9,
+        "desC_ZONA_DGI": "Buenos Aires - Gran Buenos Aires",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSXA="
+      },
+      {
+        "iD_ZONA_DGI": 10,
+        "desC_ZONA_DGI": "Buenos Aires - La Matanza",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSXE="
+      },
+      {
+        "iD_ZONA_DGI": 11,
+        "desC_ZONA_DGI": "Buenos Aires - Lanús",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSXM="
+      },
+      {
+        "iD_ZONA_DGI": 12,
+        "desC_ZONA_DGI": "Buenos Aires - Lomas de Zamora",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSXQ="
+      },
+      {
+        "iD_ZONA_DGI": 13,
+        "desC_ZONA_DGI": "Buenos Aires - Merlo",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSXY="
+      },
+      {
+        "iD_ZONA_DGI": 14,
+        "desC_ZONA_DGI": "Buenos Aires - Moreno",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSXc="
+      },
+      {
+        "iD_ZONA_DGI": 15,
+        "desC_ZONA_DGI": "Buenos Aires - Morón",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSXg="
+      },
+      {
+        "iD_ZONA_DGI": 16,
+        "desC_ZONA_DGI": "Buenos Aires - Quilmes",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSXs="
+      },
+      {
+        "iD_ZONA_DGI": 17,
+        "desC_ZONA_DGI": "Buenos Aires - San Fernando",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSX0="
+      },
+      {
+        "iD_ZONA_DGI": 18,
+        "desC_ZONA_DGI": "Buenos Aires - San Isidro",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSX4="
+      },
+      {
+        "iD_ZONA_DGI": 19,
+        "desC_ZONA_DGI": "Buenos Aires - Tigre",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSYA="
+      },
+      {
+        "iD_ZONA_DGI": 20,
+        "desC_ZONA_DGI": "Buenos Aires - Tres de Febrero",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSYE="
+      },
+      {
+        "iD_ZONA_DGI": 21,
+        "desC_ZONA_DGI": "Buenos Aires - Vicente Lopez",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "02",
+        "porC_REDUCCION": 30,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSYI="
+      },
+      {
+        "iD_ZONA_DGI": 22,
+        "desC_ZONA_DGI": "Buenos Aires - Berisso",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "03",
+        "porC_REDUCCION": 35,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSWY="
+      },
+      {
+        "iD_ZONA_DGI": 23,
+        "desC_ZONA_DGI": "Buenos Aires - Cañuelas",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "03",
+        "porC_REDUCCION": 35,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSWc="
+      },
+      {
+        "iD_ZONA_DGI": 24,
+        "desC_ZONA_DGI": "Buenos Aires - Ensenada",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "03",
+        "porC_REDUCCION": 35,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSWk="
+      },
+      {
+        "iD_ZONA_DGI": 25,
+        "desC_ZONA_DGI": "Buenos Aires - Escobar",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "03",
+        "porC_REDUCCION": 35,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSWo="
+      },
+      {
+        "iD_ZONA_DGI": 26,
+        "desC_ZONA_DGI": "Buenos Aires - Gral. Rodiguez",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "03",
+        "porC_REDUCCION": 35,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSW0="
+      },
+      {
+        "iD_ZONA_DGI": 27,
+        "desC_ZONA_DGI": "Buenos Aires - La Plata",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "03",
+        "porC_REDUCCION": 35,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSXI="
+      },
+      {
+        "iD_ZONA_DGI": 28,
+        "desC_ZONA_DGI": "Buenos Aires - Marcos Paz",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "03",
+        "porC_REDUCCION": 35,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSXU="
+      },
+      {
+        "iD_ZONA_DGI": 29,
+        "desC_ZONA_DGI": "Buenos Aires - Pilar",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "03",
+        "porC_REDUCCION": 35,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSXo="
+      },
+      {
+        "iD_ZONA_DGI": 30,
+        "desC_ZONA_DGI": "Buenos Aires - San Vicente",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "03",
+        "porC_REDUCCION": 35,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSX8="
+      },
+      {
+        "iD_ZONA_DGI": 31,
+        "desC_ZONA_DGI": "Buenos Aires - Carmen de Patagones",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "04",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoJQ="
+      },
+      {
+        "iD_ZONA_DGI": 32,
+        "desC_ZONA_DGI": "Buenos Aires - Patagones",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "05",
+        "porC_REDUCCION": 45,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSXk="
+      },
+      {
+        "iD_ZONA_DGI": 33,
+        "desC_ZONA_DGI": "Buenos Aires - Villarino",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "06",
+        "porC_REDUCCION": 45,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSYM="
+      },
+      {
+        "iD_ZONA_DGI": 34,
+        "desC_ZONA_DGI": "Buenos Aires - Resto de la Provincia",
+        "iD_PROVINCIA": 2,
+        "coD_ZONA_DGI": "07",
+        "porC_REDUCCION": 40,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSXw="
+      },
+      {
+        "iD_ZONA_DGI": 35,
+        "desC_ZONA_DGI": "Catamarca - Gran Catamarca",
+        "iD_PROVINCIA": 3,
+        "coD_ZONA_DGI": "08",
+        "porC_REDUCCION": 60,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSYg="
+      },
+      {
+        "iD_ZONA_DGI": 36,
+        "desC_ZONA_DGI": "Catamarca",
+        "iD_PROVINCIA": 3,
+        "coD_ZONA_DGI": "09",
+        "porC_REDUCCION": 65,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSYU="
+      },
+      {
+        "iD_ZONA_DGI": 37,
+        "desC_ZONA_DGI": "Córdoba - Sobremonte",
+        "iD_PROVINCIA": 4,
+        "coD_ZONA_DGI": "10",
+        "porC_REDUCCION": 60,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSZY="
+      },
+      {
+        "iD_ZONA_DGI": 38,
+        "desC_ZONA_DGI": "Córdoba - Río Seco",
+        "iD_PROVINCIA": 4,
+        "coD_ZONA_DGI": "11",
+        "porC_REDUCCION": 60,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSZM="
+      },
+      {
+        "iD_ZONA_DGI": 39,
+        "desC_ZONA_DGI": "Córdoba - Tulumba",
+        "iD_PROVINCIA": 4,
+        "coD_ZONA_DGI": "12",
+        "porC_REDUCCION": 60,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSZc="
+      },
+      {
+        "iD_ZONA_DGI": 40,
+        "desC_ZONA_DGI": "Córdoba - Cruz del Eje",
+        "iD_PROVINCIA": 4,
+        "coD_ZONA_DGI": "13",
+        "porC_REDUCCION": 55,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSY4="
+      },
+      {
+        "iD_ZONA_DGI": 41,
+        "desC_ZONA_DGI": "Córdoba - Minas",
+        "iD_PROVINCIA": 4,
+        "coD_ZONA_DGI": "14",
+        "porC_REDUCCION": 55,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSZA="
+      },
+      {
+        "iD_ZONA_DGI": 42,
+        "desC_ZONA_DGI": "Córdoba - Pocho",
+        "iD_PROVINCIA": 4,
+        "coD_ZONA_DGI": "15",
+        "porC_REDUCCION": 55,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSZE="
+      },
+      {
+        "iD_ZONA_DGI": 43,
+        "desC_ZONA_DGI": "Córdoba - San Alberto",
+        "iD_PROVINCIA": 4,
+        "coD_ZONA_DGI": "16",
+        "porC_REDUCCION": 55,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSZQ="
+      },
+      {
+        "iD_ZONA_DGI": 44,
+        "desC_ZONA_DGI": "Córdoba - San Javier",
+        "iD_PROVINCIA": 4,
+        "coD_ZONA_DGI": "17",
+        "porC_REDUCCION": 55,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSZU="
+      },
+      {
+        "iD_ZONA_DGI": 45,
+        "desC_ZONA_DGI": "Córdoba - Gran Córdoba",
+        "iD_PROVINCIA": 4,
+        "coD_ZONA_DGI": "18",
+        "porC_REDUCCION": 40,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSY8="
+      },
+      {
+        "iD_ZONA_DGI": 46,
+        "desC_ZONA_DGI": "Córdoba - Resto de la Provincia",
+        "iD_PROVINCIA": 4,
+        "coD_ZONA_DGI": "19",
+        "porC_REDUCCION": 45,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSZI="
+      },
+      {
+        "iD_ZONA_DGI": 47,
+        "desC_ZONA_DGI": "Corrientes - Esquina",
+        "iD_PROVINCIA": 5,
+        "coD_ZONA_DGI": "20",
+        "porC_REDUCCION": 60,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSZo="
+      },
+      {
+        "iD_ZONA_DGI": 48,
+        "desC_ZONA_DGI": "Corrientes - Sauce",
+        "iD_PROVINCIA": 5,
+        "coD_ZONA_DGI": "21",
+        "porC_REDUCCION": 60,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSZ0="
+      },
+      {
+        "iD_ZONA_DGI": 49,
+        "desC_ZONA_DGI": "Corrientes - Curuzú-Cuatia",
+        "iD_PROVINCIA": 5,
+        "coD_ZONA_DGI": "22",
+        "porC_REDUCCION": 60,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSZk="
+      },
+      {
+        "iD_ZONA_DGI": 50,
+        "desC_ZONA_DGI": "Corrientes - Monte Caseros",
+        "iD_PROVINCIA": 5,
+        "coD_ZONA_DGI": "23",
+        "porC_REDUCCION": 60,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSZs="
+      },
+      {
+        "iD_ZONA_DGI": 51,
+        "desC_ZONA_DGI": "Corrientes - Ciudad de Corriente",
+        "iD_PROVINCIA": 5,
+        "coD_ZONA_DGI": "24",
+        "porC_REDUCCION": 70,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSZg="
+      },
+      {
+        "iD_ZONA_DGI": 52,
+        "desC_ZONA_DGI": "Corrientes - Resto de la Provincia",
+        "iD_PROVINCIA": 5,
+        "coD_ZONA_DGI": "25",
+        "porC_REDUCCION": 70,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSZw="
+      },
+      {
+        "iD_ZONA_DGI": 53,
+        "desC_ZONA_DGI": "Chaco - Gran Resistencia",
+        "iD_PROVINCIA": 16,
+        "coD_ZONA_DGI": "26",
+        "porC_REDUCCION": 70,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSYo="
+      },
+      {
+        "iD_ZONA_DGI": 54,
+        "desC_ZONA_DGI": "Chaco",
+        "iD_PROVINCIA": 16,
+        "coD_ZONA_DGI": "27",
+        "porC_REDUCCION": 80,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSYk="
+      },
+      {
+        "iD_ZONA_DGI": 55,
+        "desC_ZONA_DGI": "Chubut - Rawson",
+        "iD_PROVINCIA": 17,
+        "coD_ZONA_DGI": "28",
+        "porC_REDUCCION": 60,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoJU="
+      },
+      {
+        "iD_ZONA_DGI": 56,
+        "desC_ZONA_DGI": "Chubut - Trelew",
+        "iD_PROVINCIA": 17,
+        "coD_ZONA_DGI": "28",
+        "porC_REDUCCION": 60,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoJY="
+      },
+      {
+        "iD_ZONA_DGI": 57,
+        "desC_ZONA_DGI": "Chubut",
+        "iD_PROVINCIA": 17,
+        "coD_ZONA_DGI": "29",
+        "porC_REDUCCION": 65,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoJc="
+      },
+      {
+        "iD_ZONA_DGI": 58,
+        "desC_ZONA_DGI": "Entre Ríos - Federación",
+        "iD_PROVINCIA": 6,
+        "coD_ZONA_DGI": "30",
+        "porC_REDUCCION": 60,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSZ4="
+      },
+      {
+        "iD_ZONA_DGI": 59,
+        "desC_ZONA_DGI": "Entre Ríos - Feliciano",
+        "iD_PROVINCIA": 6,
+        "coD_ZONA_DGI": "31",
+        "porC_REDUCCION": 60,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSZ8="
+      },
+      {
+        "iD_ZONA_DGI": 60,
+        "desC_ZONA_DGI": "Entre Ríos - Paraná",
+        "iD_PROVINCIA": 6,
+        "coD_ZONA_DGI": "32",
+        "porC_REDUCCION": 45,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSaA="
+      },
+      {
+        "iD_ZONA_DGI": 61,
+        "desC_ZONA_DGI": "Entre Ríos - Resto de la Provincia",
+        "iD_PROVINCIA": 6,
+        "coD_ZONA_DGI": "33",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSaE="
+      },
+      {
+        "iD_ZONA_DGI": 62,
+        "desC_ZONA_DGI": "Formosa - Ciudad de Formosa",
+        "iD_PROVINCIA": 18,
+        "coD_ZONA_DGI": "34",
+        "porC_REDUCCION": 75,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSaQ="
+      },
+      {
+        "iD_ZONA_DGI": 63,
+        "desC_ZONA_DGI": "Formosa",
+        "iD_PROVINCIA": 18,
+        "coD_ZONA_DGI": "35",
+        "porC_REDUCCION": 80,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSaI="
+      },
+      {
+        "iD_ZONA_DGI": 64,
+        "desC_ZONA_DGI": "Jujuy - Ciudad de Jujuy",
+        "iD_PROVINCIA": 7,
+        "coD_ZONA_DGI": "36",
+        "porC_REDUCCION": 70,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSag="
+      },
+      {
+        "iD_ZONA_DGI": 65,
+        "desC_ZONA_DGI": "Jujuy",
+        "iD_PROVINCIA": 7,
+        "coD_ZONA_DGI": "37",
+        "porC_REDUCCION": 75,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSac="
+      },
+      {
+        "iD_ZONA_DGI": 66,
+        "desC_ZONA_DGI": "La Pampa - Chical-Co",
+        "iD_PROVINCIA": 19,
+        "coD_ZONA_DGI": "38",
+        "porC_REDUCCION": 55,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoJg="
+      },
+      {
+        "iD_ZONA_DGI": 67,
+        "desC_ZONA_DGI": "La Pampa - Chalileo",
+        "iD_PROVINCIA": 19,
+        "coD_ZONA_DGI": "39",
+        "porC_REDUCCION": 55,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoJk="
+      },
+      {
+        "iD_ZONA_DGI": 68,
+        "desC_ZONA_DGI": "La Pampa - Puelén",
+        "iD_PROVINCIA": 19,
+        "coD_ZONA_DGI": "40",
+        "porC_REDUCCION": 55,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoJo="
+      },
+      {
+        "iD_ZONA_DGI": 69,
+        "desC_ZONA_DGI": "La Pampa - Limay-Mahuilda",
+        "iD_PROVINCIA": 19,
+        "coD_ZONA_DGI": "41",
+        "porC_REDUCCION": 55,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoJs="
+      },
+      {
+        "iD_ZONA_DGI": 70,
+        "desC_ZONA_DGI": "La Pampa - Curaco",
+        "iD_PROVINCIA": 19,
+        "coD_ZONA_DGI": "42",
+        "porC_REDUCCION": 55,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoJw="
+      },
+      {
+        "iD_ZONA_DGI": 71,
+        "desC_ZONA_DGI": "La Pampa - Lihuel - Calel",
+        "iD_PROVINCIA": 19,
+        "coD_ZONA_DGI": "43",
+        "porC_REDUCCION": 55,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoJ0="
+      },
+      {
+        "iD_ZONA_DGI": 72,
+        "desC_ZONA_DGI": "La Pampa - Santa Rosa",
+        "iD_PROVINCIA": 19,
+        "coD_ZONA_DGI": "44",
+        "porC_REDUCCION": 45,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoJ4="
+      },
+      {
+        "iD_ZONA_DGI": 73,
+        "desC_ZONA_DGI": "La Pampa - Toay",
+        "iD_PROVINCIA": 19,
+        "coD_ZONA_DGI": "44",
+        "porC_REDUCCION": 45,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoJ8="
+      },
+      {
+        "iD_ZONA_DGI": 74,
+        "desC_ZONA_DGI": "La Pampa - Resto de la Provincia",
+        "iD_PROVINCIA": 19,
+        "coD_ZONA_DGI": "45",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoKA="
+      },
+      {
+        "iD_ZONA_DGI": 75,
+        "desC_ZONA_DGI": "La Rioja - Ciudad de La Rioja",
+        "iD_PROVINCIA": 8,
+        "coD_ZONA_DGI": "46",
+        "porC_REDUCCION": 60,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSbk="
+      },
+      {
+        "iD_ZONA_DGI": 76,
+        "desC_ZONA_DGI": "La Rioja",
+        "iD_PROVINCIA": 8,
+        "coD_ZONA_DGI": "47",
+        "porC_REDUCCION": 65,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSbg="
+      },
+      {
+        "iD_ZONA_DGI": 77,
+        "desC_ZONA_DGI": "Mendoza - Gran Mendoza",
+        "iD_PROVINCIA": 9,
+        "coD_ZONA_DGI": "48",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSbs="
+      },
+      {
+        "iD_ZONA_DGI": 78,
+        "desC_ZONA_DGI": "Mendoza",
+        "iD_PROVINCIA": 9,
+        "coD_ZONA_DGI": "49",
+        "porC_REDUCCION": 55,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSbo="
+      },
+      {
+        "iD_ZONA_DGI": 79,
+        "desC_ZONA_DGI": "Misiones - Posadas",
+        "iD_PROVINCIA": 20,
+        "coD_ZONA_DGI": "50",
+        "porC_REDUCCION": 70,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSeM="
+      },
+      {
+        "iD_ZONA_DGI": 80,
+        "desC_ZONA_DGI": "Misiones",
+        "iD_PROVINCIA": 20,
+        "coD_ZONA_DGI": "51",
+        "porC_REDUCCION": 75,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADPSeI="
+      },
+      {
+        "iD_ZONA_DGI": 81,
+        "desC_ZONA_DGI": "Neuquén - Ciudad de Neuquén",
+        "iD_PROVINCIA": 21,
+        "coD_ZONA_DGI": "52",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoKE="
+      },
+      {
+        "iD_ZONA_DGI": 82,
+        "desC_ZONA_DGI": "Neuquén - Plottier",
+        "iD_PROVINCIA": 21,
+        "coD_ZONA_DGI": "52",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoKI="
+      },
+      {
+        "iD_ZONA_DGI": 83,
+        "desC_ZONA_DGI": "Neuquén - Centenario",
+        "iD_PROVINCIA": 21,
+        "coD_ZONA_DGI": "53",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoKM="
+      },
+      {
+        "iD_ZONA_DGI": 84,
+        "desC_ZONA_DGI": "Neuquén - Cutral-Co",
+        "iD_PROVINCIA": 21,
+        "coD_ZONA_DGI": "54",
+        "porC_REDUCCION": 65,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoKQ="
+      },
+      {
+        "iD_ZONA_DGI": 85,
+        "desC_ZONA_DGI": "Neuquén - Plaza Huincul",
+        "iD_PROVINCIA": 21,
+        "coD_ZONA_DGI": "55",
+        "porC_REDUCCION": 65,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoKU="
+      },
+      {
+        "iD_ZONA_DGI": 86,
+        "desC_ZONA_DGI": "Neuquén",
+        "iD_PROVINCIA": 21,
+        "coD_ZONA_DGI": "56",
+        "porC_REDUCCION": 55,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoKY="
+      },
+      {
+        "iD_ZONA_DGI": 87,
+        "desC_ZONA_DGI": "Río Negro - Zona Nº 2",
+        "iD_PROVINCIA": 22,
+        "coD_ZONA_DGI": "57",
+        "porC_REDUCCION": 65,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoKc="
+      },
+      {
+        "iD_ZONA_DGI": 88,
+        "desC_ZONA_DGI": "Río Negro - Viedma",
+        "iD_PROVINCIA": 22,
+        "coD_ZONA_DGI": "58",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoKg="
+      },
+      {
+        "iD_ZONA_DGI": 89,
+        "desC_ZONA_DGI": "Río Negro - Alejando Stefenelli",
+        "iD_PROVINCIA": 22,
+        "coD_ZONA_DGI": "59",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoKk="
+      },
+      {
+        "iD_ZONA_DGI": 90,
+        "desC_ZONA_DGI": "Río Negro - Allen",
+        "iD_PROVINCIA": 22,
+        "coD_ZONA_DGI": "59",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoKo="
+      },
+      {
+        "iD_ZONA_DGI": 91,
+        "desC_ZONA_DGI": "Río Negro - Alto Valle",
+        "iD_PROVINCIA": 22,
+        "coD_ZONA_DGI": "59",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoKs="
+      },
+      {
+        "iD_ZONA_DGI": 92,
+        "desC_ZONA_DGI": "Río Negro - Cervantes",
+        "iD_PROVINCIA": 22,
+        "coD_ZONA_DGI": "59",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoKw="
+      },
+      {
+        "iD_ZONA_DGI": 93,
+        "desC_ZONA_DGI": "Río Negro - Chichinales",
+        "iD_PROVINCIA": 22,
+        "coD_ZONA_DGI": "59",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoK0="
+      },
+      {
+        "iD_ZONA_DGI": 94,
+        "desC_ZONA_DGI": "Río Negro - Cinco Saltos",
+        "iD_PROVINCIA": 22,
+        "coD_ZONA_DGI": "59",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoK4="
+      },
+      {
+        "iD_ZONA_DGI": 95,
+        "desC_ZONA_DGI": "Río Negro - Cipoletti",
+        "iD_PROVINCIA": 22,
+        "coD_ZONA_DGI": "59",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoK8="
+      },
+      {
+        "iD_ZONA_DGI": 96,
+        "desC_ZONA_DGI": "Río Negro - Contralmirante Cordero",
+        "iD_PROVINCIA": 22,
+        "coD_ZONA_DGI": "59",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoLA="
+      },
+      {
+        "iD_ZONA_DGI": 97,
+        "desC_ZONA_DGI": "Río Negro - Coronel Juan J. Gomez",
+        "iD_PROVINCIA": 22,
+        "coD_ZONA_DGI": "59",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoLE="
+      },
+      {
+        "iD_ZONA_DGI": 98,
+        "desC_ZONA_DGI": "Río Negro - Fernández Oro",
+        "iD_PROVINCIA": 22,
+        "coD_ZONA_DGI": "59",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoLI="
+      },
+      {
+        "iD_ZONA_DGI": 99,
+        "desC_ZONA_DGI": "Río Negro - Gral. Enrique Godoy",
+        "iD_PROVINCIA": 22,
+        "coD_ZONA_DGI": "59",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoLM="
+      },
+      {
+        "iD_ZONA_DGI": 100,
+        "desC_ZONA_DGI": "Río Negro - Gral. Roca",
+        "iD_PROVINCIA": 22,
+        "coD_ZONA_DGI": "59",
+        "porC_REDUCCION": 50,
+        "zonA_LEY23272": "N",
+        "roW_VERSION": "AAAAAADfoLQ="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

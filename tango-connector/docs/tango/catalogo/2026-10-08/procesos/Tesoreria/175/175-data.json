@@ -1,0 +1,287 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_TIPO_COMPROBANTE_SB": 2,
+        "coD_SBA02": "REV",
+        "iD_SBA02": 1,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "iD_LEYENDA_ENCABEZADO_TIPO_ASIENTO": 1,
+        "desC_LEYENDA_ENCABEZADO": "REVERSION DE MOVIMIENTOS",
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWuM="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 3,
+        "coD_SBA02": "REC",
+        "iD_SBA02": 2,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWt0="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 4,
+        "coD_SBA02": "O/P",
+        "iD_SBA02": 3,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWtY="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 5,
+        "coD_SBA02": "FFA",
+        "iD_SBA02": 4,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWs0="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 6,
+        "coD_SBA02": "FFP",
+        "iD_SBA02": 5,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWtA="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 7,
+        "coD_SBA02": "FFR",
+        "iD_SBA02": 6,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWtE="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 8,
+        "coD_SBA02": "FFF",
+        "iD_SBA02": 7,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWs4="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 9,
+        "coD_SBA02": "EGB",
+        "iD_SBA02": 8,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWso="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 10,
+        "coD_SBA02": "AJU",
+        "iD_SBA02": 9,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWsY="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 11,
+        "coD_SBA02": "PFC",
+        "iD_SBA02": 13,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWtc="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 12,
+        "coD_SBA02": "PTC",
+        "iD_SBA02": 14,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWtk="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 13,
+        "coD_SBA02": "TCD",
+        "iD_SBA02": 15,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWuE="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 14,
+        "coD_SBA02": "EGC",
+        "iD_SBA02": 16,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWss="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 15,
+        "coD_SBA02": "FFV",
+        "iD_SBA02": 17,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWtM="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 16,
+        "coD_SBA02": "FFM",
+        "iD_SBA02": 18,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWs8="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 17,
+        "coD_SBA02": "FFT",
+        "iD_SBA02": 19,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWtI="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 19,
+        "coD_SBA02": "DEP",
+        "iD_SBA02": 12,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWsg="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 20,
+        "coD_SBA02": "RCP",
+        "iD_SBA02": 11,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWts="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 21,
+        "coD_SBA02": "RCT",
+        "iD_SBA02": 10,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWtw="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 22,
+        "coD_SBA02": "ING",
+        "iD_SBA02": 21,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWtQ="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 23,
+        "coD_SBA02": "CJE",
+        "iD_SBA02": 22,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWsc="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 25,
+        "coD_SBA02": "RET",
+        "iD_SBA02": 24,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWt4="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 26,
+        "coD_SBA02": "FAC",
+        "iD_SBA02": 25,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWsw="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 27,
+        "coD_SBA02": "N/C",
+        "iD_SBA02": 26,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWtU="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 28,
+        "coD_SBA02": "SAL",
+        "iD_SBA02": 27,
+        "generA_ASIENTO": "N",
+        "editA_ASIENTO": "N",
+        "roW_VERSION": "AAAAAADQWuA="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 29,
+        "coD_SBA02": "DEV",
+        "iD_SBA02": 28,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWsk="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 31,
+        "coD_SBA02": "PFM",
+        "iD_SBA02": 30,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWtg="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 32,
+        "coD_SBA02": "PTR",
+        "iD_SBA02": 31,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADQWto="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 33,
+        "coD_SBA02": "CN",
+        "iD_SBA02": 32,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADcZ4s="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_SB": 35,
+        "coD_SBA02": "VAL",
+        "iD_SBA02": 20,
+        "generA_ASIENTO": "S",
+        "iD_TIPO_ASIENTO": 22,
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADfr+c="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

@@ -1,0 +1,54 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "existE_BASE_CALCULO_IMPORTE_FIJO": false,
+        "iD_PERCEPCION_VENTAS": 3,
+        "coD_PERCEPCION_VENTAS": "1",
+        "descripcio": "LMB1",
+        "tiP_IMPUES": "IB",
+        "coD_REGIM": "",
+        "juR_IMPUES": "P",
+        "iD_GVA18": 1,
+        "leyenda": "",
+        "miN_NO_IMP": 0,
+        "miN_IMPUES": 0,
+        "metodO_MINIMO_PERCEPCION": "A",
+        "acumulA_BASE_CALCULO": "N",
+        "orD_CALCU": 1,
+        "coD_IMPUES": "1",
+        "coD_DESCRIP": "1 - LMB1",
+        "roW_VERSION": "AAAAAADf5MY="
+      },
+      {
+        "existE_BASE_CALCULO_IMPORTE_FIJO": false,
+        "iD_PERCEPCION_VENTAS": 4,
+        "coD_PERCEPCION_VENTAS": "2",
+        "descripcio": "LMB2",
+        "tiP_IMPUES": "IB",
+        "coD_REGIM": "",
+        "juR_IMPUES": "P",
+        "iD_GVA18": 1,
+        "leyenda": "",
+        "miN_NO_IMP": 0,
+        "miN_IMPUES": 0,
+        "metodO_MINIMO_PERCEPCION": "A",
+        "acumulA_BASE_CALCULO": "N",
+        "orD_CALCU": 1,
+        "coD_IMPUES": "2",
+        "coD_DESCRIP": "2 - LMB2",
+        "roW_VERSION": "AAAAAADf5Mo="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

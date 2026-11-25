@@ -1,0 +1,616 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_ACTIVIDAD_DGI": 1,
+        "coD_ACTIVIDAD_DGI": "171200",
+        "desC_ACTIVIDAD_DGI": "Acabado de productos textiles",
+        "roW_VERSION": "AAAAAADOy2E="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 2,
+        "coD_ACTIVIDAD_DGI": "112000",
+        "desC_ACTIVIDAD_DGI": "Actividades de servicios de extracción de petróleo/gas excepto actividades de prospección",
+        "roW_VERSION": "AAAAAADOyxE="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 3,
+        "coD_ACTIVIDAD_DGI": "659810",
+        "desC_ACTIVIDAD_DGI": "Actividades de crédito para financiar otras actividades económicas",
+        "roW_VERSION": "AAAAAADOzVY="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 4,
+        "coD_ACTIVIDAD_DGI": "452520",
+        "desC_ACTIVIDAD_DGI": "Actividades de hincado de pilotes, cimentación y otros trabajos de hormigón armado",
+        "roW_VERSION": "AAAAAADOzDM="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 5,
+        "coD_ACTIVIDAD_DGI": "729000",
+        "desC_ACTIVIDAD_DGI": "Actividades de informática n.c.p.",
+        "roW_VERSION": "AAAAAADOzX8="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 6,
+        "coD_ACTIVIDAD_DGI": "452590",
+        "desC_ACTIVIDAD_DGI": "Actividades especializadas de construcción n.c.p.",
+        "roW_VERSION": "AAAAAADOzDQ="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 7,
+        "coD_ACTIVIDAD_DGI": "662000",
+        "desC_ACTIVIDAD_DGI": "Administración de fondos de jubilaciones y pensiones (A.F.J.P.)",
+        "roW_VERSION": "AAAAAADOzWE="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 8,
+        "coD_ACTIVIDAD_DGI": "453200",
+        "desC_ACTIVIDAD_DGI": "Aislamiento térmico, acústico, hídrico y antivibratorio",
+        "roW_VERSION": "AAAAAADOzDk="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 9,
+        "coD_ACTIVIDAD_DGI": "014292",
+        "desC_ACTIVIDAD_DGI": "Albergue y cuidado de  animales de terceros",
+        "roW_VERSION": "AAAAAADOyvw="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 10,
+        "coD_ACTIVIDAD_DGI": "713009",
+        "desC_ACTIVIDAD_DGI": "Alquiler de efectos personales y enseres domésticos n.c.p.",
+        "roW_VERSION": "AAAAAADOzXk="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 11,
+        "coD_ACTIVIDAD_DGI": "455000",
+        "desC_ACTIVIDAD_DGI": "Alquiler de equipo de construcción o demolición dotado de operarios",
+        "roW_VERSION": "AAAAAADOzEE="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 12,
+        "coD_ACTIVIDAD_DGI": "711200",
+        "desC_ACTIVIDAD_DGI": "Alquiler de equipo de transporte para vía acuática, sin operarios ni tripulación",
+        "roW_VERSION": "AAAAAADOzXA="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 13,
+        "coD_ACTIVIDAD_DGI": "711300",
+        "desC_ACTIVIDAD_DGI": "Alquiler de equipo de transporte para vía aérea, sin operarios ni tripulación",
+        "roW_VERSION": "AAAAAADOzXE="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 14,
+        "coD_ACTIVIDAD_DGI": "711100",
+        "desC_ACTIVIDAD_DGI": "Alquiler de equipo de transporte para vía terrestre, sin operarios ni tripulación",
+        "roW_VERSION": "AAAAAADOzW8="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 15,
+        "coD_ACTIVIDAD_DGI": "712100",
+        "desC_ACTIVIDAD_DGI": "Alquiler de maquinaria y equipo agropecuario, sin operarios",
+        "roW_VERSION": "AAAAAADOzXI="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 16,
+        "coD_ACTIVIDAD_DGI": "712200",
+        "desC_ACTIVIDAD_DGI": "Alquiler de maquinaria y equipo de construcción e ingeniería civil, sin operarios",
+        "roW_VERSION": "AAAAAADOzXM="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 17,
+        "coD_ACTIVIDAD_DGI": "712300",
+        "desC_ACTIVIDAD_DGI": "Alquiler de maquinaria y equipo de oficina, incluso computadoras",
+        "roW_VERSION": "AAAAAADOzXQ="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 18,
+        "coD_ACTIVIDAD_DGI": "713001",
+        "desC_ACTIVIDAD_DGI": "Alquiler de ropa",
+        "roW_VERSION": "AAAAAADOzXg="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 19,
+        "coD_ACTIVIDAD_DGI": "712902",
+        "desC_ACTIVIDAD_DGI": "Alquiler de maquinaria y equipo minero y petrolero, sin personal",
+        "roW_VERSION": "AAAAAADOzXY="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 20,
+        "coD_ACTIVIDAD_DGI": "712909",
+        "desC_ACTIVIDAD_DGI": "Alquiler de maquinaria y equipo n.c.p., sin personal",
+        "roW_VERSION": "AAAAAADOzXc="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 21,
+        "coD_ACTIVIDAD_DGI": "712901",
+        "desC_ACTIVIDAD_DGI": "Alquiler de maquinaria y equipo para la industria manufacturera, sin personal",
+        "roW_VERSION": "AAAAAADOzXU="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 22,
+        "coD_ACTIVIDAD_DGI": "012230",
+        "desC_ACTIVIDAD_DGI": "Apicultura",
+        "roW_VERSION": "AAAAAADOyu4="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 23,
+        "coD_ACTIVIDAD_DGI": "201000",
+        "desC_ACTIVIDAD_DGI": "Aserrado y cepillado de madera",
+        "roW_VERSION": "AAAAAADOy3w="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 24,
+        "coD_ACTIVIDAD_DGI": "410010",
+        "desC_ACTIVIDAD_DGI": "Captación, depuración y distribución de agua de fuentes subterráneas",
+        "roW_VERSION": "AAAAAADOzCg="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 25,
+        "coD_ACTIVIDAD_DGI": "410020",
+        "desC_ACTIVIDAD_DGI": "Captación, depuración y distribución de agua de fuentes superficiales",
+        "roW_VERSION": "AAAAAADOzCk="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 26,
+        "coD_ACTIVIDAD_DGI": "151191",
+        "desC_ACTIVIDAD_DGI": "Fabricación de aceites y grasas de origen animal",
+        "roW_VERSION": "AAAAAADOyyM="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 27,
+        "coD_ACTIVIDAD_DGI": "015010",
+        "desC_ACTIVIDAD_DGI": "Caza  y captura de animales vivos y repoblación  de animales de caza",
+        "roW_VERSION": "AAAAAADOyv4="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 28,
+        "coD_ACTIVIDAD_DGI": "454300",
+        "desC_ACTIVIDAD_DGI": "Colocación de cristales en obra",
+        "roW_VERSION": "AAAAAADOzD4="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 29,
+        "coD_ACTIVIDAD_DGI": "921420",
+        "desC_ACTIVIDAD_DGI": "Composición y representación de obras teatrales, musicales y artísticas",
+        "roW_VERSION": "AAAAAADOzcw="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 30,
+        "coD_ACTIVIDAD_DGI": "181120",
+        "desC_ACTIVIDAD_DGI": "Confección de indumentaria de trabajo, uniformes, guardapolvos y sus accesorios",
+        "roW_VERSION": "AAAAAADOy24="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 31,
+        "coD_ACTIVIDAD_DGI": "181130",
+        "desC_ACTIVIDAD_DGI": "Confección de indumentaria para bebés y niños",
+        "roW_VERSION": "AAAAAADOy28="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 32,
+        "coD_ACTIVIDAD_DGI": "181191",
+        "desC_ACTIVIDAD_DGI": "Confección de pilotos e impermeables",
+        "roW_VERSION": "AAAAAADOy3A="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 33,
+        "coD_ACTIVIDAD_DGI": "181202",
+        "desC_ACTIVIDAD_DGI": "Confección de prendas de vestir de cuero",
+        "roW_VERSION": "AAAAAADOy3Q="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 34,
+        "coD_ACTIVIDAD_DGI": "182001",
+        "desC_ACTIVIDAD_DGI": "Confección de prendas de vestir de piel y sucedáneos",
+        "roW_VERSION": "AAAAAADOy3U="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 35,
+        "coD_ACTIVIDAD_DGI": "181199",
+        "desC_ACTIVIDAD_DGI": "Confección de prendas de vestir n.c.p., excepto de piel, cuero y sucedáneos, pilotos e impermeables",
+        "roW_VERSION": "AAAAAADOy3I="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 36,
+        "coD_ACTIVIDAD_DGI": "181110",
+        "desC_ACTIVIDAD_DGI": "Confección de ropa interior, prendas para dormir y para la playa",
+        "roW_VERSION": "AAAAAADOy20="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 37,
+        "coD_ACTIVIDAD_DGI": "351100",
+        "desC_ACTIVIDAD_DGI": "Construcción y reparación de buques",
+        "roW_VERSION": "AAAAAADOzAk="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 38,
+        "coD_ACTIVIDAD_DGI": "351200",
+        "desC_ACTIVIDAD_DGI": "Construcción y reparación de embarcaciones de recreo y deporte",
+        "roW_VERSION": "AAAAAADOzAo="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 39,
+        "coD_ACTIVIDAD_DGI": "452200",
+        "desC_ACTIVIDAD_DGI": "Construcción, reforma y reparación de edificios no residenciales",
+        "roW_VERSION": "AAAAAADOzC4="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 40,
+        "coD_ACTIVIDAD_DGI": "452100",
+        "desC_ACTIVIDAD_DGI": "Construcción, reforma y reparación de edificios residenciales",
+        "roW_VERSION": "AAAAAADOzC0="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 41,
+        "coD_ACTIVIDAD_DGI": "452390",
+        "desC_ACTIVIDAD_DGI": "Construcción, reforma y reparación de obras de infraestructura del transporte n.c.p",
+        "roW_VERSION": "AAAAAADOzDA="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 42,
+        "coD_ACTIVIDAD_DGI": "452310",
+        "desC_ACTIVIDAD_DGI": "Construcción, reforma y reparación de obras hidráulicas",
+        "roW_VERSION": "AAAAAADOzC8="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 43,
+        "coD_ACTIVIDAD_DGI": "452400",
+        "desC_ACTIVIDAD_DGI": "Construcción, reforma y reparación de redes",
+        "roW_VERSION": "AAAAAADOzDE="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 44,
+        "coD_ACTIVIDAD_DGI": "269600",
+        "desC_ACTIVIDAD_DGI": "Corte, tallado y acabado de la piedra",
+        "roW_VERSION": "AAAAAADOy8Q="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 45,
+        "coD_ACTIVIDAD_DGI": "012242",
+        "desC_ACTIVIDAD_DGI": "Cría de animales para la obtención de pelos",
+        "roW_VERSION": "AAAAAADOyvA="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 46,
+        "coD_ACTIVIDAD_DGI": "012241",
+        "desC_ACTIVIDAD_DGI": "Cría de animales para la obtención de pieles y cueros",
+        "roW_VERSION": "AAAAAADOyu8="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 47,
+        "coD_ACTIVIDAD_DGI": "012243",
+        "desC_ACTIVIDAD_DGI": "Cría de animales para la obtención de plumas",
+        "roW_VERSION": "AAAAAADOyvE="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 48,
+        "coD_ACTIVIDAD_DGI": "012290",
+        "desC_ACTIVIDAD_DGI": "Cría de animales y obtención de productos de origen animal, n.c.p.",
+        "roW_VERSION": "AAAAAADOyvI="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 49,
+        "coD_ACTIVIDAD_DGI": "012211",
+        "desC_ACTIVIDAD_DGI": "Cría de aves para producción de carne",
+        "roW_VERSION": "AAAAAADOyus="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 50,
+        "coD_ACTIVIDAD_DGI": "012212",
+        "desC_ACTIVIDAD_DGI": "Cría de aves para producción de huevos",
+        "roW_VERSION": "AAAAAADOyuw="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 51,
+        "coD_ACTIVIDAD_DGI": "012161",
+        "desC_ACTIVIDAD_DGI": "Cría de ganado bovino en cabañas",
+        "roW_VERSION": "AAAAAADOyuI="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 52,
+        "coD_ACTIVIDAD_DGI": "012111",
+        "desC_ACTIVIDAD_DGI": "Cría de ganado bovino -excepto en cabañas y para la producción de leche-",
+        "roW_VERSION": "AAAAAADOyts="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 53,
+        "coD_ACTIVIDAD_DGI": "012150",
+        "desC_ACTIVIDAD_DGI": "Cría de ganado caprino, excepto en cabañas y para producción de leche",
+        "roW_VERSION": "AAAAAADOyuE="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 54,
+        "coD_ACTIVIDAD_DGI": "012163",
+        "desC_ACTIVIDAD_DGI": "Cría de ganado equino en haras",
+        "roW_VERSION": "AAAAAADOyuQ="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 55,
+        "coD_ACTIVIDAD_DGI": "012140",
+        "desC_ACTIVIDAD_DGI": "Cría de ganado equino, excepto en haras",
+        "roW_VERSION": "AAAAAADOyuA="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 56,
+        "coD_ACTIVIDAD_DGI": "012190",
+        "desC_ACTIVIDAD_DGI": "Cría de ganado n.c.p.",
+        "roW_VERSION": "AAAAAADOyuo="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 57,
+        "coD_ACTIVIDAD_DGI": "012169",
+        "desC_ACTIVIDAD_DGI": "Cría en cabañas de ganado n.c.p.",
+        "roW_VERSION": "AAAAAADOyuU="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 58,
+        "coD_ACTIVIDAD_DGI": "012162",
+        "desC_ACTIVIDAD_DGI": "Cría de ganado ovino, porcino y caprino en cabañas",
+        "roW_VERSION": "AAAAAADOyuM="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 59,
+        "coD_ACTIVIDAD_DGI": "012120",
+        "desC_ACTIVIDAD_DGI": "Cría de ganado ovino, excepto en cabañas y para la  producción de lana",
+        "roW_VERSION": "AAAAAADOyt4="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 60,
+        "coD_ACTIVIDAD_DGI": "012130",
+        "desC_ACTIVIDAD_DGI": "Cría de ganado porcino, excepto en cabañas",
+        "roW_VERSION": "AAAAAADOyt8="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 61,
+        "coD_ACTIVIDAD_DGI": "011140",
+        "desC_ACTIVIDAD_DGI": "Cultivo de  pastos forrajeros",
+        "roW_VERSION": "AAAAAADOyr4="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 62,
+        "coD_ACTIVIDAD_DGI": "011411",
+        "desC_ACTIVIDAD_DGI": "Cultivo de algodón",
+        "roW_VERSION": "AAAAAADOys0="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 63,
+        "coD_ACTIVIDAD_DGI": "011111",
+        "desC_ACTIVIDAD_DGI": "Cultivo de arroz",
+        "roW_VERSION": "AAAAAADOyrU="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 64,
+        "coD_ACTIVIDAD_DGI": "011229",
+        "desC_ACTIVIDAD_DGI": "Cultivo de bulbos, brotes, raíces y hortalizas de frutos n.c.p.",
+        "roW_VERSION": "AAAAAADOysE="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 65,
+        "coD_ACTIVIDAD_DGI": "011421",
+        "desC_ACTIVIDAD_DGI": "Cultivo de caña de azúcar",
+        "roW_VERSION": "AAAAAADOys8="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 66,
+        "coD_ACTIVIDAD_DGI": "011119",
+        "desC_ACTIVIDAD_DGI": "Cultivo de cereales excepto los forrajeros y  las semillas n.c.p.",
+        "roW_VERSION": "AAAAAADOyrc="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 67,
+        "coD_ACTIVIDAD_DGI": "011129",
+        "desC_ACTIVIDAD_DGI": "Cultivo de cereales forrajeros n.c.p.",
+        "roW_VERSION": "AAAAAADOyro="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 68,
+        "coD_ACTIVIDAD_DGI": "011460",
+        "desC_ACTIVIDAD_DGI": "Cultivo de especias (de hoja, de semilla, de flor y de fruto) y de plantas aromáticas y medicinales",
+        "roW_VERSION": "AAAAAADOytQ="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 69,
+        "coD_ACTIVIDAD_DGI": "011251",
+        "desC_ACTIVIDAD_DGI": "Cultivo de flores",
+        "roW_VERSION": "AAAAAADOysU="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 70,
+        "coD_ACTIVIDAD_DGI": "011330",
+        "desC_ACTIVIDAD_DGI": "Cultivo de frutas cítricas",
+        "roW_VERSION": "AAAAAADOyso="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 71,
+        "coD_ACTIVIDAD_DGI": "011320",
+        "desC_ACTIVIDAD_DGI": "Cultivo de frutas de carozo",
+        "roW_VERSION": "AAAAAADOysk="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 72,
+        "coD_ACTIVIDAD_DGI": "011319",
+        "desC_ACTIVIDAD_DGI": "Cultivo de frutas de pepita n.c.p.",
+        "roW_VERSION": "AAAAAADOysg="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 73,
+        "coD_ACTIVIDAD_DGI": "011390",
+        "desC_ACTIVIDAD_DGI": "Cultivo de frutas n.c.p.",
+        "roW_VERSION": "AAAAAADOysw="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 74,
+        "coD_ACTIVIDAD_DGI": "011132",
+        "desC_ACTIVIDAD_DGI": "Cultivo de girasol",
+        "roW_VERSION": "AAAAAADOyrw="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 75,
+        "coD_ACTIVIDAD_DGI": "011230",
+        "desC_ACTIVIDAD_DGI": "Cultivo de hortalizas de hoja y de otras hortalizas frescas",
+        "roW_VERSION": "AAAAAADOysI="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 76,
+        "coD_ACTIVIDAD_DGI": "011241",
+        "desC_ACTIVIDAD_DGI": "Cultivo de legumbres frescas",
+        "roW_VERSION": "AAAAAADOysM="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 77,
+        "coD_ACTIVIDAD_DGI": "011242",
+        "desC_ACTIVIDAD_DGI": "Cultivo de legumbres secas",
+        "roW_VERSION": "AAAAAADOysQ="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 78,
+        "coD_ACTIVIDAD_DGI": "011121",
+        "desC_ACTIVIDAD_DGI": "Cultivo de maíz",
+        "roW_VERSION": "AAAAAADOyrg="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 79,
+        "coD_ACTIVIDAD_DGI": "011311",
+        "desC_ACTIVIDAD_DGI": "Cultivo de manzana y pera",
+        "roW_VERSION": "AAAAAADOysc="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 80,
+        "coD_ACTIVIDAD_DGI": "011340",
+        "desC_ACTIVIDAD_DGI": "Cultivo de nueces y frutas secas",
+        "roW_VERSION": "AAAAAADOyss="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 81,
+        "coD_ACTIVIDAD_DGI": "011139",
+        "desC_ACTIVIDAD_DGI": "Cultivo de oleaginosas n.c.p.",
+        "roW_VERSION": "AAAAAADOyr0="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 82,
+        "coD_ACTIVIDAD_DGI": "011210",
+        "desC_ACTIVIDAD_DGI": "Cultivo de papa, batata y mandioca",
+        "roW_VERSION": "AAAAAADOyr8="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 83,
+        "coD_ACTIVIDAD_DGI": "011252",
+        "desC_ACTIVIDAD_DGI": "Cultivo de plantas ornamentales",
+        "roW_VERSION": "AAAAAADOysY="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 84,
+        "coD_ACTIVIDAD_DGI": "011419",
+        "desC_ACTIVIDAD_DGI": "Cultivo de plantas para la obtención de fibras n.c.p.",
+        "roW_VERSION": "AAAAAADOys4="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 85,
+        "coD_ACTIVIDAD_DGI": "011429",
+        "desC_ACTIVIDAD_DGI": "Cultivo de plantas sacaríferas n.c.p.",
+        "roW_VERSION": "AAAAAADOytA="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 86,
+        "coD_ACTIVIDAD_DGI": "011131",
+        "desC_ACTIVIDAD_DGI": "Cultivo de soja",
+        "roW_VERSION": "AAAAAADOyrs="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 87,
+        "coD_ACTIVIDAD_DGI": "011122",
+        "desC_ACTIVIDAD_DGI": "Cultivo de sorgo granífero",
+        "roW_VERSION": "AAAAAADOyrk="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 88,
+        "coD_ACTIVIDAD_DGI": "011450",
+        "desC_ACTIVIDAD_DGI": "Cultivo de tabaco",
+        "roW_VERSION": "AAAAAADOytM="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 89,
+        "coD_ACTIVIDAD_DGI": "011440",
+        "desC_ACTIVIDAD_DGI": "Cultivo de té, yerba mate y otras plantas cuyas hojas se utilizan para preparar bebidas (infusiones)",
+        "roW_VERSION": "AAAAAADOytI="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 90,
+        "coD_ACTIVIDAD_DGI": "011221",
+        "desC_ACTIVIDAD_DGI": "Cultivo de tomate",
+        "roW_VERSION": "AAAAAADOysA="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 91,
+        "coD_ACTIVIDAD_DGI": "011112",
+        "desC_ACTIVIDAD_DGI": "Cultivo de trigo",
+        "roW_VERSION": "AAAAAADOyrY="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 92,
+        "coD_ACTIVIDAD_DGI": "011430",
+        "desC_ACTIVIDAD_DGI": "Cultivo de vid para vinificar",
+        "roW_VERSION": "AAAAAADOytE="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 93,
+        "coD_ACTIVIDAD_DGI": "011490",
+        "desC_ACTIVIDAD_DGI": "Cultivos industriales n.c.p.",
+        "roW_VERSION": "AAAAAADOytU="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 94,
+        "coD_ACTIVIDAD_DGI": "191100",
+        "desC_ACTIVIDAD_DGI": "Curtido y terminación de cueros",
+        "roW_VERSION": "AAAAAADOy3c="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 95,
+        "coD_ACTIVIDAD_DGI": "451100",
+        "desC_ACTIVIDAD_DGI": "Demolición y voladura de edificios y de sus partes",
+        "roW_VERSION": "AAAAAADOzCo="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 96,
+        "coD_ACTIVIDAD_DGI": "155110",
+        "desC_ACTIVIDAD_DGI": "Destilación de alcohol etílico",
+        "roW_VERSION": "AAAAAADOy0o="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 97,
+        "coD_ACTIVIDAD_DGI": "155120",
+        "desC_ACTIVIDAD_DGI": "Destilación, rectificación y mezcla de bebidas espiritosas",
+        "roW_VERSION": "AAAAAADOy0s="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 98,
+        "coD_ACTIVIDAD_DGI": "401300",
+        "desC_ACTIVIDAD_DGI": "Distribución de energía eléctrica",
+        "roW_VERSION": "AAAAAADOzCQ="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 99,
+        "coD_ACTIVIDAD_DGI": "921120",
+        "desC_ACTIVIDAD_DGI": "Distribución de filmes y videocintas",
+        "roW_VERSION": "AAAAAADOzcc="
+      },
+      {
+        "iD_ACTIVIDAD_DGI": 100,
+        "coD_ACTIVIDAD_DGI": "221300",
+        "desC_ACTIVIDAD_DGI": "Edición de grabaciones",
+        "roW_VERSION": "AAAAAADOy44="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

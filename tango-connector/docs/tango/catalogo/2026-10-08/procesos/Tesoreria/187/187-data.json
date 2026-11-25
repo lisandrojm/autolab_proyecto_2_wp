@@ -1,0 +1,52 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_HOST": 1,
+        "coD_HOST": "POS",
+        "desC_HOST": "POSNET",
+        "habilitado": "S",
+        "numeracioN_CUPON": "R",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADO2yc="
+      },
+      {
+        "iD_HOST": 2,
+        "coD_HOST": "VIS",
+        "desC_HOST": "VISA",
+        "habilitado": "S",
+        "numeracioN_CUPON": "R",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADO2yg="
+      },
+      {
+        "iD_HOST": 3,
+        "coD_HOST": "AME",
+        "desC_HOST": "AMEX",
+        "habilitado": "S",
+        "numeracioN_CUPON": "R",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADO2yU="
+      },
+      {
+        "iD_HOST": 4,
+        "coD_HOST": "DIN",
+        "desC_HOST": "DINERS",
+        "habilitado": "S",
+        "numeracioN_CUPON": "R",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADO2yY="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

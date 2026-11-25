@@ -1,0 +1,916 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_VARIABLE": 1,
+        "iD_VARIABLE_GRUPO": 5,
+        "coD_VARIABLE": "CANTIDAD",
+        "desC_VARIABLE": "Cantidad liquidada.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Conceptos"
+      },
+      {
+        "iD_VARIABLE": 2,
+        "iD_VARIABLE_GRUPO": 5,
+        "coD_VARIABLE": "VALOR",
+        "desC_VARIABLE": "Valor liquidado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Conceptos"
+      },
+      {
+        "iD_VARIABLE": 3,
+        "iD_VARIABLE_GRUPO": 28,
+        "coD_VARIABLE": "IF",
+        "desC_VARIABLE": "Devuelve un único valor si una condición especificada (prueba lógica) se evalúa como VERDADERO y otro valor si se evalúa como FALSO. \"Prueba_lógica\" es cualquier valor o expresión que pueda evaluarse como VERDADERO o FALSO.",
+        "devuelve": "Cualquiera",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables Lógicas"
+      },
+      {
+        "iD_VARIABLE": 4,
+        "iD_VARIABLE_GRUPO": 28,
+        "coD_VARIABLE": "SI",
+        "desC_VARIABLE": "Devuelve un único valor si una condición especificada (prueba lógica) se evalúa como VERDADERO y otro valor si se evalúa como FALSO. \"Prueba_lógica\" es cualquier valor o expresión que pueda evaluarse como VERDADERO o FALSO.",
+        "devuelve": "Cualquiera",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables Lógicas"
+      },
+      {
+        "iD_VARIABLE": 5,
+        "iD_VARIABLE_GRUPO": 28,
+        "coD_VARIABLE": "NO",
+        "desC_VARIABLE": "Operador compuesto lógico para la negación.",
+        "devuelve": "Valor_lógico",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables Lógicas"
+      },
+      {
+        "iD_VARIABLE": 6,
+        "iD_VARIABLE_GRUPO": 28,
+        "coD_VARIABLE": "NOT",
+        "desC_VARIABLE": "Operador compuesto lógico para la negación.",
+        "devuelve": "Valor_lógico",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables Lógicas"
+      },
+      {
+        "iD_VARIABLE": 12,
+        "iD_VARIABLE_GRUPO": 21,
+        "coD_VARIABLE": "ACTIV",
+        "desC_VARIABLE": "Actividad del empleado según codificación SIJP.",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Sijp"
+      },
+      {
+        "iD_VARIABLE": 13,
+        "iD_VARIABLE_GRUPO": 21,
+        "coD_VARIABLE": "DGIOB",
+        "desC_VARIABLE": "Obra Social del empleado según codificación SIJP.",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Sijp"
+      },
+      {
+        "iD_VARIABLE": 15,
+        "iD_VARIABLE_GRUPO": 21,
+        "coD_VARIABLE": "ZONAG",
+        "desC_VARIABLE": "Zona geográfica según codificación SIJP, asignado al lugar de trabajo del empleado.",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Sijp"
+      },
+      {
+        "iD_VARIABLE": 16,
+        "iD_VARIABLE_GRUPO": 21,
+        "coD_VARIABLE": "REDUC",
+        "desC_VARIABLE": "Porcentaje de reducción para la zona geográfica del lugar de trabajo del empleado.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Sijp"
+      },
+      {
+        "iD_VARIABLE": 19,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "ART",
+        "desC_VARIABLE": "Art del empleado (código).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 20,
+        "iD_VARIABLE_GRUPO": 3,
+        "coD_VARIABLE": "ARTCF",
+        "desC_VARIABLE": "Comisión fija de la Art del empleado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Art"
+      },
+      {
+        "iD_VARIABLE": 21,
+        "iD_VARIABLE_GRUPO": 3,
+        "coD_VARIABLE": "ARTCV",
+        "desC_VARIABLE": "Comisión variable de la Art del empleado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Art"
+      },
+      {
+        "iD_VARIABLE": 22,
+        "iD_VARIABLE_GRUPO": 19,
+        "coD_VARIABLE": "PREOS",
+        "desC_VARIABLE": "Porcentaje de retención asignado a la obra social del empleado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Obras Sociales"
+      },
+      {
+        "iD_VARIABLE": 23,
+        "iD_VARIABLE_GRUPO": 19,
+        "coD_VARIABLE": "PAPOS",
+        "desC_VARIABLE": "Porcentaje de aporte asignado a la obra social del empleado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Obras Sociales"
+      },
+      {
+        "iD_VARIABLE": 24,
+        "iD_VARIABLE_GRUPO": 19,
+        "coD_VARIABLE": "PANSA",
+        "desC_VARIABLE": "Porcentaje destinado al Anssal, asignado a la obra social del empleado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Obras Sociales"
+      },
+      {
+        "iD_VARIABLE": 25,
+        "iD_VARIABLE_GRUPO": 19,
+        "coD_VARIABLE": "IPLAN",
+        "desC_VARIABLE": "Valor del plan de salud de la obra social que posee el empleado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Obras Sociales"
+      },
+      {
+        "iD_VARIABLE": 26,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "OBRAS",
+        "desC_VARIABLE": "Obra Social del empleado (código).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 27,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "PLAN",
+        "desC_VARIABLE": "Plan de obra social del empleado (código).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 28,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "SINDI",
+        "desC_VARIABLE": "Sindicado del empleado (código).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 29,
+        "iD_VARIABLE_GRUPO": 22,
+        "coD_VARIABLE": "PRESI",
+        "desC_VARIABLE": "Porcentaje de retención asignado al sindicato del empleado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Sindicatos"
+      },
+      {
+        "iD_VARIABLE": 30,
+        "iD_VARIABLE_GRUPO": 22,
+        "coD_VARIABLE": "IRESI",
+        "desC_VARIABLE": "Importe de retención asignado al sindicato del empleado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Sindicatos"
+      },
+      {
+        "iD_VARIABLE": 31,
+        "iD_VARIABLE_GRUPO": 22,
+        "coD_VARIABLE": "PAPSI",
+        "desC_VARIABLE": "Porcentaje de aporte asignado al sindicato del empleado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Sindicatos"
+      },
+      {
+        "iD_VARIABLE": 32,
+        "iD_VARIABLE_GRUPO": 22,
+        "coD_VARIABLE": "IAPSI",
+        "desC_VARIABLE": "Importe de aporte asignado al sindicato del empleado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Sindicatos"
+      },
+      {
+        "iD_VARIABLE": 34,
+        "iD_VARIABLE_GRUPO": 11,
+        "coD_VARIABLE": "PRENA",
+        "desC_VARIABLE": "Indica si el empleado tiene ingresado asignación por prenatal.",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Familiares"
+      },
+      {
+        "iD_VARIABLE": 35,
+        "iD_VARIABLE_GRUPO": 11,
+        "coD_VARIABLE": "CONYU",
+        "desC_VARIABLE": "Indica si el empleado tiene ingresado asignación por cónyuge. En caso afirmativo devuelve \"S\" y en caso negativo devuelve \"N\".",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Familiares"
+      },
+      {
+        "iD_VARIABLE": 36,
+        "iD_VARIABLE_GRUPO": 16,
+        "coD_VARIABLE": "MATV1",
+        "desC_VARIABLE": "Dados una matriz y un número, devuelve el Valor1 del rango que contiene al número especificado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Matrices auxiliares"
+      },
+      {
+        "iD_VARIABLE": 37,
+        "iD_VARIABLE_GRUPO": 16,
+        "coD_VARIABLE": "MATV2",
+        "desC_VARIABLE": "Dados una matriz y un número, devuelve el Valor2 del rango que contiene al número especificado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Matrices auxiliares"
+      },
+      {
+        "iD_VARIABLE": 38,
+        "iD_VARIABLE_GRUPO": 24,
+        "coD_VARIABLE": "TABV1",
+        "desC_VARIABLE": "Devuelve el Valor1 que le corresponde a una tabla auxiliar y a un código de fila especificados.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Tablas auxiliares"
+      },
+      {
+        "iD_VARIABLE": 39,
+        "iD_VARIABLE_GRUPO": 24,
+        "coD_VARIABLE": "TABV2",
+        "desC_VARIABLE": "Devuelve el Valor2 que le corresponde a una tabla auxiliar y a un código de fila especificados.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Tablas auxiliares"
+      },
+      {
+        "iD_VARIABLE": 40,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "FEGRE",
+        "desC_VARIABLE": "Fecha de egreso del último tramo laboral del empleado.",
+        "devuelve": "Fecha",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 41,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "FEING",
+        "desC_VARIABLE": "Fecha de ingreso del último tramo laboral del empleado.",
+        "devuelve": "Fecha",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 42,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "MOEGR",
+        "desC_VARIABLE": "Motivo de egreso del último tramo laboral del empleado.",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 43,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "ANTIG",
+        "desC_VARIABLE": "Antigüedad total del empleado, expresada en años, calculada según las fechas de la liquidación y el convenio del empleado.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 44,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "ANTIM",
+        "desC_VARIABLE": "Antigüedad total del empleado, expresada en meses, a partir del último año completos, calculada según las fechas de la liquidación y el convenio del empleado.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 45,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "ANTID",
+        "desC_VARIABLE": "Antigüedad total del empleado, expresada en días, a partir del último mes completos, calculada según las fechas de la liquidación y el convenio del empleado.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 46,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "ACTUA",
+        "desC_VARIABLE": "Antigüedad actual del empleado, expresada en años, calculada según las fechas de la liquidación y el convenio del empleado.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 47,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "ACTUM",
+        "desC_VARIABLE": "Antigüedad actual del empleado, expresada en meses, a partir del último año completos, calculada según las fechas de la liquidación y el convenio del empleado.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 48,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "ACTUD",
+        "desC_VARIABLE": "Antigüedad actual del empleado, expresada en días, a partir del último mes completos, calculada según las fechas de la liquidación y el convenio del empleado.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 49,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "FENAC",
+        "desC_VARIABLE": "Fecha de nacimiento del empleado.",
+        "devuelve": "Fecha",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 50,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "EDAD",
+        "desC_VARIABLE": "Edad del empleado a una fecha. Por ejemplo: EDAD(LQHAS), calculará la edad a la \"Fecha Hasta\" de la liquidación.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 51,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "NACIO",
+        "desC_VARIABLE": "Nacionalidad del empleado (código).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 52,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "COSIT",
+        "desC_VARIABLE": "Situación de revista del empleado (código).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 53,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "LTRAB",
+        "desC_VARIABLE": "Lugar de trabajo del empleado (código).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 54,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "NTRAB",
+        "desC_VARIABLE": "Número del lugar de trabajo del empleado.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 55,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "LPAGO",
+        "desC_VARIABLE": "Lugar de pago del empleado (código).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 56,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "FPAGO",
+        "desC_VARIABLE": "Forma de pago del empleado.",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 57,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "BANCO",
+        "desC_VARIABLE": "Banco al que pertenece la cuenta bancaria del empleado (código).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 58,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "SUCUR",
+        "desC_VARIABLE": "Sucursal de la cuenta bancaria del empleado.",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 59,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "TICTA",
+        "desC_VARIABLE": "Tipo de cuenta bancaria del empleado.",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 60,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "CONDI",
+        "desC_VARIABLE": "Condición de contratación del empleado.",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 61,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "TICON",
+        "desC_VARIABLE": "Tipo de convenio del empleado (Indica si está dentro o fuera de convenio).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 62,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "ESTCI",
+        "desC_VARIABLE": "Estado civil del empleado.",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 63,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "JERAR",
+        "desC_VARIABLE": "Grupo jerárquico del empleado (código).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 64,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "AFJP",
+        "desC_VARIABLE": "Afjp del empleado (código).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 65,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "CONVE",
+        "desC_VARIABLE": "Convenio al que pertenece el empleado (código).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 66,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "CATEG",
+        "desC_VARIABLE": "Categoría laboral a la que pertenece el empleado (código).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 67,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "CTRATO",
+        "desC_VARIABLE": "Modalidad de contratación del empleado (código). Devuelve el último contrato celebrado para el empleado (según el número de contrato). Si no hay contratos, devuelve la modalidad de contratación definida en el legajo.",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 68,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "DEPTO",
+        "desC_VARIABLE": "Departamento al que pertenece el empleado (código).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 69,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "SUELDO",
+        "desC_VARIABLE": "Sueldo o jornal asignado al empleado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 70,
+        "iD_VARIABLE_GRUPO": 9,
+        "coD_VARIABLE": "PCONV",
+        "desC_VARIABLE": "Porcentaje del convenio del empleado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Convenios"
+      },
+      {
+        "iD_VARIABLE": 71,
+        "iD_VARIABLE_GRUPO": 9,
+        "coD_VARIABLE": "ICONV",
+        "desC_VARIABLE": "Importe del convenio del empleado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Convenios"
+      },
+      {
+        "iD_VARIABLE": 72,
+        "iD_VARIABLE_GRUPO": 9,
+        "coD_VARIABLE": "PANT1",
+        "desC_VARIABLE": "Devuelve el \"Valor1\" de la matriz \"Plus por antigüedad\" del convenio, según una cantidad en años.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Convenios"
+      },
+      {
+        "iD_VARIABLE": 73,
+        "iD_VARIABLE_GRUPO": 9,
+        "coD_VARIABLE": "PANT2",
+        "desC_VARIABLE": "Devuelve el \"Valor2\" de la matriz \"Plus por antigüedad\" del convenio, según una cantidad en años.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Convenios"
+      },
+      {
+        "iD_VARIABLE": 74,
+        "iD_VARIABLE_GRUPO": 9,
+        "coD_VARIABLE": "MEHAB",
+        "desC_VARIABLE": "Acumula la cantidad de días hábiles por convenio, de los períodos (mes/año) del rango seleccionado.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Convenios"
+      },
+      {
+        "iD_VARIABLE": 75,
+        "iD_VARIABLE_GRUPO": 9,
+        "coD_VARIABLE": "ACHAB",
+        "desC_VARIABLE": "Días hábiles por convenio acumulados al período de liquidación inclusive según Z períodos anteriores incluyendo el actual.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Convenios"
+      },
+      {
+        "iD_VARIABLE": 76,
+        "iD_VARIABLE_GRUPO": 9,
+        "coD_VARIABLE": "SEHAB",
+        "desC_VARIABLE": "Días hábiles por convenio que corresponden al semestre del período indicado. Por ejemplo: SEHAB(PERLQ), calculará los días hábiles del semestre del período de la liquidación.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Convenios"
+      },
+      {
+        "iD_VARIABLE": 77,
+        "iD_VARIABLE_GRUPO": 8,
+        "coD_VARIABLE": "CTDES",
+        "desC_VARIABLE": "Fecha de inicio del último contrato celebrado con el empleado.",
+        "devuelve": "Fecha",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Contratos"
+      },
+      {
+        "iD_VARIABLE": 78,
+        "iD_VARIABLE_GRUPO": 8,
+        "coD_VARIABLE": "CTHAS",
+        "desC_VARIABLE": "Fecha de finalización del último contrato celebrado con el empleado.",
+        "devuelve": "Fecha",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Contratos"
+      },
+      {
+        "iD_VARIABLE": 79,
+        "iD_VARIABLE_GRUPO": 21,
+        "coD_VARIABLE": "PADIC",
+        "desC_VARIABLE": "Porcentaje de aporte adicional para la DDJJ al SIJP.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Sijp"
+      },
+      {
+        "iD_VARIABLE": 80,
+        "iD_VARIABLE_GRUPO": 4,
+        "coD_VARIABLE": "HSDIA",
+        "desC_VARIABLE": "Horas laborales diarias, establecidas en la categoría del empleado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Categorías"
+      },
+      {
+        "iD_VARIABLE": 81,
+        "iD_VARIABLE_GRUPO": 4,
+        "coD_VARIABLE": "HSSEM",
+        "desC_VARIABLE": "Horas laborales semanales, establecidas en la categoría del empleado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Categorías"
+      },
+      {
+        "iD_VARIABLE": 82,
+        "iD_VARIABLE_GRUPO": 4,
+        "coD_VARIABLE": "HSMES",
+        "desC_VARIABLE": "Horas laborales mensuales, establecidas en la categoría del empleado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Categorías"
+      },
+      {
+        "iD_VARIABLE": 83,
+        "iD_VARIABLE_GRUPO": 4,
+        "coD_VARIABLE": "DSMES",
+        "desC_VARIABLE": "Días laborales por mes, establecidos en la categoría del empleado.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Categorías"
+      },
+      {
+        "iD_VARIABLE": 84,
+        "iD_VARIABLE_GRUPO": 4,
+        "coD_VARIABLE": "DSSEM",
+        "desC_VARIABLE": "Días laborales por semana, establecidos en la categoría del empleado.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Categorías"
+      },
+      {
+        "iD_VARIABLE": 85,
+        "iD_VARIABLE_GRUPO": 4,
+        "coD_VARIABLE": "EXPRE",
+        "desC_VARIABLE": "Unidad de expresión del sueldo del empleado.",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Categorías"
+      },
+      {
+        "iD_VARIABLE": 86,
+        "iD_VARIABLE_GRUPO": 13,
+        "coD_VARIABLE": "DHABI",
+        "desC_VARIABLE": "Cantidad de días hábiles comprendidos entre dos fechas (excluye Sábados, Domingos y Feriados).",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables de Fecha"
+      },
+      {
+        "iD_VARIABLE": 87,
+        "iD_VARIABLE_GRUPO": 13,
+        "coD_VARIABLE": "DFERI",
+        "desC_VARIABLE": "Si la fecha corresponde a un feriado definido para el módulo de Sueldos devuelve \"S\" y en caso negativo devuelve \"N\".",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables de Fecha"
+      },
+      {
+        "iD_VARIABLE": 88,
+        "iD_VARIABLE_GRUPO": 13,
+        "coD_VARIABLE": "CANFE",
+        "desC_VARIABLE": "Devuelve la cantidad de feriados (número de fechas) definidos en un rango de fechas.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables de Fecha"
+      },
+      {
+        "iD_VARIABLE": 90,
+        "iD_VARIABLE_GRUPO": 13,
+        "coD_VARIABLE": "DIASE",
+        "desC_VARIABLE": "Cantidad de días trabajados en el semestre al que pertenece el período de liquidación. La cantidad de días surge de la diferencia entre la fecha \"Hasta\" de la liquidación y la fecha de ingreso del empleado, o el primer día del semestre que incluye al mes de liquidación, si la fecha de ingreso es anterior.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables de Fecha"
+      },
+      {
+        "iD_VARIABLE": 91,
+        "iD_VARIABLE_GRUPO": 18,
+        "coD_VARIABLE": "NOVIM",
+        "desC_VARIABLE": "Acumula importes registrados para el rango de novedades y fechas, según el \"Tipo\" indicado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Novedades"
+      },
+      {
+        "iD_VARIABLE": 92,
+        "iD_VARIABLE_GRUPO": 18,
+        "coD_VARIABLE": "NOVCA",
+        "desC_VARIABLE": "Acumula cantidades registradas para el rango de novedades y fechas, según el \"Tipo\" indicado.",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Novedades"
+      },
+      {
+        "iD_VARIABLE": 93,
+        "iD_VARIABLE_GRUPO": 18,
+        "coD_VARIABLE": "ACNIM",
+        "desC_VARIABLE": "Acumula importes de novedades registradas en los últimos períodos anteriores, según el \"Tipo\".",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Novedades"
+      },
+      {
+        "iD_VARIABLE": 94,
+        "iD_VARIABLE_GRUPO": 18,
+        "coD_VARIABLE": "ACNCA",
+        "desC_VARIABLE": "Acumula cantidades de novedades registradas en los últimos períodos anteriores, según el \"Tipo\".",
+        "devuelve": "Número_real",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Novedades"
+      },
+      {
+        "iD_VARIABLE": 95,
+        "iD_VARIABLE_GRUPO": 15,
+        "coD_VARIABLE": "LEGAJO",
+        "desC_VARIABLE": "Número de legajo asignado al empleado (código).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Legajos"
+      },
+      {
+        "iD_VARIABLE": 96,
+        "iD_VARIABLE_GRUPO": 27,
+        "coD_VARIABLE": "MESVA",
+        "desC_VARIABLE": "Mes habitual para el goce de vacaciones asignado al empleado.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Vacaciones"
+      },
+      {
+        "iD_VARIABLE": 97,
+        "iD_VARIABLE_GRUPO": 27,
+        "coD_VARIABLE": "DIAVA",
+        "desC_VARIABLE": "Días adicionales por vacaciones asignados al empleado.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Vacaciones"
+      },
+      {
+        "iD_VARIABLE": 98,
+        "iD_VARIABLE_GRUPO": 8,
+        "coD_VARIABLE": "PROMO",
+        "desC_VARIABLE": "Porcentaje por modalidad promovida que corresponde al contrato actual del empleado (del último contrato celebrado para el empleado, según el número de contrato). Si no hay contratos, devuelve el porcentaje de la modalidad de contratación definida en el legajo.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Contratos"
+      },
+      {
+        "iD_VARIABLE": 99,
+        "iD_VARIABLE_GRUPO": 13,
+        "coD_VARIABLE": "DIA",
+        "desC_VARIABLE": "Devuelve el \"día\" (1-31) de la fecha indicada, como valor numérico.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables de Fecha"
+      },
+      {
+        "iD_VARIABLE": 100,
+        "iD_VARIABLE_GRUPO": 13,
+        "coD_VARIABLE": "DAY",
+        "desC_VARIABLE": "Devuelve el \"día\" (1-31) de la fecha indicada, como valor numérico.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables de Fecha"
+      },
+      {
+        "iD_VARIABLE": 101,
+        "iD_VARIABLE_GRUPO": 13,
+        "coD_VARIABLE": "MES",
+        "desC_VARIABLE": "Devuelve el \"mes\" (1-12) de la fecha indicada, como valor numérico.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables de Fecha"
+      },
+      {
+        "iD_VARIABLE": 102,
+        "iD_VARIABLE_GRUPO": 13,
+        "coD_VARIABLE": "MONTH",
+        "desC_VARIABLE": "Devuelve el \"mes\" (1-12) de la fecha indicada, como valor numérico.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables de Fecha"
+      },
+      {
+        "iD_VARIABLE": 103,
+        "iD_VARIABLE_GRUPO": 13,
+        "coD_VARIABLE": "ANIO",
+        "desC_VARIABLE": "Devuelve el \"año\" de la fecha indicada, como valor numérico.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables de Fecha"
+      },
+      {
+        "iD_VARIABLE": 104,
+        "iD_VARIABLE_GRUPO": 13,
+        "coD_VARIABLE": "YEAR",
+        "desC_VARIABLE": "Devuelve el \"año\" de la fecha indicada, como valor numérico.",
+        "devuelve": "Número_entero",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables de Fecha"
+      },
+      {
+        "iD_VARIABLE": 105,
+        "iD_VARIABLE_GRUPO": 13,
+        "coD_VARIABLE": "HOY",
+        "desC_VARIABLE": "Devuelve la fecha actual del sistema, en formato fecha.",
+        "devuelve": "Fecha",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables de Fecha"
+      },
+      {
+        "iD_VARIABLE": 106,
+        "iD_VARIABLE_GRUPO": 13,
+        "coD_VARIABLE": "TODAY",
+        "desC_VARIABLE": "Devuelve la fecha actual del sistema, en formato fecha.",
+        "devuelve": "Fecha",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables de Fecha"
+      },
+      {
+        "iD_VARIABLE": 107,
+        "iD_VARIABLE_GRUPO": 13,
+        "coD_VARIABLE": "FAC",
+        "desC_VARIABLE": "Convierte una fecha (en formato fecha) a caracter (cadena de texto).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables de Fecha"
+      },
+      {
+        "iD_VARIABLE": 108,
+        "iD_VARIABLE_GRUPO": 13,
+        "coD_VARIABLE": "DTOC",
+        "desC_VARIABLE": "Convierte una fecha (en formato fecha) a caracter (cadena de texto).",
+        "devuelve": "Texto",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables de Fecha"
+      },
+      {
+        "iD_VARIABLE": 109,
+        "iD_VARIABLE_GRUPO": 13,
+        "coD_VARIABLE": "CAF",
+        "desC_VARIABLE": "Convierte una fecha (en formato caracter) a formato de fecha.",
+        "devuelve": "Fecha",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables de Fecha"
+      },
+      {
+        "iD_VARIABLE": 110,
+        "iD_VARIABLE_GRUPO": 13,
+        "coD_VARIABLE": "CTOD",
+        "desC_VARIABLE": "Convierte una fecha (en formato caracter) a formato de fecha.",
+        "devuelve": "Fecha",
+        "tipO_VARIABLE": "Básica",
+        "variablE_GRUPO": "Variables de Fecha"
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 483,
+    "totalPages": 5,
+    "hasPreviousPage": false,
+    "hasNextPage": true
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

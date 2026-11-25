@@ -1,0 +1,30 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_STA22": 1,
+        "coD_SUCURS": "01",
+        "coD_STA22": "01",
+        "nombrE_SUC": "DEPOSITOS",
+        "inhabilita": false,
+        "diR_SUCURS": "",
+        "abastece": false,
+        "sincronizA_NEXO_PEDIDOS": false,
+        "sucursaL_DESTINO": 0,
+        "coD_DESCRIP": "01 - DEPOSITOS",
+        "codigo": "01",
+        "roW_VERSION": "AAAAAADPR0I="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

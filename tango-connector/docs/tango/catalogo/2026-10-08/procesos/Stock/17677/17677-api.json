@@ -1,0 +1,111 @@
+{
+  "title": "Por precio de reposición",
+  "moduleId": 10002,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "StockPorPrecioDeReposicionModel": [
+      "ID_STA11",
+      "COD_ARTICULO",
+      "DESCRIPCION",
+      "DESC_ADICIONAL",
+      "SINONIMO",
+      "COD_FAMILIA_ARTICULO",
+      "FAMILIA_ARTICULO",
+      "COD_GRUPO_ARTICULO",
+      "GRUPO_ARTICULO",
+      "COD_INDIVIDUO_ARTICULO",
+      "CODIGO_DE_BARRAS",
+      "USA_ESCALAS",
+      "COD_BASE_ARTICULO",
+      "DESC_BASE_ARTICULO",
+      "VALOR_DE_LA_ESCALA_1",
+      "VALOR_DE_LA_ESCALA_2",
+      "SALDO",
+      "COSTO",
+      "SALDO_VALORIZADO"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

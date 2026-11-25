@@ -1,0 +1,28 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_GVA22": 1,
+        "coD_ACTIVI": 1,
+        "desC_ACTIV": "Producción Propia",
+        "roW_VERSION": "AAAAAADO2Uk="
+      },
+      {
+        "iD_GVA22": 2,
+        "coD_ACTIVI": 2,
+        "desC_ACTIV": "Reventa",
+        "roW_VERSION": "AAAAAADO2Uo="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

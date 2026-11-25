@@ -1,0 +1,816 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_PUESTO": 1,
+        "coD_PUESTO": "ABOGADO",
+        "desC_PUESTO": "Abogados",
+        "coD_DGI": "2421",
+        "observaciones": "Abogados",
+        "roW_VERSION": "AAAAAADPPqc="
+      },
+      {
+        "iD_PUESTO": 2,
+        "coD_PUESTO": "ACROBATA",
+        "desC_PUESTO": "Payasos, acróbatas ",
+        "coD_DGI": "3474",
+        "observaciones": "Payasos, prestidigitadores, acróbatas y afines",
+        "roW_VERSION": "AAAAAADPPqg="
+      },
+      {
+        "iD_PUESTO": 3,
+        "coD_PUESTO": "ACTOR",
+        "desC_PUESTO": "Actores y Dir. de cine, teatro y TV",
+        "coD_DGI": "2455",
+        "observaciones": "Actores y Dir. de cine, radio, teatro, televisión y afines",
+        "roW_VERSION": "AAAAAADPPqk="
+      },
+      {
+        "iD_PUESTO": 4,
+        "coD_PUESTO": "ADMINNOCL",
+        "desC_PUESTO": "Prof. Nivel medio de serv. de admin(NC)",
+        "coD_DGI": "3439",
+        "observaciones": "Prof. de nivel medio de servicios de administración, no clasificados bajo otros epígrafes",
+        "roW_VERSION": "AAAAAADPPqo="
+      },
+      {
+        "iD_PUESTO": 5,
+        "coD_PUESTO": "AGADUANA",
+        "desC_PUESTO": "Agtes aduana e inspect. de fronteras",
+        "coD_DGI": "3441",
+        "observaciones": "Agentes de aduana e inspectores de fronteras",
+        "roW_VERSION": "AAAAAADPPqs="
+      },
+      {
+        "iD_PUESTO": 6,
+        "coD_PUESTO": "AGCOMERCI",
+        "desC_PUESTO": "Agentes comerciales y corredores (NC)",
+        "coD_DGI": "3429",
+        "observaciones": "Agentes comerciales y corredores, no clasificados bajo otros epígrafes",
+        "roW_VERSION": "AAAAAADPPqw="
+      },
+      {
+        "iD_PUESTO": 7,
+        "coD_PUESTO": "AGCOMPRAS",
+        "desC_PUESTO": "Agentes de compras y consignatarios",
+        "coD_DGI": "3421",
+        "observaciones": "Agentes de compras y consignatarios",
+        "roW_VERSION": "AAAAAADPPq0="
+      },
+      {
+        "iD_PUESTO": 8,
+        "coD_PUESTO": "AGEBOLSA",
+        "desC_PUESTO": "Agentes de serv. financieros",
+        "coD_DGI": "3411",
+        "observaciones": "Agentes de bolsa, cambio y otros servicios financieros",
+        "roW_VERSION": "AAAAAADPPq4="
+      },
+      {
+        "iD_PUESTO": 9,
+        "coD_PUESTO": "AGEINMOBIL",
+        "desC_PUESTO": "Agentes inmobiliarios",
+        "coD_DGI": "3413",
+        "observaciones": "Agentes inmobiliarios",
+        "roW_VERSION": "AAAAAADPPq8="
+      },
+      {
+        "iD_PUESTO": 10,
+        "coD_PUESTO": "AGENADNC",
+        "desC_PUESTO": "Agtes de adm púb. de aduanas (NC)",
+        "coD_DGI": "3449",
+        "observaciones": "Agentes de las administraciones públicas de aduanas, impuestos y afines, no clasificados bajo otros epígrafes",
+        "roW_VERSION": "AAAAAADPPrA="
+      },
+      {
+        "iD_PUESTO": 11,
+        "coD_PUESTO": "AGESEGUR",
+        "desC_PUESTO": "Agentes de seguros",
+        "coD_DGI": "3412",
+        "observaciones": "Agentes de seguros",
+        "roW_VERSION": "AAAAAADPPrE="
+      },
+      {
+        "iD_PUESTO": 12,
+        "coD_PUESTO": "AGEVIAJES",
+        "desC_PUESTO": "Agentes de viajes",
+        "coD_DGI": "3414",
+        "observaciones": "Agentes de viajes",
+        "roW_VERSION": "AAAAAADPPrI="
+      },
+      {
+        "iD_PUESTO": 13,
+        "coD_PUESTO": "AGMANOOB",
+        "desC_PUESTO": "Agtes de contratistas de mano de obra",
+        "coD_DGI": "3423",
+        "observaciones": "Agentes públicos y privados de colocación y contratistas de mano de obra",
+        "roW_VERSION": "AAAAAADPPrM="
+      },
+      {
+        "iD_PUESTO": 14,
+        "coD_PUESTO": "AGRICULTO",
+        "desC_PUESTO": "Agric.y trab. de cultivos extensivos",
+        "coD_DGI": "6111",
+        "observaciones": "Agricultores y trabajadores calificados de cultivos extensivos",
+        "roW_VERSION": "AAAAAADPPrQ="
+      },
+      {
+        "iD_PUESTO": 15,
+        "coD_PUESTO": "AGRIHUERT",
+        "desC_PUESTO": "Agric.y trabajad.calif de viveros",
+        "coD_DGI": "6113",
+        "observaciones": "Agricultores y trabajadores calificados de huertas, invernaderos, viveros y jardines",
+        "roW_VERSION": "AAAAAADPPrU="
+      },
+      {
+        "iD_PUESTO": 16,
+        "coD_PUESTO": "AGRIMIXTO",
+        "desC_PUESTO": "Agric.y trabaj. de cultivos mixtos",
+        "coD_DGI": "6114",
+        "observaciones": "Agricultores y trabajadores calificados de cultivos mixtos",
+        "roW_VERSION": "AAAAAADPPrY="
+      },
+      {
+        "iD_PUESTO": 17,
+        "coD_PUESTO": "AGRIPLANT",
+        "desC_PUESTO": "Agric.y trab. Calif. de plantaciones ",
+        "coD_DGI": "6112",
+        "observaciones": "Agricultores y trabajadores calificados de plantaciones de árboles y arbustos",
+        "roW_VERSION": "AAAAAADPPrc="
+      },
+      {
+        "iD_PUESTO": 18,
+        "coD_PUESTO": "AGRONOMO",
+        "desC_PUESTO": "Agrónomos y afines",
+        "coD_DGI": "2213",
+        "observaciones": "Agrónomos y afines",
+        "roW_VERSION": "AAAAAADPPrg="
+      },
+      {
+        "iD_PUESTO": 19,
+        "coD_PUESTO": "AGROPECU",
+        "desC_PUESTO": "Trabajadores agropecuarios calificados ",
+        "coD_DGI": "6130",
+        "observaciones": "Productores y trabajadores agropecuarios calificados cuya producción se destina al mercado",
+        "roW_VERSION": "AAAAAADPPrk="
+      },
+      {
+        "iD_PUESTO": 20,
+        "coD_PUESTO": "AGROPESQ",
+        "desC_PUESTO": "Trabajadores agropec. y pesqueros ",
+        "coD_DGI": "6210",
+        "observaciones": "Trabajadores agropecuarios y pesqueros de subsistencia",
+        "roW_VERSION": "AAAAAADPPro="
+      },
+      {
+        "iD_PUESTO": 21,
+        "coD_PUESTO": "AJUSTADOR",
+        "desC_PUESTO": "Ajustadores electronicistas",
+        "coD_DGI": "7242",
+        "observaciones": "Ajustadores electronicistas",
+        "roW_VERSION": "AAAAAADPPrs="
+      },
+      {
+        "iD_PUESTO": 22,
+        "coD_PUESTO": "ALBAÑIL",
+        "desC_PUESTO": "Albañiles y mamposteros",
+        "coD_DGI": "7122",
+        "observaciones": "Albañiles y mamposteros",
+        "roW_VERSION": "AAAAAADPPrw="
+      },
+      {
+        "iD_PUESTO": 23,
+        "coD_PUESTO": "ALFARERO",
+        "desC_PUESTO": "Alfareros y afines ",
+        "coD_DGI": "7321",
+        "observaciones": "Alfareros y afines (barro, arcilla y abrasivos)",
+        "roW_VERSION": "AAAAAADPPr0="
+      },
+      {
+        "iD_PUESTO": 24,
+        "coD_PUESTO": "ANALSISTE",
+        "desC_PUESTO": "Analistas de sistemas informáticos",
+        "coD_DGI": "2131",
+        "observaciones": "Creadores y analistas de sistemas informáticos",
+        "roW_VERSION": "AAAAAADPPr4="
+      },
+      {
+        "iD_PUESTO": 25,
+        "coD_PUESTO": "APAREJADO",
+        "desC_PUESTO": "Aparejadores de cables",
+        "coD_DGI": "7215",
+        "observaciones": "Aparejadores y empalmadores de cables",
+        "roW_VERSION": "AAAAAADPPr8="
+      },
+      {
+        "iD_PUESTO": 26,
+        "coD_PUESTO": "APELAMBR",
+        "desC_PUESTO": "Apelambradores, pellejeros y curtidores",
+        "coD_DGI": "7441",
+        "observaciones": "Apelambradores, pellejeros y curtidores",
+        "roW_VERSION": "AAAAAADPPsA="
+      },
+      {
+        "iD_PUESTO": 27,
+        "coD_PUESTO": "APICULTOR",
+        "desC_PUESTO": "Apicultores ",
+        "coD_DGI": "6123",
+        "observaciones": "Apicultores y sericicultores y trabajadores calificados de la apicultura y la sericicultura",
+        "roW_VERSION": "AAAAAADPPsE="
+      },
+      {
+        "iD_PUESTO": 28,
+        "coD_PUESTO": "ARCHIVERO",
+        "desC_PUESTO": "Archiveros y conservadores de museos",
+        "coD_DGI": "2431",
+        "observaciones": "Archiveros y conservadores de museos",
+        "roW_VERSION": "AAAAAADPPsI="
+      },
+      {
+        "iD_PUESTO": 29,
+        "coD_PUESTO": "ARQUITENC",
+        "desC_PUESTO": "Arquitectos, ing. y afines (NC)",
+        "coD_DGI": "2149",
+        "observaciones": "Arquitectos, ingenieros y afines, no clasificados bajo otros epígrafes",
+        "roW_VERSION": "AAAAAADPPsQ="
+      },
+      {
+        "iD_PUESTO": 30,
+        "coD_PUESTO": "ARQUITECT",
+        "desC_PUESTO": "Arquitectos, urbanistas ",
+        "coD_DGI": "2141",
+        "observaciones": "Arquitectos, urbanistas e ingenieros de tránsito",
+        "roW_VERSION": "AAAAAADPPsM="
+      },
+      {
+        "iD_PUESTO": 31,
+        "coD_PUESTO": "ARTMADERA",
+        "desC_PUESTO": "Artesanos de la madera ",
+        "coD_DGI": "7331",
+        "observaciones": "Artesanos de la madera y materiales similares",
+        "roW_VERSION": "AAAAAADPPsU="
+      },
+      {
+        "iD_PUESTO": 32,
+        "coD_PUESTO": "ARTTEJIDO",
+        "desC_PUESTO": "Artesanos de los tejidos, el cuero",
+        "coD_DGI": "7332",
+        "observaciones": "Artesanos de los tejidos, el cuero y materiales similares",
+        "roW_VERSION": "AAAAAADPPsY="
+      },
+      {
+        "iD_PUESTO": 33,
+        "coD_PUESTO": "ASISTMEDIC",
+        "desC_PUESTO": "Practicantes y asistentes médicos",
+        "coD_DGI": "3221",
+        "observaciones": "Practicantes y asistentes médicos",
+        "roW_VERSION": "AAAAAADPPsc="
+      },
+      {
+        "iD_PUESTO": 34,
+        "coD_PUESTO": "ASISTSOCI",
+        "desC_PUESTO": "Trabajadores y asistentes sociales ",
+        "coD_DGI": "3460",
+        "observaciones": "Trabajadores y asistentes sociales de nivel medio",
+        "roW_VERSION": "AAAAAADPPsg="
+      },
+      {
+        "iD_PUESTO": 35,
+        "coD_PUESTO": "ASTROLOG",
+        "desC_PUESTO": "Astrólogos y afines",
+        "coD_DGI": "5151",
+        "observaciones": "Astrólogos y afines",
+        "roW_VERSION": "AAAAAADPPsk="
+      },
+      {
+        "iD_PUESTO": 36,
+        "coD_PUESTO": "AUTOR",
+        "desC_PUESTO": "Autores, periodistas y otros escritores",
+        "coD_DGI": "2451",
+        "observaciones": "Autores, periodistas y otros escritores",
+        "roW_VERSION": "AAAAAADPPso="
+      },
+      {
+        "iD_PUESTO": 37,
+        "coD_PUESTO": "AUXLAICO",
+        "desC_PUESTO": "Auxiliares laicos de los cultos",
+        "coD_DGI": "3480",
+        "observaciones": "Auxiliares laicos de los cultos",
+        "roW_VERSION": "AAAAAADPPss="
+      },
+      {
+        "iD_PUESTO": 38,
+        "coD_PUESTO": "AVICULTOR",
+        "desC_PUESTO": "Avicultores ",
+        "coD_DGI": "6122",
+        "observaciones": "Avicultores y trabajadores calificados de la avicultura",
+        "roW_VERSION": "AAAAAADPPsw="
+      },
+      {
+        "iD_PUESTO": 39,
+        "coD_PUESTO": "AYUCAMAR",
+        "desC_PUESTO": "Acompañantes y ayudas de cámara",
+        "coD_DGI": "5142",
+        "observaciones": "Acompañantes y ayudas de cámara",
+        "roW_VERSION": "AAAAAADPPs0="
+      },
+      {
+        "iD_PUESTO": 40,
+        "coD_PUESTO": "AYUENFDO",
+        "desC_PUESTO": "Ayudantes de enfermería a domicilio",
+        "coD_DGI": "5133",
+        "observaciones": "Ayudantes de enfermería a domicilio",
+        "roW_VERSION": "AAAAAADPPs4="
+      },
+      {
+        "iD_PUESTO": 41,
+        "coD_PUESTO": "AYUENFER",
+        "desC_PUESTO": "Ayudantes de enfermería ",
+        "coD_DGI": "5132",
+        "observaciones": "Ayudantes de enfermería en instituciones",
+        "roW_VERSION": "AAAAAADPPs8="
+      },
+      {
+        "iD_PUESTO": 42,
+        "coD_PUESTO": "AZAFATA",
+        "desC_PUESTO": "Camareros y azafatas",
+        "coD_DGI": "5111",
+        "observaciones": "Camareros y azafatas",
+        "roW_VERSION": "AAAAAADPPtA="
+      },
+      {
+        "iD_PUESTO": 43,
+        "coD_PUESTO": "BARNIZADO",
+        "desC_PUESTO": "Barnizadores y afines",
+        "coD_DGI": "7142",
+        "observaciones": "Barnizadores y afines",
+        "roW_VERSION": "AAAAAADPPtE="
+      },
+      {
+        "iD_PUESTO": 44,
+        "coD_PUESTO": "BARRENDE",
+        "desC_PUESTO": "Barrenderos y afines",
+        "coD_DGI": "9162",
+        "observaciones": "Barrenderos y afines",
+        "roW_VERSION": "AAAAAADPPtI="
+      },
+      {
+        "iD_PUESTO": 45,
+        "coD_PUESTO": "BIBLIOTECA",
+        "desC_PUESTO": "Bibliotecarios, documentalistas y afines",
+        "coD_DGI": "2432",
+        "observaciones": "Bibliotecarios, documentalistas y afines",
+        "roW_VERSION": "AAAAAADPPtM="
+      },
+      {
+        "iD_PUESTO": 46,
+        "coD_PUESTO": "BIOLOGO",
+        "desC_PUESTO": "Biólogos, botánicos, zoólogos y afines",
+        "coD_DGI": "2211",
+        "observaciones": "Biólogos, botánicos, zoólogos y afines",
+        "roW_VERSION": "AAAAAADPPtQ="
+      },
+      {
+        "iD_PUESTO": 47,
+        "coD_PUESTO": "BOMBERO",
+        "desC_PUESTO": "Bomberos",
+        "coD_DGI": "5161",
+        "observaciones": "Bomberos",
+        "roW_VERSION": "AAAAAADPPtU="
+      },
+      {
+        "iD_PUESTO": 48,
+        "coD_PUESTO": "BUZO",
+        "desC_PUESTO": "Buzos",
+        "coD_DGI": "7216",
+        "observaciones": "Buzos",
+        "roW_VERSION": "AAAAAADPPtY="
+      },
+      {
+        "iD_PUESTO": 49,
+        "coD_PUESTO": "CAJERO",
+        "desC_PUESTO": "Cajeros y expendedores de billetes",
+        "coD_DGI": "4211",
+        "observaciones": "Cajeros y expendedores de billetes",
+        "roW_VERSION": "AAAAAADPPtc="
+      },
+      {
+        "iD_PUESTO": 50,
+        "coD_PUESTO": "CAJISTA",
+        "desC_PUESTO": "Cajistas, tipógrafos y afines",
+        "coD_DGI": "7341",
+        "observaciones": "Cajistas, tipógrafos y afines",
+        "roW_VERSION": "AAAAAADPPtg="
+      },
+      {
+        "iD_PUESTO": 51,
+        "coD_PUESTO": "CAMARERO",
+        "desC_PUESTO": "Camareros y taberneros",
+        "coD_DGI": "5123",
+        "observaciones": "Camareros y taberneros",
+        "roW_VERSION": "AAAAAADPPtk="
+      },
+      {
+        "iD_PUESTO": 52,
+        "coD_PUESTO": "CAPITAN",
+        "desC_PUESTO": "Capitanes, oficiales de cubierta",
+        "coD_DGI": "3142",
+        "observaciones": "Capitanes, oficiales de cubierta y prácticos",
+        "roW_VERSION": "AAAAAADPPto="
+      },
+      {
+        "iD_PUESTO": 53,
+        "coD_PUESTO": "CARBONER",
+        "desC_PUESTO": "Carboneros de carbón vegetal y afines",
+        "coD_DGI": "6142",
+        "observaciones": "Carboneros de carbón vegetal y afines",
+        "roW_VERSION": "AAAAAADPPts="
+      },
+      {
+        "iD_PUESTO": 54,
+        "coD_PUESTO": "CARNICERO",
+        "desC_PUESTO": "Carniceros, pescaderos y afines",
+        "coD_DGI": "7411",
+        "observaciones": "Carniceros, pescaderos y afines",
+        "roW_VERSION": "AAAAAADPPtw="
+      },
+      {
+        "iD_PUESTO": 55,
+        "coD_PUESTO": "CARPINTERO",
+        "desC_PUESTO": "Carpinteros de armar y de blanco",
+        "coD_DGI": "7124",
+        "observaciones": "Carpinteros de armar y de blanco",
+        "roW_VERSION": "AAAAAADPPt0="
+      },
+      {
+        "iD_PUESTO": 56,
+        "coD_PUESTO": "CARTOGRAF",
+        "desC_PUESTO": "Cartógrafos y agrimensores",
+        "coD_DGI": "2148",
+        "observaciones": "Cartógrafos y agrimensores",
+        "roW_VERSION": "AAAAAADPPt4="
+      },
+      {
+        "iD_PUESTO": 57,
+        "coD_PUESTO": "CATADORES",
+        "desC_PUESTO": "Catadores y clasif de alimentos ",
+        "coD_DGI": "7415",
+        "observaciones": "Catadores y clasificadores de alimentos y bebidas",
+        "roW_VERSION": "AAAAAADPPt8="
+      },
+      {
+        "iD_PUESTO": 58,
+        "coD_PUESTO": "CAZADOR",
+        "desC_PUESTO": "Cazadores y tramperos",
+        "coD_DGI": "6154",
+        "observaciones": "Cazadores y tramperos",
+        "roW_VERSION": "AAAAAADPPuA="
+      },
+      {
+        "iD_PUESTO": 59,
+        "coD_PUESTO": "CESTEROS",
+        "desC_PUESTO": "Cesteros, bruceros y afines",
+        "coD_DGI": "7424",
+        "observaciones": "Cesteros, bruceros y afines",
+        "roW_VERSION": "AAAAAADPPuE="
+      },
+      {
+        "iD_PUESTO": 60,
+        "coD_PUESTO": "CHAPISTA",
+        "desC_PUESTO": "Chapistas y caldereros",
+        "coD_DGI": "7213",
+        "observaciones": "Chapistas y caldereros",
+        "roW_VERSION": "AAAAAADPPuI="
+      },
+      {
+        "iD_PUESTO": 61,
+        "coD_PUESTO": "COBRADOR",
+        "desC_PUESTO": "Cobradores y afines",
+        "coD_DGI": "4215",
+        "observaciones": "Cobradores y afines",
+        "roW_VERSION": "AAAAAADPPuM="
+      },
+      {
+        "iD_PUESTO": 62,
+        "coD_PUESTO": "COCINERO",
+        "desC_PUESTO": "Cocineros",
+        "coD_DGI": "5122",
+        "observaciones": "Cocineros",
+        "roW_VERSION": "AAAAAADPPuQ="
+      },
+      {
+        "iD_PUESTO": 63,
+        "coD_PUESTO": "CODIFICAD",
+        "desC_PUESTO": "Codificadores de datos",
+        "coD_DGI": "4143",
+        "observaciones": "Codificadores de datos, correctores de pruebas de imprenta y afines",
+        "roW_VERSION": "AAAAAADPPuU="
+      },
+      {
+        "iD_PUESTO": 64,
+        "coD_PUESTO": "COMPOSITO",
+        "desC_PUESTO": "Compositores, músicos y cantantes",
+        "coD_DGI": "2453",
+        "observaciones": "Compositores, músicos y cantantes",
+        "roW_VERSION": "AAAAAADPPuY="
+      },
+      {
+        "iD_PUESTO": 65,
+        "coD_PUESTO": "COMPRADO",
+        "desC_PUESTO": "Compradores",
+        "coD_DGI": "3416",
+        "observaciones": "Compradores",
+        "roW_VERSION": "AAAAAADPPuc="
+      },
+      {
+        "iD_PUESTO": 66,
+        "coD_PUESTO": "CONCERJE",
+        "desC_PUESTO": "Conserjes",
+        "coD_DGI": "9141",
+        "observaciones": "Conserjes",
+        "roW_VERSION": "AAAAAADPPug="
+      },
+      {
+        "iD_PUESTO": 67,
+        "coD_PUESTO": "CONDAERO",
+        "desC_PUESTO": "Controladores de tráfico aéreo",
+        "coD_DGI": "3144",
+        "observaciones": "Controladores de tráfico aéreo",
+        "roW_VERSION": "AAAAAADPPuk="
+      },
+      {
+        "iD_PUESTO": 68,
+        "coD_PUESTO": "CONDAUTOS",
+        "desC_PUESTO": "Conductores de automóviles",
+        "coD_DGI": "8322",
+        "observaciones": "Conductores de automóviles, taxis y camionetas",
+        "roW_VERSION": "AAAAAADPPuo="
+      },
+      {
+        "iD_PUESTO": 69,
+        "coD_PUESTO": "CONDTRACC",
+        "desC_PUESTO": "Conduct. de vehículos a tracción animal",
+        "coD_DGI": "9332",
+        "observaciones": "Conductores de vehículos y máq. de tracción animal",
+        "roW_VERSION": "AAAAAADPPuw="
+      },
+      {
+        "iD_PUESTO": 70,
+        "coD_PUESTO": "CONDMOTO",
+        "desC_PUESTO": "Conductores de motocicletas",
+        "coD_DGI": "8321",
+        "observaciones": "Conductores de motocicletas",
+        "roW_VERSION": "AAAAAADPPus="
+      },
+      {
+        "iD_PUESTO": 71,
+        "coD_PUESTO": "CONDUCPE",
+        "desC_PUESTO": "Conduct. de vehículos a pedal ",
+        "coD_DGI": "9331",
+        "observaciones": "Conductores de vehículos accionados a pedal o a brazo",
+        "roW_VERSION": "AAAAAADPPu4="
+      },
+      {
+        "iD_PUESTO": 72,
+        "coD_PUESTO": "CONDUCCA",
+        "desC_PUESTO": "Conductores de camiones pesados",
+        "coD_DGI": "8324",
+        "observaciones": "Conductores de camiones pesados",
+        "roW_VERSION": "AAAAAADPPu0="
+      },
+      {
+        "iD_PUESTO": 73,
+        "coD_PUESTO": "CONDUCTO",
+        "desC_PUESTO": "Conductores de autobuses y tranvías",
+        "coD_DGI": "8323",
+        "observaciones": "Conductores de autobuses y tranvías",
+        "roW_VERSION": "AAAAAADPPu8="
+      },
+      {
+        "iD_PUESTO": 74,
+        "coD_PUESTO": "CONSAGRI",
+        "desC_PUESTO": "Consejeros agrícolas y forestales",
+        "coD_DGI": "3213",
+        "observaciones": "Consejeros agrícolas y forestales",
+        "roW_VERSION": "AAAAAADPPvA="
+      },
+      {
+        "iD_PUESTO": 75,
+        "coD_PUESTO": "CONSMUSIC",
+        "desC_PUESTO": "Constructores de instru. musicales",
+        "coD_DGI": "7312",
+        "observaciones": "Constructores y afinadores de instrumentos musicales",
+        "roW_VERSION": "AAAAAADPPvE="
+      },
+      {
+        "iD_PUESTO": 76,
+        "coD_PUESTO": "CONSTRUCT",
+        "desC_PUESTO": "Construct. con materiales tradicionales",
+        "coD_DGI": "7121",
+        "observaciones": "Constructores con técnicas y materiales tradicionales",
+        "roW_VERSION": "AAAAAADPPvI="
+      },
+      {
+        "iD_PUESTO": 77,
+        "coD_PUESTO": "CONTADOR",
+        "desC_PUESTO": "Contadores",
+        "coD_DGI": "2411",
+        "observaciones": "Contadores",
+        "roW_VERSION": "AAAAAADPPvM="
+      },
+      {
+        "iD_PUESTO": 78,
+        "coD_PUESTO": "COREOGRA",
+        "desC_PUESTO": "Coreógrafos y bailarines",
+        "coD_DGI": "2454",
+        "observaciones": "Coreógrafos y bailarines",
+        "roW_VERSION": "AAAAAADPPvQ="
+      },
+      {
+        "iD_PUESTO": 79,
+        "coD_PUESTO": "COSTURER",
+        "desC_PUESTO": "Costureros, bordadores y afines",
+        "coD_DGI": "7436",
+        "observaciones": "Costureros, bordadores y afines",
+        "roW_VERSION": "AAAAAADPPvY="
+      },
+      {
+        "iD_PUESTO": 80,
+        "coD_PUESTO": "CREIADOR",
+        "desC_PUESTO": "Criadores y trabajadores pecuarios(NC)",
+        "coD_DGI": "6129",
+        "observaciones": "Criadores y trabajadores pecuarios calificados de la cría de animales para el mercado y afines, no clasificados bajo otros epígrafes",
+        "roW_VERSION": "AAAAAADPPvc="
+      },
+      {
+        "iD_PUESTO": 81,
+        "coD_PUESTO": "CRIADACUA",
+        "desC_PUESTO": "Criadores de especies acuáticas",
+        "coD_DGI": "6151",
+        "observaciones": "Criadores de especies acuáticas",
+        "roW_VERSION": "AAAAAADPPvg="
+      },
+      {
+        "iD_PUESTO": 82,
+        "coD_PUESTO": "CRIADGANA",
+        "desC_PUESTO": "Criadores de ganado, produ.  de leche ",
+        "coD_DGI": "6121",
+        "observaciones": "Criadores de ganado y otros animales domésticos, productores de leche y sus derivados",
+        "roW_VERSION": "AAAAAADPPvk="
+      },
+      {
+        "iD_PUESTO": 83,
+        "coD_PUESTO": "CRIADOR",
+        "desC_PUESTO": "Criadores de animales domésticos",
+        "coD_DGI": "6124",
+        "observaciones": "Criadores y trabajadores calificados de la cría de animales domésticos diversos",
+        "roW_VERSION": "AAAAAADPPvo="
+      },
+      {
+        "iD_PUESTO": 84,
+        "coD_PUESTO": "CRISTALER",
+        "desC_PUESTO": "Cristaleros",
+        "coD_DGI": "7135",
+        "observaciones": "Cristaleros",
+        "roW_VERSION": "AAAAAADPPvs="
+      },
+      {
+        "iD_PUESTO": 85,
+        "coD_PUESTO": "CURANDER",
+        "desC_PUESTO": "Curanderos",
+        "coD_DGI": "3242",
+        "observaciones": "Curanderos",
+        "roW_VERSION": "AAAAAADPPvw="
+      },
+      {
+        "iD_PUESTO": 86,
+        "coD_PUESTO": "DECORADO",
+        "desC_PUESTO": "Decoradores y diseñadores",
+        "coD_DGI": "3471",
+        "observaciones": "Decoradores y diseñadores",
+        "roW_VERSION": "AAAAAADPPv0="
+      },
+      {
+        "iD_PUESTO": 87,
+        "coD_PUESTO": "DENTISTA",
+        "desC_PUESTO": "Dentistas auxiliares  de odontología",
+        "coD_DGI": "3225",
+        "observaciones": "Dentistas auxiliares y ayudantes de odontología",
+        "roW_VERSION": "AAAAAADPPv4="
+      },
+      {
+        "iD_PUESTO": 88,
+        "coD_PUESTO": "DEPORTIST",
+        "desC_PUESTO": "Atletas, deportistas y afines",
+        "coD_DGI": "3475",
+        "observaciones": "Atletas, deportistas y afines",
+        "roW_VERSION": "AAAAAADPPv8="
+      },
+      {
+        "iD_PUESTO": 89,
+        "coD_PUESTO": "DIBUJANTE",
+        "desC_PUESTO": "Delineantes y dibujantes Téc.",
+        "coD_DGI": "3118",
+        "observaciones": "Delineantes y dibujantes técnicos",
+        "roW_VERSION": "AAAAAADPPwE="
+      },
+      {
+        "iD_PUESTO": 90,
+        "coD_PUESTO": "DIRABASTE",
+        "desC_PUESTO": "Dir. dptos. de abastec, y distribución",
+        "coD_DGI": "1235",
+        "observaciones": "Dir. de dptos. de abastecimiento y distribución",
+        "roW_VERSION": "AAAAAADPPwI="
+      },
+      {
+        "iD_PUESTO": 91,
+        "coD_PUESTO": "DIRAGRICU",
+        "desC_PUESTO": "Dir. de prod. y ope, agricultura y caza ",
+        "coD_DGI": "1221",
+        "observaciones": "Dir. de dptos. de producción y operaciones, agricultura, caza, silvicultura y pesca",
+        "roW_VERSION": "AAAAAADPPwM="
+      },
+      {
+        "iD_PUESTO": 92,
+        "coD_PUESTO": "DIRCOMERC",
+        "desC_PUESTO": "Dir. de prod y ope, comercio ",
+        "coD_DGI": "1224",
+        "observaciones": "Dir. de dptos. de producción y operaciones, comercio mayorista y minorista",
+        "roW_VERSION": "AAAAAADPPwQ="
+      },
+      {
+        "iD_PUESTO": 93,
+        "coD_PUESTO": "DIRCONSTR",
+        "desC_PUESTO": "Dir. de prod y ope, construcciones",
+        "coD_DGI": "1223",
+        "observaciones": "Dir. de dptos. de producción y operaciones, construcción y obras públicas",
+        "roW_VERSION": "AAAAAADPPwU="
+      },
+      {
+        "iD_PUESTO": 94,
+        "coD_PUESTO": "DIREMPSER",
+        "desC_PUESTO": "Dir. dptos. Prod de servic a empresas",
+        "coD_DGI": "1227",
+        "observaciones": "Dir. de dptos. de producción y operaciones, empresas de intermediación y servicios a empresas",
+        "roW_VERSION": "AAAAAADPPwY="
+      },
+      {
+        "iD_PUESTO": 95,
+        "coD_PUESTO": "DIRFINANC",
+        "desC_PUESTO": "Dir. de dptos. financieros y administra.",
+        "coD_DGI": "1231",
+        "observaciones": "Dir. de dptos. financieros y administrativos",
+        "roW_VERSION": "AAAAAADPPwc="
+      },
+      {
+        "iD_PUESTO": 96,
+        "coD_PUESTO": "DIRGRAL",
+        "desC_PUESTO": "Dir. y Gtes. generales de empresa",
+        "coD_DGI": "1210",
+        "observaciones": "Dir. generales y Gtes. generales de empresa",
+        "roW_VERSION": "AAAAAADPPwg="
+      },
+      {
+        "iD_PUESTO": 97,
+        "coD_PUESTO": "DIRINVESTI",
+        "desC_PUESTO": "Dir. dptos. de investigac. y desarrollo",
+        "coD_DGI": "1237",
+        "observaciones": "Dir. de dptos. de investigaciones y desarrollo",
+        "roW_VERSION": "AAAAAADPPwk="
+      },
+      {
+        "iD_PUESTO": 98,
+        "coD_PUESTO": "DIRLIMPIEZ",
+        "desC_PUESTO": "Dir. dptos. Prod y ope, serv. cuidados ",
+        "coD_DGI": "1228",
+        "observaciones": "Dir. de dptos. de producción y operaciones, servicios de cuidados personales, limpieza y servicios similares",
+        "roW_VERSION": "AAAAAADPPwo="
+      },
+      {
+        "iD_PUESTO": 99,
+        "coD_PUESTO": "DIRMANUFA",
+        "desC_PUESTO": "Dir. de prod y ope indust manufacturer.",
+        "coD_DGI": "1222",
+        "observaciones": "Dir. de dptos. de producción y operaciones, industrias manufactureras",
+        "roW_VERSION": "AAAAAADPPws="
+      },
+      {
+        "iD_PUESTO": 100,
+        "coD_PUESTO": "DIRNOCLASI",
+        "desC_PUESTO": "Dir. de prod y ope, no clasificados ",
+        "coD_DGI": "1229",
+        "observaciones": "Dir. de dptos. de producción y operaciones, no clasificados bajo otros epígrafes",
+        "roW_VERSION": "AAAAAADPPww="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

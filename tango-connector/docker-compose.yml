@@ -1,0 +1,16 @@
+# Postgres para desarrollo local. En el 5433, para no chocar con otro Postgres de la PC.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tango-connector-db
+    environment:
+      POSTGRES_DB: tango_connector
+      POSTGRES_USER: tango_connector
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-solo-desarrollo}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - tango-connector-db:/var/lib/postgresql/data
+
+volumes:
+  tango-connector-db:

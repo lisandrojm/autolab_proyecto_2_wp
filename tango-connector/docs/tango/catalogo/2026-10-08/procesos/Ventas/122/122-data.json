@@ -1,0 +1,71 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "eS_COPIA": false,
+        "iD_TIPO_COMPROBANTE_GV": 2,
+        "coD_GVA15": "FAC",
+        "iD_GVA15": 1,
+        "generA_ASIENTO": "S",
+        "iD_ASIENTO_MODELO_HABITUAL": 1,
+        "editA_ASIENTO_MODELO": "S",
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADPVig="
+      },
+      {
+        "eS_COPIA": false,
+        "iD_TIPO_COMPROBANTE_GV": 3,
+        "coD_GVA15": "N/D",
+        "iD_GVA15": 2,
+        "generA_ASIENTO": "S",
+        "iD_ASIENTO_MODELO_HABITUAL": 1,
+        "editA_ASIENTO_MODELO": "S",
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADPVio="
+      },
+      {
+        "eS_COPIA": false,
+        "iD_TIPO_COMPROBANTE_GV": 4,
+        "coD_GVA15": "N/C",
+        "iD_GVA15": 3,
+        "generA_ASIENTO": "S",
+        "iD_ASIENTO_MODELO_HABITUAL": 2,
+        "editA_ASIENTO_MODELO": "S",
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADPVik="
+      },
+      {
+        "eS_COPIA": false,
+        "iD_TIPO_COMPROBANTE_GV": 5,
+        "coD_GVA15": "NCI",
+        "iD_GVA15": 4,
+        "generA_ASIENTO": "S",
+        "iD_ASIENTO_MODELO_HABITUAL": 2,
+        "editA_ASIENTO_MODELO": "S",
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADPVis="
+      },
+      {
+        "eS_COPIA": false,
+        "iD_TIPO_COMPROBANTE_GV": 6,
+        "coD_GVA15": "NDI",
+        "iD_GVA15": 5,
+        "generA_ASIENTO": "S",
+        "iD_ASIENTO_MODELO_HABITUAL": 1,
+        "editA_ASIENTO_MODELO": "S",
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADPViw="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

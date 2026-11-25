@@ -1,0 +1,22 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_VALORIZACION_UNIDAD_ADICIONAL": 2,
+        "iD_UNIDAD_ADICIONAL": 3,
+        "iD_TIPO_VALORIZACION": 4,
+        "roW_VERSION": "AAAAAADf4+k="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

@@ -1,0 +1,480 @@
+{
+  "title": "Cuentas contables",
+  "moduleId": 6,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"CUENTA\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_CUENTA\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_CUENTA\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 20,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_CUENTA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_CUENTA_ALTERNATIVO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"USA_AUXILIARES_CONTABLES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"REGISTRACION_AUTOMATICA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_CLASE_CUENTA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"TIPO_CUENTA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 20,\r\n      \"minLength\": 0\r\n    },\r\n    \"SALDO_HABITUAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8,\r\n      \"minLength\": 0\r\n    },\r\n    \"HABILITADO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESFE_INHABILITADO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"HASFE_INHABILITADO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"ID_CUENTA_RDO_EJ_POSITIVO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_RDO_EJ_NEGATIVO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_RESULTADOS_ACUMULADOS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"AFECTA_AJUSTE_INFLACION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"AFECTA_COMPROBACION_AJUSTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_INDICE_COMPROBACION_AJUSTE\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"USA_UNIDAD_ADICIONAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"AFECTA_CONVERSION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_DESCRIP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ID_CUENTA_RDO_INFLAC_POSITIVO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_RDO_INFLAC_NEGATIVO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_PROPORCION_AJUSTE\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_INDICE_AJUSTE_INFLACION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"TIPO_UNIDAD_ADICIONAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 20,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_MONEDA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_UNIDAD_ADICIONAL\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"AFECTA_RESULTADO_TENENCIA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_CUENTA_RDO_TENENCIA_POSITIVO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_RDO_TENENCIA_NEGATIVO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_TENENCIA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_ASIENTO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"TIPO_CONVERSION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 20,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_TIPO_COTIZACION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_ASIENTO_CONVERSION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_CONVERSION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_TRASLACION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_RUBRO_COPIA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"PERMITE_MOD_CODIGO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"DETAIL_TOOLBAR_GROUP\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/DETAIL_TOOLBAR_GROUP\"\r\n      }\r\n    },\r\n    \"LEYENDA_MOVIMIENTO_CUENTA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/LEYENDA_MOVIMIENTO_CUENTA\"\r\n      }\r\n    },\r\n    \"CA_204_AGRUPADOR\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 50,\r\n      \"minLength\": 0\r\n    },\r\n    \"CA_204_AGRUPADOR_RESULTADOS\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 50,\r\n      \"minLength\": 0\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"DETAIL_TOOLBAR_GROUP\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"COD_MODULO\",\r\n        \"Habilitado\"\r\n      ],\r\n      \"properties\": {\r\n        \"COD_MODULO\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"Habilitado\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        }\r\n      }\r\n    },\r\n    \"LEYENDA_MOVIMIENTO_CUENTA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_LEYENDA_MOVIMIENTO\",\r\n        \"D_H\",\r\n        \"LEYENDA_DEFECTO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_LEYENDA_MOVIMIENTO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"D_H\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"LEYENDA_DEFECTO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class DETAIL_TOOLBAR_GROUP\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_MODULO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string COD_MODULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Habilitado\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string Habilitado { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class LEYENDA_MOVIMIENTO_CUENTA\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_LEYENDA_MOVIMIENTO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_LEYENDA_MOVIMIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"D_H\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string D_H { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA_DEFECTO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string LEYENDA_DEFECTO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CUENTA\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_CUENTA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string COD_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string DESC_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CUENTA_ALTERNATIVO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string COD_CUENTA_ALTERNATIVO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_AUXILIARES_CONTABLES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string USA_AUXILIARES_CONTABLES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"REGISTRACION_AUTOMATICA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string REGISTRACION_AUTOMATICA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CLASE_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CLASE_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string TIPO_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SALDO_HABITUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8)]\n        public string SALDO_HABITUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESFE_INHABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? DESFE_INHABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HASFE_INHABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? HASFE_INHABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_RDO_EJ_POSITIVO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_RDO_EJ_POSITIVO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_RDO_EJ_NEGATIVO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_RDO_EJ_NEGATIVO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_RESULTADOS_ACUMULADOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_RESULTADOS_ACUMULADOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_AJUSTE_INFLACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string AFECTA_AJUSTE_INFLACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_COMPROBACION_AJUSTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string AFECTA_COMPROBACION_AJUSTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_INDICE_COMPROBACION_AJUSTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_INDICE_COMPROBACION_AJUSTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_UNIDAD_ADICIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string USA_UNIDAD_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_CONVERSION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string AFECTA_CONVERSION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_DESCRIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string COD_DESCRIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_RDO_INFLAC_POSITIVO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_RDO_INFLAC_POSITIVO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_RDO_INFLAC_NEGATIVO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_RDO_INFLAC_NEGATIVO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_PROPORCION_AJUSTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_PROPORCION_AJUSTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_INDICE_AJUSTE_INFLACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_INDICE_AJUSTE_INFLACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_UNIDAD_ADICIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string TIPO_UNIDAD_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_UNIDAD_ADICIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_UNIDAD_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RESULTADO_TENENCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string AFECTA_RESULTADO_TENENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_RDO_TENENCIA_POSITIVO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_RDO_TENENCIA_POSITIVO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_RDO_TENENCIA_NEGATIVO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_RDO_TENENCIA_NEGATIVO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_TENENCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_TENENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_ASIENTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_ASIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_CONVERSION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string TIPO_CONVERSION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_COTIZACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_COTIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_ASIENTO_CONVERSION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_ASIENTO_CONVERSION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_CONVERSION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_CONVERSION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_TRASLACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_TRASLACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_RUBRO_COPIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_RUBRO_COPIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERMITE_MOD_CODIGO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PERMITE_MOD_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DETAIL_TOOLBAR_GROUP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<DETAIL_TOOLBAR_GROUP> DETAIL_TOOLBAR_GROUP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA_MOVIMIENTO_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<LEYENDA_MOVIMIENTO_CUENTA> LEYENDA_MOVIMIENTO_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CA_204_AGRUPADOR\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(50)]\n        public string CA_204_AGRUPADOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CA_204_AGRUPADOR_RESULTADOS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(50)]\n        public string CA_204_AGRUPADOR_RESULTADOS { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface DETAIL_TOOLBAR_GROUP {\n    COD_MODULO: string;\n    Habilitado: string;\n}\n\nexport interface LEYENDA_MOVIMIENTO_CUENTA {\n    ID_LEYENDA_MOVIMIENTO: number;\n    D_H: string;\n    LEYENDA_DEFECTO: string;\n}\n\nexport interface CUENTA {\n    COD_CUENTA: string;\n    DESC_CUENTA: string | undefined;\n    COD_CUENTA_ALTERNATIVO: string | undefined;\n    USA_AUXILIARES_CONTABLES: string | undefined;\n    REGISTRACION_AUTOMATICA: string | undefined;\n    ID_CLASE_CUENTA: number | undefined;\n    TIPO_CUENTA: string | undefined;\n    SALDO_HABITUAL: string | undefined;\n    HABILITADO: string | undefined;\n    DESFE_INHABILITADO: Date | undefined;\n    HASFE_INHABILITADO: Date | undefined;\n    ID_CUENTA_RDO_EJ_POSITIVO: number | undefined;\n    ID_CUENTA_RDO_EJ_NEGATIVO: number | undefined;\n    ID_CUENTA_RESULTADOS_ACUMULADOS: number | undefined;\n    AFECTA_AJUSTE_INFLACION: string | undefined;\n    AFECTA_COMPROBACION_AJUSTE: string | undefined;\n    ID_INDICE_COMPROBACION_AJUSTE: number | undefined;\n    USA_UNIDAD_ADICIONAL: string | undefined;\n    AFECTA_CONVERSION: string | undefined;\n    OBSERVACIONES: string | undefined;\n    COD_DESCRIP: string | undefined;\n    ID_CUENTA_RDO_INFLAC_POSITIVO: number | undefined;\n    ID_CUENTA_RDO_INFLAC_NEGATIVO: number | undefined;\n    ID_CUENTA_PROPORCION_AJUSTE: number | undefined;\n    ID_INDICE_AJUSTE_INFLACION: number | undefined;\n    TIPO_UNIDAD_ADICIONAL: string | undefined;\n    ID_MONEDA: number | undefined;\n    ID_UNIDAD_ADICIONAL: number | undefined;\n    AFECTA_RESULTADO_TENENCIA: string | undefined;\n    ID_CUENTA_RDO_TENENCIA_POSITIVO: number | undefined;\n    ID_CUENTA_RDO_TENENCIA_NEGATIVO: number | undefined;\n    ID_CUENTA_TENENCIA: number | undefined;\n    ID_TIPO_ASIENTO: number | undefined;\n    TIPO_CONVERSION: string | undefined;\n    ID_TIPO_COTIZACION: number | undefined;\n    ID_TIPO_ASIENTO_CONVERSION: number | undefined;\n    ID_CUENTA_CONVERSION: number | undefined;\n    ID_CUENTA_TRASLACION: number | undefined;\n    ID_CUENTA_RUBRO_COPIA: number | undefined;\n    PERMITE_MOD_CODIGO: boolean;\n    DETAIL_TOOLBAR_GROUP: DETAIL_TOOLBAR_GROUP[] | undefined;\n    LEYENDA_MOVIMIENTO_CUENTA: LEYENDA_MOVIMIENTO_CUENTA[] | undefined;\n    CA_204_AGRUPADOR: string;\n    CA_204_AGRUPADOR_RESULTADOS: string;\n}",
+          "example": {
+            "COD_CUENTA": null,
+            "DESC_CUENTA": null,
+            "COD_CUENTA_ALTERNATIVO": null,
+            "USA_AUXILIARES_CONTABLES": "N",
+            "REGISTRACION_AUTOMATICA": "N",
+            "ID_CLASE_CUENTA": 0,
+            "TIPO_CUENTA": "No monetaria",
+            "SALDO_HABITUAL": null,
+            "HABILITADO": "S",
+            "DESFE_INHABILITADO": "0001-01-01T00:00:00",
+            "HASFE_INHABILITADO": "0001-01-01T00:00:00",
+            "ID_CUENTA_RDO_EJ_POSITIVO": 0,
+            "ID_CUENTA_RDO_EJ_NEGATIVO": 0,
+            "ID_CUENTA_RESULTADOS_ACUMULADOS": 0,
+            "AFECTA_AJUSTE_INFLACION": "S",
+            "ID_CUENTA_RDO_INFLAC_POSITIVO": 522,
+            "ID_CUENTA_RDO_INFLAC_NEGATIVO": 522,
+            "ID_CUENTA_PROPORCION_AJUSTE": 0,
+            "ID_INDICE_AJUSTE_INFLACION": 1,
+            "AFECTA_COMPROBACION_AJUSTE": "N",
+            "ID_INDICE_COMPROBACION_AJUSTE": 0,
+            "USA_UNIDAD_ADICIONAL": "N",
+            "TIPO_UNIDAD_ADICIONAL": null,
+            "ID_MONEDA": 0,
+            "ID_UNIDAD_ADICIONAL": 0,
+            "AFECTA_RESULTADO_TENENCIA": "N",
+            "ID_CUENTA_RDO_TENENCIA_POSITIVO": 0,
+            "ID_CUENTA_RDO_TENENCIA_NEGATIVO": 0,
+            "ID_CUENTA_TENENCIA": 0,
+            "ID_TIPO_ASIENTO": 0,
+            "AFECTA_CONVERSION": "N",
+            "TIPO_CONVERSION": null,
+            "ID_TIPO_COTIZACION": 0,
+            "ID_TIPO_ASIENTO_CONVERSION": 0,
+            "ID_CUENTA_CONVERSION": 0,
+            "ID_CUENTA_TRASLACION": 0,
+            "OBSERVACIONES": null,
+            "COD_DESCRIP": "",
+            "ID_CUENTA_RUBRO_COPIA": 0,
+            "PERMITE_MOD_CODIGO": true,
+            "DETAIL_TOOLBAR_GROUP": [
+              {
+                "COD_MODULO": "AF",
+                "Habilitado": "S"
+              },
+              {
+                "COD_MODULO": "TR",
+                "Habilitado": "S"
+              },
+              {
+                "COD_MODULO": "CP",
+                "Habilitado": "S"
+              },
+              {
+                "COD_MODULO": "CN",
+                "Habilitado": "S"
+              },
+              {
+                "COD_MODULO": "IV",
+                "Habilitado": "S"
+              },
+              {
+                "COD_MODULO": "SU",
+                "Habilitado": "S"
+              },
+              {
+                "COD_MODULO": "SB",
+                "Habilitado": "S"
+              },
+              {
+                "COD_MODULO": "GV",
+                "Habilitado": "S"
+              }
+            ],
+            "LEYENDA_MOVIMIENTO_CUENTA": [
+              {
+                "ID_LEYENDA_MOVIMIENTO": 0,
+                "D_H": null,
+                "LEYENDA_DEFECTO": null
+              }
+            ],
+            "CA_204_AGRUPADOR": null,
+            "CA_204_AGRUPADOR_RESULTADOS": null
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"CUENTA\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_CUENTA\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_CUENTA\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 20,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_CUENTA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_CUENTA_ALTERNATIVO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"USA_AUXILIARES_CONTABLES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"REGISTRACION_AUTOMATICA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_CLASE_CUENTA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"TIPO_CUENTA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 20,\r\n      \"minLength\": 0\r\n    },\r\n    \"SALDO_HABITUAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8,\r\n      \"minLength\": 0\r\n    },\r\n    \"HABILITADO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESFE_INHABILITADO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"HASFE_INHABILITADO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"ID_CUENTA_RDO_EJ_POSITIVO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_RDO_EJ_NEGATIVO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_RESULTADOS_ACUMULADOS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"AFECTA_AJUSTE_INFLACION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"AFECTA_COMPROBACION_AJUSTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_INDICE_COMPROBACION_AJUSTE\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"USA_UNIDAD_ADICIONAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"AFECTA_CONVERSION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_CUENTA\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_DESCRIP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ID_CUENTA_RDO_INFLAC_POSITIVO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_RDO_INFLAC_NEGATIVO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_PROPORCION_AJUSTE\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_INDICE_AJUSTE_INFLACION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"TIPO_UNIDAD_ADICIONAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 20,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_MONEDA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_UNIDAD_ADICIONAL\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"AFECTA_RESULTADO_TENENCIA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_CUENTA_RDO_TENENCIA_POSITIVO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_RDO_TENENCIA_NEGATIVO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_TENENCIA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_ASIENTO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"TIPO_CONVERSION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 20,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_TIPO_COTIZACION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_ASIENTO_CONVERSION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_CONVERSION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_TRASLACION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_RUBRO_COPIA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"PERMITE_MOD_CODIGO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"DETAIL_TOOLBAR_GROUP\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/DETAIL_TOOLBAR_GROUP\"\r\n      }\r\n    },\r\n    \"LEYENDA_MOVIMIENTO_CUENTA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/LEYENDA_MOVIMIENTO_CUENTA\"\r\n      }\r\n    },\r\n    \"CA_204_AGRUPADOR\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 50,\r\n      \"minLength\": 0\r\n    },\r\n    \"CA_204_AGRUPADOR_RESULTADOS\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 50,\r\n      \"minLength\": 0\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"DETAIL_TOOLBAR_GROUP\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"COD_MODULO\",\r\n        \"Habilitado\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_MODULO_CUENTA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_CUENTA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_MODULO\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"Habilitado\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        }\r\n      }\r\n    },\r\n    \"LEYENDA_MOVIMIENTO_CUENTA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_LEYENDA_MOVIMIENTO\",\r\n        \"D_H\",\r\n        \"LEYENDA_DEFECTO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_LEYENDA_MOVIMIENTO_CUENTA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_CUENTA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_LEYENDA_MOVIMIENTO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"D_H\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"LEYENDA_DEFECTO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class DETAIL_TOOLBAR_GROUP\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_MODULO_CUENTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_MODULO_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_MODULO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string COD_MODULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Habilitado\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string Habilitado { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class LEYENDA_MOVIMIENTO_CUENTA\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_LEYENDA_MOVIMIENTO_CUENTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_LEYENDA_MOVIMIENTO_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_LEYENDA_MOVIMIENTO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_LEYENDA_MOVIMIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"D_H\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string D_H { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA_DEFECTO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string LEYENDA_DEFECTO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CUENTA\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_CUENTA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string COD_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string DESC_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CUENTA_ALTERNATIVO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string COD_CUENTA_ALTERNATIVO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_AUXILIARES_CONTABLES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string USA_AUXILIARES_CONTABLES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"REGISTRACION_AUTOMATICA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string REGISTRACION_AUTOMATICA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CLASE_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CLASE_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string TIPO_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SALDO_HABITUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8)]\n        public string SALDO_HABITUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESFE_INHABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? DESFE_INHABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HASFE_INHABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? HASFE_INHABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_RDO_EJ_POSITIVO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_RDO_EJ_POSITIVO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_RDO_EJ_NEGATIVO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_RDO_EJ_NEGATIVO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_RESULTADOS_ACUMULADOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_RESULTADOS_ACUMULADOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_AJUSTE_INFLACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string AFECTA_AJUSTE_INFLACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_COMPROBACION_AJUSTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string AFECTA_COMPROBACION_AJUSTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_INDICE_COMPROBACION_AJUSTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_INDICE_COMPROBACION_AJUSTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_UNIDAD_ADICIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string USA_UNIDAD_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_CONVERSION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string AFECTA_CONVERSION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_DESCRIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string COD_DESCRIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_RDO_INFLAC_POSITIVO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_RDO_INFLAC_POSITIVO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_RDO_INFLAC_NEGATIVO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_RDO_INFLAC_NEGATIVO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_PROPORCION_AJUSTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_PROPORCION_AJUSTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_INDICE_AJUSTE_INFLACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_INDICE_AJUSTE_INFLACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_UNIDAD_ADICIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string TIPO_UNIDAD_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_UNIDAD_ADICIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_UNIDAD_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RESULTADO_TENENCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string AFECTA_RESULTADO_TENENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_RDO_TENENCIA_POSITIVO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_RDO_TENENCIA_POSITIVO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_RDO_TENENCIA_NEGATIVO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_RDO_TENENCIA_NEGATIVO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_TENENCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_TENENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_ASIENTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_ASIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_CONVERSION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string TIPO_CONVERSION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_COTIZACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_COTIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_ASIENTO_CONVERSION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_ASIENTO_CONVERSION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_CONVERSION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_CONVERSION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_TRASLACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_TRASLACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_RUBRO_COPIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_RUBRO_COPIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERMITE_MOD_CODIGO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PERMITE_MOD_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DETAIL_TOOLBAR_GROUP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<DETAIL_TOOLBAR_GROUP> DETAIL_TOOLBAR_GROUP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA_MOVIMIENTO_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<LEYENDA_MOVIMIENTO_CUENTA> LEYENDA_MOVIMIENTO_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CA_204_AGRUPADOR\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(50)]\n        public string CA_204_AGRUPADOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CA_204_AGRUPADOR_RESULTADOS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(50)]\n        public string CA_204_AGRUPADOR_RESULTADOS { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface DETAIL_TOOLBAR_GROUP {\n    ID_MODULO_CUENTA: number;\n    ID_CUENTA: number;\n    COD_MODULO: string;\n    Habilitado: string;\n}\n\nexport interface LEYENDA_MOVIMIENTO_CUENTA {\n    ID_LEYENDA_MOVIMIENTO_CUENTA: number;\n    ID_CUENTA: number;\n    ID_LEYENDA_MOVIMIENTO: number;\n    D_H: string;\n    LEYENDA_DEFECTO: string;\n}\n\nexport interface CUENTA {\n    COD_CUENTA: string;\n    DESC_CUENTA: string | undefined;\n    COD_CUENTA_ALTERNATIVO: string | undefined;\n    USA_AUXILIARES_CONTABLES: string | undefined;\n    REGISTRACION_AUTOMATICA: string | undefined;\n    ID_CLASE_CUENTA: number | undefined;\n    TIPO_CUENTA: string | undefined;\n    SALDO_HABITUAL: string | undefined;\n    HABILITADO: string | undefined;\n    DESFE_INHABILITADO: Date | undefined;\n    HASFE_INHABILITADO: Date | undefined;\n    ID_CUENTA_RDO_EJ_POSITIVO: number | undefined;\n    ID_CUENTA_RDO_EJ_NEGATIVO: number | undefined;\n    ID_CUENTA_RESULTADOS_ACUMULADOS: number | undefined;\n    AFECTA_AJUSTE_INFLACION: string | undefined;\n    AFECTA_COMPROBACION_AJUSTE: string | undefined;\n    ID_INDICE_COMPROBACION_AJUSTE: number | undefined;\n    USA_UNIDAD_ADICIONAL: string | undefined;\n    AFECTA_CONVERSION: string | undefined;\n    OBSERVACIONES: string | undefined;\n    ID_CUENTA: number;\n    COD_DESCRIP: string | undefined;\n    ID_CUENTA_RDO_INFLAC_POSITIVO: number | undefined;\n    ID_CUENTA_RDO_INFLAC_NEGATIVO: number | undefined;\n    ID_CUENTA_PROPORCION_AJUSTE: number | undefined;\n    ID_INDICE_AJUSTE_INFLACION: number | undefined;\n    TIPO_UNIDAD_ADICIONAL: string | undefined;\n    ID_MONEDA: number | undefined;\n    ID_UNIDAD_ADICIONAL: number | undefined;\n    AFECTA_RESULTADO_TENENCIA: string | undefined;\n    ID_CUENTA_RDO_TENENCIA_POSITIVO: number | undefined;\n    ID_CUENTA_RDO_TENENCIA_NEGATIVO: number | undefined;\n    ID_CUENTA_TENENCIA: number | undefined;\n    ID_TIPO_ASIENTO: number | undefined;\n    TIPO_CONVERSION: string | undefined;\n    ID_TIPO_COTIZACION: number | undefined;\n    ID_TIPO_ASIENTO_CONVERSION: number | undefined;\n    ID_CUENTA_CONVERSION: number | undefined;\n    ID_CUENTA_TRASLACION: number | undefined;\n    ID_CUENTA_RUBRO_COPIA: number | undefined;\n    PERMITE_MOD_CODIGO: boolean;\n    DETAIL_TOOLBAR_GROUP: DETAIL_TOOLBAR_GROUP[] | undefined;\n    LEYENDA_MOVIMIENTO_CUENTA: LEYENDA_MOVIMIENTO_CUENTA[] | undefined;\n    CA_204_AGRUPADOR: string;\n    CA_204_AGRUPADOR_RESULTADOS: string;\n}",
+          "example": {
+            "COD_CUENTA": null,
+            "DESC_CUENTA": null,
+            "COD_CUENTA_ALTERNATIVO": null,
+            "USA_AUXILIARES_CONTABLES": "N",
+            "REGISTRACION_AUTOMATICA": "N",
+            "ID_CLASE_CUENTA": 0,
+            "TIPO_CUENTA": "No monetaria",
+            "SALDO_HABITUAL": null,
+            "HABILITADO": "S",
+            "DESFE_INHABILITADO": "0001-01-01T00:00:00",
+            "HASFE_INHABILITADO": "0001-01-01T00:00:00",
+            "ID_CUENTA_RDO_EJ_POSITIVO": 0,
+            "ID_CUENTA_RDO_EJ_NEGATIVO": 0,
+            "ID_CUENTA_RESULTADOS_ACUMULADOS": 0,
+            "AFECTA_AJUSTE_INFLACION": "S",
+            "ID_CUENTA_RDO_INFLAC_POSITIVO": 522,
+            "ID_CUENTA_RDO_INFLAC_NEGATIVO": 522,
+            "ID_CUENTA_PROPORCION_AJUSTE": 0,
+            "ID_INDICE_AJUSTE_INFLACION": 1,
+            "AFECTA_COMPROBACION_AJUSTE": "N",
+            "ID_INDICE_COMPROBACION_AJUSTE": 0,
+            "USA_UNIDAD_ADICIONAL": "N",
+            "TIPO_UNIDAD_ADICIONAL": null,
+            "ID_MONEDA": 0,
+            "ID_UNIDAD_ADICIONAL": 0,
+            "AFECTA_RESULTADO_TENENCIA": "N",
+            "ID_CUENTA_RDO_TENENCIA_POSITIVO": 0,
+            "ID_CUENTA_RDO_TENENCIA_NEGATIVO": 0,
+            "ID_CUENTA_TENENCIA": 0,
+            "ID_TIPO_ASIENTO": 0,
+            "AFECTA_CONVERSION": "N",
+            "TIPO_CONVERSION": null,
+            "ID_TIPO_COTIZACION": 0,
+            "ID_TIPO_ASIENTO_CONVERSION": 0,
+            "ID_CUENTA_CONVERSION": 0,
+            "ID_CUENTA_TRASLACION": 0,
+            "OBSERVACIONES": null,
+            "ID_CUENTA": 0,
+            "COD_DESCRIP": "",
+            "ID_CUENTA_RUBRO_COPIA": 0,
+            "PERMITE_MOD_CODIGO": true,
+            "DETAIL_TOOLBAR_GROUP": [
+              {
+                "ID_MODULO_CUENTA": -1,
+                "ID_CUENTA": 0,
+                "COD_MODULO": "AF",
+                "Habilitado": "S"
+              },
+              {
+                "ID_MODULO_CUENTA": -8,
+                "ID_CUENTA": 0,
+                "COD_MODULO": "TR",
+                "Habilitado": "S"
+              },
+              {
+                "ID_MODULO_CUENTA": -3,
+                "ID_CUENTA": 0,
+                "COD_MODULO": "CP",
+                "Habilitado": "S"
+              },
+              {
+                "ID_MODULO_CUENTA": -2,
+                "ID_CUENTA": 0,
+                "COD_MODULO": "CN",
+                "Habilitado": "S"
+              },
+              {
+                "ID_MODULO_CUENTA": -5,
+                "ID_CUENTA": 0,
+                "COD_MODULO": "IV",
+                "Habilitado": "S"
+              },
+              {
+                "ID_MODULO_CUENTA": -7,
+                "ID_CUENTA": 0,
+                "COD_MODULO": "SU",
+                "Habilitado": "S"
+              },
+              {
+                "ID_MODULO_CUENTA": -6,
+                "ID_CUENTA": 0,
+                "COD_MODULO": "SB",
+                "Habilitado": "S"
+              },
+              {
+                "ID_MODULO_CUENTA": -4,
+                "ID_CUENTA": 0,
+                "COD_MODULO": "GV",
+                "Habilitado": "S"
+              }
+            ],
+            "LEYENDA_MOVIMIENTO_CUENTA": [
+              {
+                "ID_LEYENDA_MOVIMIENTO_CUENTA": 0,
+                "ID_CUENTA": 0,
+                "ID_LEYENDA_MOVIMIENTO": 0,
+                "D_H": null,
+                "LEYENDA_DEFECTO": null
+              }
+            ],
+            "CA_204_AGRUPADOR": null,
+            "CA_204_AGRUPADOR_RESULTADOS": null
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "AXV_CUENTA": [
+      "COD_CUENTA",
+      "DESC_CUENTA",
+      "COD_DESC_CUENTA",
+      "COD_CUENTA_ALTERNATIVO",
+      "CLASE_CUENTA",
+      "COD_CLASE_CUENTA",
+      "DESC_CLASE_CUENTA",
+      "SALDO_HABITUAL",
+      "TIPO_CUENTA",
+      "USA_AUXILIARES_CONTABLES",
+      "HABILITADO",
+      "DESFE_INHABILITADO",
+      "HASFE_INHABILITADO",
+      "REGISTRACION_AUTOMATICA",
+      "AFECTA_AJUSTE_INFLACION",
+      "USA_UNIDAD_ADICIONAL",
+      "AFECTA_CONVERSION",
+      "OBSERVACIONES",
+      "AFECTA_COMPROBACION_AJUSTE",
+      "COD_CUENTA_PROPORCION_AJUSTE",
+      "DESC_CUENTA_PROPORCION_AJUSTE",
+      "COD_CUENTA_RDO_INFLAC_NEGATIVO",
+      "DESC_CUENTA_RDO_INFLAC_NEGATIVO",
+      "COD_CUENTA_RDO_INFLAC_POSITIVO",
+      "DESC_CUENTA_RDO_INFLAC_POSITIVO",
+      "COD_MONEDA",
+      "DESC_MONEDA",
+      "TIPO_CONVERSION",
+      "COD_CUENTA_CONVERSION",
+      "DESC_CUENTA_CONVERSION",
+      "COD_CUENTA_TRASLACION",
+      "DESC_CUENTA_TRASLACION",
+      "COD_CUENTA_TENENCIA",
+      "DES_CUENTA_TENENCIA",
+      "COD_CUENTA_RDO_TENENCIA_NEGATIVO",
+      "DESC_CUENTA_RDO_TENENCIA_NEGATIVO",
+      "COD_CUENTA_RDO_TENENCIA_POSITIVO",
+      "DESC_CUENTA_RDO_TENENCIA_POSITIVO",
+      "COD_INDICE",
+      "DESC_INDICE",
+      "COD_INDICE_COMPROBACION_AJUSTE",
+      "DESC_INDICE_COMPROBACION_AJUSTE",
+      "COD_TIPO_COTIZACION",
+      "DESC_TIPO_COTIZACION",
+      "COD_TIPO_ASIENTO_CONVERSION",
+      "DESC_TIPO_ASIENTO_CONVERSION",
+      "COD_TIPO_ASIENTO",
+      "DESC_TIPO_ASIENTO",
+      "COD_CUENTA_RDO_EJE_POSITIVO",
+      "DESC_CUENTA_RDO_EJE_POSITIVO",
+      "COD_CUENTA_RDO_EJE_NEGATIVO",
+      "DESC_CUENTA_RDO_EJE_NEGATIVO",
+      "COD_CUENTA_RESULTADO_ACUMULADO",
+      "DESC_CUENTA_RESULTADO_ACUMULADO",
+      "TIPO_UNIDAD_ADICIONAL",
+      "AFECTA_RESULTADO_TENENCIA",
+      "COD_UNIDAD_ADICIONAL",
+      "DESC_UNIDAD_ADICIONAL"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

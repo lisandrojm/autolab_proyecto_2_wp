@@ -1,0 +1,163 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_TIPO_EVENTO_DGI": 1,
+        "coD_TIPO_EVENTO_DGI": "1",
+        "desC_TIPO_EVENTO_DGI": "Adopción plena",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSDU="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 2,
+        "coD_TIPO_EVENTO_DGI": "3",
+        "desC_TIPO_EVENTO_DGI": "Persona a cargo Obra Social",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSD4="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 3,
+        "coD_TIPO_EVENTO_DGI": "4",
+        "desC_TIPO_EVENTO_DGI": "Convivencia",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSEY="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 4,
+        "coD_TIPO_EVENTO_DGI": "7",
+        "desC_TIPO_EVENTO_DGI": "Divorcio",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSEg="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 5,
+        "coD_TIPO_EVENTO_DGI": "9",
+        "desC_TIPO_EVENTO_DGI": "Nacimiento",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSEk="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 6,
+        "coD_TIPO_EVENTO_DGI": "12",
+        "desC_TIPO_EVENTO_DGI": "Casamiento",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSDY="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 7,
+        "coD_TIPO_EVENTO_DGI": "13",
+        "desC_TIPO_EVENTO_DGI": "Guarda",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSDc="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 8,
+        "coD_TIPO_EVENTO_DGI": "14",
+        "desC_TIPO_EVENTO_DGI": "Tenencia",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSDg="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 9,
+        "coD_TIPO_EVENTO_DGI": "15",
+        "desC_TIPO_EVENTO_DGI": "Tutela",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSDk="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 10,
+        "coD_TIPO_EVENTO_DGI": "19",
+        "desC_TIPO_EVENTO_DGI": "Curatela a las personas",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSDo="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 11,
+        "coD_TIPO_EVENTO_DGI": "23",
+        "desC_TIPO_EVENTO_DGI": "Tenencia con renuncio",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSDs="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 12,
+        "coD_TIPO_EVENTO_DGI": "24",
+        "desC_TIPO_EVENTO_DGI": "Hijo de cónyuge / conviviente",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSDw="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 13,
+        "coD_TIPO_EVENTO_DGI": "26",
+        "desC_TIPO_EVENTO_DGI": "Baja de persona a cargo Obra Social",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSD0="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 14,
+        "coD_TIPO_EVENTO_DGI": "30",
+        "desC_TIPO_EVENTO_DGI": "Finalización de convivencia",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSD8="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 15,
+        "coD_TIPO_EVENTO_DGI": "31",
+        "desC_TIPO_EVENTO_DGI": "Finaliz. de hijo cónyuge/conviviente",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSEA="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 16,
+        "coD_TIPO_EVENTO_DGI": "32",
+        "desC_TIPO_EVENTO_DGI": "Finalización de guarda",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSEE="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 17,
+        "coD_TIPO_EVENTO_DGI": "33",
+        "desC_TIPO_EVENTO_DGI": "Finalización de tenencia",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSEI="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 18,
+        "coD_TIPO_EVENTO_DGI": "34",
+        "desC_TIPO_EVENTO_DGI": "Finalización de tutela",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSEM="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 19,
+        "coD_TIPO_EVENTO_DGI": "35",
+        "desC_TIPO_EVENTO_DGI": "Finaliz. de curatela a las personas",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSEQ="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 20,
+        "coD_TIPO_EVENTO_DGI": "36",
+        "desC_TIPO_EVENTO_DGI": "Finalización de tenencia con renuncio",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSEU="
+      },
+      {
+        "iD_TIPO_EVENTO_DGI": 21,
+        "coD_TIPO_EVENTO_DGI": "50",
+        "desC_TIPO_EVENTO_DGI": "Escolaridad",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPSEc="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

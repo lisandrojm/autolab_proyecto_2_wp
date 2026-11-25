@@ -1,0 +1,358 @@
+{
+  "modulo": "ControlDePersonal",
+  "capturado": "2026-10-08T17:20:37.079Z",
+  "procesos": {
+    "1024": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "LecturaFichadasApiParams"
+      ],
+      "titulo": "Lectura de fichadas"
+    },
+    "1025": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MOTIVO_FICHADA_MANUAL"
+      ],
+      "titulo": "Motivos de fichada manual"
+    },
+    "1043": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "CONCEPTO_JUSTIFICACION"
+      ],
+      "titulo": "Conceptos de justificación"
+    },
+    "1055": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TIPO_HORA"
+      ],
+      "titulo": "Tipos de hora"
+    },
+    "1075": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TAREA"
+      ],
+      "titulo": "Tareas"
+    },
+    "1127": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_LEGAJO"
+      ],
+      "titulo": "Legajos de Control de personal"
+    },
+    "1326": {
+      "estado": "sin-api",
+      "tablas": [
+        "PARAMETRO_RE"
+      ],
+      "titulo": "Parámetros de Control de personal"
+    },
+    "21414": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ControlDePersonalNominaLegajosModel"
+      ],
+      "titulo": "Legajos"
+    },
+    "21444": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ResumenPartesDepartamentoModel"
+      ],
+      "titulo": "Resumen por departamento"
+    },
+    "21446": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ResumenFichadasModel"
+      ],
+      "titulo": "Resumen de fichadas"
+    },
+    "21451": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ResumenFichadasRechazadasModel"
+      ],
+      "titulo": "Resumen de fichadas rechazadas"
+    },
+    "21453": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ResumenHorasDepartamentoModel"
+      ],
+      "titulo": "Resumen por departamento"
+    },
+    "21454": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ResumenHorasHorarioModel"
+      ],
+      "titulo": "Resumen por horario"
+    },
+    "21461": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ResumenAnormalidadesAusenciasRealesModel"
+      ],
+      "titulo": "Resumen de anormalidades y ausencias"
+    },
+    "21462": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ResumenAnormalidadesAusenciasComputadasModel"
+      ],
+      "titulo": "Resumen de anormalidades y ausencias"
+    },
+    "21467": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "DetalleAnormalidadesAusenciasRealesModel"
+      ],
+      "titulo": "Detalle de anormalidades y ausencias"
+    },
+    "21468": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "DetalleAnormalidadesAusenciasComputadasModel"
+      ],
+      "titulo": "Detalle de anormalidades y ausencias"
+    },
+    "21470": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ResumenCompensacionesModel"
+      ],
+      "titulo": "Resumen de compensaciones"
+    },
+    "21471": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "DetalleCompensacionesHorasPendientesModel"
+      ],
+      "titulo": "Detalle de compensaciones"
+    },
+    "21475": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "DetalleCompensacionesHorasSobrantesModel"
+      ],
+      "titulo": "Detalle de compensaciones"
+    },
+    "21476": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "DetalleCompensacionesHorasEliminadasModel"
+      ],
+      "titulo": "Detalle de compensaciones"
+    },
+    "21481": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "DetalleDescuentosCompensadosPorDiaModel"
+      ],
+      "titulo": "Detalle de compensaciones"
+    },
+    "21485": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ResumenHorasExtrasComputadasDepartamentoModel"
+      ],
+      "titulo": "Resumen de horas extras computadas"
+    },
+    "21486": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "DetalleHorasExtrasComputadasDepartamentoModel"
+      ],
+      "titulo": "Detalle de horas extras computadas"
+    },
+    "21487": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ResumenHorasExtrasComputadasHorarioModel"
+      ],
+      "titulo": "Resumen de horas extras computadas"
+    },
+    "21488": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "DetalleHorasExtrasComputadasHorarioModel"
+      ],
+      "titulo": "Detalle de horas extras computadas"
+    },
+    "21490": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ResumenTareasRealizadasDepartamentoModel"
+      ],
+      "titulo": "Resumen de tareas realizadas"
+    },
+    "21491": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ResumenTareasRealizadasHorarioModel"
+      ],
+      "titulo": "Resumen de tareas realizadas"
+    },
+    "21492": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "DetalleTareasRealizadasDepartamentoModel"
+      ],
+      "titulo": "Detalle de tareas realizadas"
+    },
+    "21493": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "DetalleTareasRealizadasHorarioModel"
+      ],
+      "titulo": "Detalle de tareas realizadas"
+    }
+  }
+}

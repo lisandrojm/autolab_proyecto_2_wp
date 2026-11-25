@@ -1,0 +1,51 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_NOVEDAD": 1,
+        "coD_NOVEDAD": "ADELANTO",
+        "desC_NOVEDAD": "Adelanto de Sueldos",
+        "clasE_NOVEDAD": "Otras novedades",
+        "tipO_NOVEDAD": "General",
+        "validA_PERIODO_LICENCIA_POR_MES": "N",
+        "unidaD_CANTIDAD": "pesos",
+        "horA_EXTRA_INE": "N",
+        "ingresA_CANTIDAD": "S",
+        "ingresA_VALOR": "S",
+        "habitual": "S",
+        "canT_OTORGABLE": 0,
+        "valoR_OTORGABLE": 0,
+        "meS_INICIO_TOPE_ANUAL": 1,
+        "meS_INICIO_TOPE_SEMESTRAL": 1,
+        "roW_VERSION": "AAAAAADWD1g="
+      },
+      {
+        "iD_NOVEDAD": 7,
+        "coD_NOVEDAD": "0900",
+        "clasE_NOVEDAD": "Anormalidades",
+        "tipO_NOVEDAD": "General",
+        "validA_PERIODO_LICENCIA_POR_MES": "N",
+        "unidaD_CANTIDAD": "21",
+        "horA_EXTRA_INE": "N",
+        "ingresA_CANTIDAD": "S",
+        "ingresA_VALOR": "S",
+        "habitual": "S",
+        "canT_OTORGABLE": 0,
+        "valoR_OTORGABLE": 0,
+        "meS_INICIO_TOPE_ANUAL": 1,
+        "meS_INICIO_TOPE_SEMESTRAL": 1,
+        "roW_VERSION": "AAAAAADfvvI="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

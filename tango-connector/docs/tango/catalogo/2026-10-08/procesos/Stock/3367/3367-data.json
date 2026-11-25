@@ -1,0 +1,34 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_TRA82": 1,
+        "coD_TRA82": "GEN",
+        "desC_CATPV": "Categoría general",
+        "valorizado": false,
+        "criteriO_ASIGNACION_PRECIO": "R",
+        "ordE_CATPV": 1,
+        "cargA_AUT": "N",
+        "arT_EXCLUS": false,
+        "coD_CATPV": "GEN",
+        "moD_PRECIO": "PR",
+        "vaL_INCIMP": 0,
+        "vaL_INCPOR": 0,
+        "color": "#C0C0C0",
+        "filler": "",
+        "codigo": "GEN",
+        "roW_VERSION": "AAAAAADPSE8="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

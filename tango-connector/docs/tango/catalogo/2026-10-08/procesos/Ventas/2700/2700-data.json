@@ -1,0 +1,51 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "coD_GVA14_DEFECTO": "1",
+        "desC_GVA14_DEFECTO": "LMB",
+        "aplicA_CONFIGURACION_IMPUESTOS": "S",
+        "lib": "N",
+        "iB_L": false,
+        "considerA_IVA_BASE_CALCULO_IIBB": "N",
+        "considerA_IVA_BASE_CALCULO_IIBB_ADIC": "N",
+        "iB_L3": false,
+        "iI_IB3": false,
+        "iD_GVA14": 2,
+        "sobrE_IVA": "N",
+        "porC_EXCL": 0,
+        "iI_L": "N",
+        "iI_D": "N",
+        "sobrE_II": "N",
+        "rG_3572_EMPRESA_VINCULADA_CLIENTE": false,
+        "porC_DESC": 0,
+        "moN_CTE": true,
+        "exporta": true,
+        "aplicA_MORA": "S",
+        "inhabilitadO_NEXO_COBRANZAS": "N",
+        "recibE_DE": true,
+        "auT_DE": false,
+        "coD_CATEGORIA_IVA": "RI",
+        "desC_CATEGORIA_IVA": "Responsable inscripto",
+        "destinO_DE": "T",
+        "idiomA_CTE": "1",
+        "deT_ARTIC": "A",
+        "inC_COMENT": "N",
+        "tyP_FEX": "H",
+        "tyP_NCEX": "H",
+        "tyP_NDEX": "H",
+        "roW_VERSION": "AAAAAADfrww="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

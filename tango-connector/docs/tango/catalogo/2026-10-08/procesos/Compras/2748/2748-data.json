@@ -1,0 +1,76 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_CPA108": 1,
+        "coD_CPA108": "AR",
+        "coD_PAIS": "AR",
+        "noM_PAIS": "ARGENTINA",
+        "cuiT_JURID": "",
+        "cuiT_FISIC": "",
+        "codigo": "AR",
+        "roW_VERSION": "AAAAAADO0/0="
+      },
+      {
+        "iD_CPA108": 2,
+        "coD_CPA108": "BO",
+        "coD_PAIS": "BO",
+        "noM_PAIS": "BOLIVIA",
+        "cuiT_JURID": "55-00000004-2",
+        "cuiT_FISIC": "50-00000004-0",
+        "codigo": "BO",
+        "roW_VERSION": "AAAAAADO0/4="
+      },
+      {
+        "iD_CPA108": 3,
+        "coD_CPA108": "BR",
+        "coD_PAIS": "BR",
+        "noM_PAIS": "BRASIL",
+        "cuiT_JURID": "55-00000005-0",
+        "cuiT_FISIC": "50-00000005-9",
+        "codigo": "BR",
+        "roW_VERSION": "AAAAAADO0/8="
+      },
+      {
+        "iD_CPA108": 4,
+        "coD_CPA108": "CH",
+        "coD_PAIS": "CH",
+        "noM_PAIS": "CHILE",
+        "cuiT_JURID": "55-00000003-4",
+        "cuiT_FISIC": "50-00000003-2",
+        "codigo": "CH",
+        "roW_VERSION": "AAAAAADO1AE="
+      },
+      {
+        "iD_CPA108": 5,
+        "coD_CPA108": "PA",
+        "coD_PAIS": "PA",
+        "noM_PAIS": "PARAGUAY",
+        "cuiT_JURID": "55-00000002-6",
+        "cuiT_FISIC": "50-00000002-4",
+        "codigo": "PA",
+        "roW_VERSION": "AAAAAADO1AI="
+      },
+      {
+        "iD_CPA108": 6,
+        "coD_CPA108": "UR",
+        "coD_PAIS": "UR",
+        "noM_PAIS": "URUGUAY",
+        "cuiT_JURID": "55-00000001-8",
+        "cuiT_FISIC": "50-00000001-6",
+        "codigo": "UR",
+        "roW_VERSION": "AAAAAADO1AM="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

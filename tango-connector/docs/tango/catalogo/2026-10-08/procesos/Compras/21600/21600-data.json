@@ -1,0 +1,26 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_PERFIL": 1,
+        "coD_PERFIL": "1",
+        "desC_PERFIL": "Completo",
+        "habilitado": true,
+        "modelO_AI": "AVANZADO",
+        "periodO_INDICADOR": 5,
+        "analizA_DETALLE": true,
+        "roW_VERSION": "AAAAAADgfrE="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

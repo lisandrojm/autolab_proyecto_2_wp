@@ -1,0 +1,28 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_LEYENDA_ENCABEZADO": 1,
+        "coD_LEYENDA_ENCABEZADO": "SB001",
+        "desC_LEYENDA_ENCABEZADO": "REVERSION DE MOVIMIENTOS",
+        "roW_VERSION": "AAAAAADO4jg="
+      },
+      {
+        "iD_LEYENDA_ENCABEZADO": 9,
+        "coD_LEYENDA_ENCABEZADO": "LMB",
+        "desC_LEYENDA_ENCABEZADO": "PROBAMOS PARA LUMBA",
+        "roW_VERSION": "AAAAAADfv3U="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

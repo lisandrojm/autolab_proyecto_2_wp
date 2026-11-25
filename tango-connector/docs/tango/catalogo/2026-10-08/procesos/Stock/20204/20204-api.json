@@ -1,0 +1,112 @@
+{
+  "title": "Ajustes por toma de inventario",
+  "moduleId": 10002,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "StockAjustesDeTomaInventarioModel": [
+      "ID_STA14",
+      "ID_STA37",
+      "FECHA_COMPROBANTE",
+      "TIPO_COMPROBANTE",
+      "DESC_TIPO_COMPROBANTE_AJUSTE",
+      "NRO_COMPROBANTE",
+      "COMPROBANTE",
+      "ESTADO",
+      "FECHA_DE_ANULACION",
+      "FECHA_TOMA",
+      "TIPO_COMPROBANTE_TOMA",
+      "DESC_TIPO_COMPROBANTE_TOMA",
+      "NUMERO_COMPROBANTE_TOMA",
+      "USUARIO_TOMA",
+      "OBSERVACION_TOMA",
+      "ESTADO_TOMA",
+      "FECHA_ANULACION_TOMA",
+      "MOTIVO_ANULACION_TOMA",
+      "ORIGEN_CONTEO",
+      "DESCRIPCION"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

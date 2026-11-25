@@ -1,0 +1,123 @@
+{
+  "title": "Por precio de última compra",
+  "moduleId": 10002,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "StockRentabilidadBrutaPorPrecioDeultimaCompraModel": [
+      "ID_STA11",
+      "ID_GVA14",
+      "COD_ARTICULO",
+      "DESCRIPCION",
+      "DESC_ADICIONAL",
+      "SINONIMO",
+      "COD_CLIENTE",
+      "RAZON_SOCIAL",
+      "COD_FAMILIA_ARTICULO",
+      "FAMILIA_ARTICULO",
+      "COD_GRUPO_ARTICULO",
+      "GRUPO_ARTICULO",
+      "COD_INDIVIDUO_ARTICULO",
+      "CODIGO_DE_BARRAS",
+      "EN_PROMOCION",
+      "TIPO_DE_PROMOCION",
+      "COD_PROMOCION",
+      "DESC_PROMOCION",
+      "DESC_ADICIONAL_PROMOCION",
+      "USA_ESCALAS",
+      "DENTRO_DE_KITS",
+      "COD_BASE_ARTICULO",
+      "DESC_BASE_ARTICULO",
+      "VALOR_DE_LA_ESCALA_1",
+      "VALOR_DE_LA_ESCALA_2",
+      "MONTO_VENDIDO",
+      "CANTIDAD_VENDIDA",
+      "COSTO_DE_VENTA",
+      "DIFERENCIA",
+      "COSTO_POR_VENTA",
+      "RENTABILIDADPORC"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

@@ -1,0 +1,129 @@
+{
+  "title": "Comprobantes con asientos exportados",
+  "moduleId": 11,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "ProcesosgeneralesComprobantesConAsientosExportadosModel": [
+      "MODULO",
+      "COD_TIPO_COMPROBANTE",
+      "DESC_TIPO_COMPROBANTE",
+      "COMPROBANTE",
+      "FECHA_COMPROBANTE",
+      "TIPO_INTERNO",
+      "DESC_TIPO_INTERNO",
+      "NRO_INTERNO",
+      "CLIENTEPROVEEDOR",
+      "COD_CLIENTE",
+      "COD_PROVEEDOR",
+      "RAZON_SOCIAL",
+      "RAZON_SOCIAL_CLIENTE",
+      "RAZON_SOCIAL_PROVEEDOR",
+      "TELEFONO_CLIENTE",
+      "TELEFONO_2_CLIENTE",
+      "TELEFONO_MOVIL_WA",
+      "MOVIL_CLIENTE",
+      "EMAIL_CLIENTE",
+      "EMAIL_COMPROBANTES_CLIENTE",
+      "EMAILS_ENVIO_COTIZACION",
+      "MOVILES_ENVIO_COTIZACION",
+      "EMAILS_ENVIO_RECIBO",
+      "MOVILES_ENVIO_RECIBO",
+      "EMAILS_ENVIO_PEDIDO",
+      "MOVILES_ENVIO_PEDIDO",
+      "EMAILS_RESPONSABLES_PAGOS",
+      "MOVILES_RESPONSABLES_PAGOS",
+      "TELEFONO_PROVEEDOR",
+      "TELEFONO_2_PROVEEDOR",
+      "MOVIL_PROVEEDOR",
+      "EMAIL_PROVEEDOR",
+      "EMAIL_COMPROBANTES_PROVEEDOR",
+      "EMAILS_ENVIO_ORDEN_COMPRA",
+      "MOVILES_ENVIO_ORDEN_COMPRA",
+      "EMAILS_ENVIO_ORDEN_PAGOS",
+      "MOVILES_ENVIO_ORDEN_PAGOS"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

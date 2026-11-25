@@ -1,0 +1,42 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_PARAMETRIZACION": 2,
+        "coD_ENTIDAD": "000001",
+        "eS_PROVEEDOR_OCASIONAL": false,
+        "iD_ENTIDAD": 1,
+        "cpA01": {
+          "cuiT_DUPLICADO": false,
+          "prefijO_DE_CODIGO_INCORRECTO": false,
+          "actualizA_DATOS_AFIP": false,
+          "cbU_MODIFICADO": false,
+          "cbU_2_MODIFICADO": false,
+          "cbU_3_MODIFICADO": false,
+          "iD_CPA01_ORIGINAL": 0,
+          "confirmA_EDITAR_PARAM": false,
+          "confirmA_ACTUALIZACION_AFIP": false,
+          "iD_CPA01": 0,
+          "coD_CPA01": "000000",
+          "noM_PROVEE": "Proveedor ocasional",
+          "coD_DESCRIP": "000000 - Proveedor ocasional",
+          "codigo": "000000"
+        },
+        "iD_ASIENTO_MODELO_FACTURA": 1,
+        "iD_ASIENTO_MODELO_DEBITO": 1,
+        "iD_ASIENTO_MODELO_CREDITO": 2,
+        "roW_VERSION": "AAAAAADf5CE="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

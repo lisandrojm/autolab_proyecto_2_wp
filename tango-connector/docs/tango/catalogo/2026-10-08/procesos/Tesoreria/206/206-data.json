@@ -1,0 +1,37 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_PLAN_TARJETA": 4,
+        "coD_PLAN_TARJETA": "1",
+        "desC_PLAN_TARJETA": "LMPlan",
+        "habilitado": "S",
+        "roW_VERSION": "AAAAAADf7ag="
+      },
+      {
+        "iD_PLAN_TARJETA": 5,
+        "coD_PLAN_TARJETA": "2",
+        "desC_PLAN_TARJETA": "LMBPlanNoHab",
+        "habilitado": "N",
+        "roW_VERSION": "AAAAAADf7ak="
+      },
+      {
+        "iD_PLAN_TARJETA": 6,
+        "coD_PLAN_TARJETA": "3",
+        "desC_PLAN_TARJETA": "LMBMegaPlan",
+        "habilitado": "S",
+        "roW_VERSION": "AAAAAADf7ao="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

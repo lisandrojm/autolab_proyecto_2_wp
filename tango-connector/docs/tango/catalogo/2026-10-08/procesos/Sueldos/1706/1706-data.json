@@ -1,0 +1,716 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_LOCALIDAD_DGI": 1,
+        "coD_LOCALIDAD_DGI": "9995",
+        "desC_LOCALIDAD_DGI": "Dpto. OJO DE AGUA ( 5250 )",
+        "codigO_POSTAL_DGI": "5250",
+        "roW_VERSION": "AAAAAADPOKA="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 2,
+        "coD_LOCALIDAD_DGI": "1409",
+        "desC_LOCALIDAD_DGI": "12 DE OCTUBRE ( 6501 )",
+        "codigO_POSTAL_DGI": "6501",
+        "roW_VERSION": "AAAAAADPE34="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 3,
+        "coD_LOCALIDAD_DGI": "1458",
+        "desC_LOCALIDAD_DGI": "16 DE JULIO ( 7313 )",
+        "codigO_POSTAL_DGI": "7313",
+        "roW_VERSION": "AAAAAADPE7Q="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 4,
+        "coD_LOCALIDAD_DGI": "547",
+        "desC_LOCALIDAD_DGI": "17 DE AGOSTO ( 8129 )",
+        "codigO_POSTAL_DGI": "8129",
+        "roW_VERSION": "AAAAAADPJQE="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 5,
+        "coD_LOCALIDAD_DGI": "10980",
+        "desC_LOCALIDAD_DGI": "20 DE JUNIO ( 1761 )",
+        "codigO_POSTAL_DGI": "1761",
+        "roW_VERSION": "AAAAAADPEaY="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 6,
+        "coD_LOCALIDAD_DGI": "6108",
+        "desC_LOCALIDAD_DGI": "22 DE DICIEMBRE ( 3378 )",
+        "codigO_POSTAL_DGI": "3378",
+        "roW_VERSION": "AAAAAADPJ8U="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 7,
+        "coD_LOCALIDAD_DGI": "6826",
+        "desC_LOCALIDAD_DGI": "25  DE MAYO  ( 5443 )",
+        "codigO_POSTAL_DGI": "5443",
+        "roW_VERSION": "AAAAAADPKtw="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 8,
+        "coD_LOCALIDAD_DGI": "9775",
+        "desC_LOCALIDAD_DGI": "25 DE MAYO  ( 4352 )",
+        "codigO_POSTAL_DGI": "4352",
+        "roW_VERSION": "AAAAAADPN64="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 9,
+        "coD_LOCALIDAD_DGI": "5350",
+        "desC_LOCALIDAD_DGI": "25 DE MAYO  ( 8201 )",
+        "codigO_POSTAL_DGI": "8201",
+        "roW_VERSION": "AAAAAADPJHw="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 10,
+        "coD_LOCALIDAD_DGI": "8936",
+        "desC_LOCALIDAD_DGI": "25 DE MAYO  ( 4231 )",
+        "codigO_POSTAL_DGI": "4231",
+        "roW_VERSION": "AAAAAADPNAk="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 11,
+        "coD_LOCALIDAD_DGI": "1692",
+        "desC_LOCALIDAD_DGI": "25 DE MAYO  ( 6660 )",
+        "codigO_POSTAL_DGI": "6660",
+        "roW_VERSION": "AAAAAADPFLk="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 12,
+        "coD_LOCALIDAD_DGI": "8635",
+        "desC_LOCALIDAD_DGI": "25 DE MAYO DE BARNEGAS ( 4205 )",
+        "codigO_POSTAL_DGI": "4205",
+        "roW_VERSION": "AAAAAADPMrk="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 13,
+        "coD_LOCALIDAD_DGI": "8937",
+        "desC_LOCALIDAD_DGI": "25 DE MAYO SUD ( 4231 )",
+        "codigO_POSTAL_DGI": "4231",
+        "roW_VERSION": "AAAAAADPNAo="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 14,
+        "coD_LOCALIDAD_DGI": "4200",
+        "desC_LOCALIDAD_DGI": "28 DE JULIO ( 9107 )",
+        "codigO_POSTAL_DGI": "9107",
+        "roW_VERSION": "AAAAAADPH4I="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 15,
+        "coD_LOCALIDAD_DGI": "7188",
+        "desC_LOCALIDAD_DGI": "28 DE NOVIEMBRE ( 9407 )",
+        "codigO_POSTAL_DGI": "9407",
+        "roW_VERSION": "AAAAAADPLG8="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 16,
+        "coD_LOCALIDAD_DGI": "5749",
+        "desC_LOCALIDAD_DGI": "3 DE MAYO ( 5745 )",
+        "codigO_POSTAL_DGI": "5745",
+        "roW_VERSION": "AAAAAADPJjU="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 17,
+        "coD_LOCALIDAD_DGI": "1650",
+        "desC_LOCALIDAD_DGI": "30 DE AGOSTO ( 6405 )",
+        "codigO_POSTAL_DGI": "6405",
+        "roW_VERSION": "AAAAAADPFIs="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 18,
+        "coD_LOCALIDAD_DGI": "8413",
+        "desC_LOCALIDAD_DGI": "7 DE ABRIL ( 4197 )",
+        "codigO_POSTAL_DGI": "4197",
+        "roW_VERSION": "AAAAAADPMcM="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 19,
+        "coD_LOCALIDAD_DGI": "244",
+        "desC_LOCALIDAD_DGI": "9 DE ABRIL ( 1839 )",
+        "codigO_POSTAL_DGI": "1839",
+        "roW_VERSION": "AAAAAADPF/E="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 20,
+        "coD_LOCALIDAD_DGI": "1406",
+        "desC_LOCALIDAD_DGI": "9 DE JULIO  ( 6500 )",
+        "codigO_POSTAL_DGI": "6500",
+        "roW_VERSION": "AAAAAADPE3s="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 21,
+        "coD_LOCALIDAD_DGI": "5920",
+        "desC_LOCALIDAD_DGI": "9 DE JULIO  ( 3363 )",
+        "codigO_POSTAL_DGI": "3363",
+        "roW_VERSION": "AAAAAADPJvM="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 22,
+        "coD_LOCALIDAD_DGI": "6772",
+        "desC_LOCALIDAD_DGI": "9 DE JULIO  ( 5417 )",
+        "codigO_POSTAL_DGI": "5417",
+        "roW_VERSION": "AAAAAADPKqA="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 23,
+        "coD_LOCALIDAD_DGI": "3826",
+        "desC_LOCALIDAD_DGI": "9 DE JULIO  ( 3445 )",
+        "codigO_POSTAL_DGI": "3445",
+        "roW_VERSION": "AAAAAADPHfY="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 24,
+        "coD_LOCALIDAD_DGI": "8992",
+        "desC_LOCALIDAD_DGI": "9 DE JULIO  ( 4238 )",
+        "codigO_POSTAL_DGI": "4238",
+        "roW_VERSION": "AAAAAADPNEY="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 25,
+        "coD_LOCALIDAD_DGI": "10161",
+        "desC_LOCALIDAD_DGI": "9 DE JULIO  ( 5255 )",
+        "codigO_POSTAL_DGI": "5255",
+        "roW_VERSION": "AAAAAADPDiY="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 26,
+        "coD_LOCALIDAD_DGI": "6115",
+        "desC_LOCALIDAD_DGI": "9 DE JULIO KILOMETRO 20 ( 3382 )",
+        "codigO_POSTAL_DGI": "3382",
+        "roW_VERSION": "AAAAAADPJ80="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 27,
+        "coD_LOCALIDAD_DGI": "123",
+        "desC_LOCALIDAD_DGI": "A. A. FERNANDEZ ( 1825 )",
+        "codigO_POSTAL_DGI": "1825",
+        "roW_VERSION": "AAAAAADPEro="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 28,
+        "coD_LOCALIDAD_DGI": "7783",
+        "desC_LOCALIDAD_DGI": "AARON CASTELLANOS ( 6106 )",
+        "codigO_POSTAL_DGI": "6106",
+        "roW_VERSION": "AAAAAADPLwY="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 29,
+        "coD_LOCALIDAD_DGI": "3762",
+        "desC_LOCALIDAD_DGI": "ABALO ( 3466 )",
+        "codigO_POSTAL_DGI": "3466",
+        "roW_VERSION": "AAAAAADPHa8="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 30,
+        "coD_LOCALIDAD_DGI": "1146",
+        "desC_LOCALIDAD_DGI": "ABASTO ( 1903 )",
+        "codigO_POSTAL_DGI": "1903",
+        "roW_VERSION": "AAAAAADPEl8="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 31,
+        "coD_LOCALIDAD_DGI": "1144",
+        "desC_LOCALIDAD_DGI": "ABASTO (NOROESTE) ( 1901 )",
+        "codigO_POSTAL_DGI": "1901",
+        "roW_VERSION": "AAAAAADPEl0="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 32,
+        "coD_LOCALIDAD_DGI": "11018",
+        "desC_LOCALIDAD_DGI": "ABASTO (SUDESTE) ( 1903 )",
+        "codigO_POSTAL_DGI": "1903",
+        "roW_VERSION": "AAAAAADPEdE="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 33,
+        "coD_LOCALIDAD_DGI": "804",
+        "desC_LOCALIDAD_DGI": "ABBOTT ( 7228 )",
+        "codigO_POSTAL_DGI": "7228",
+        "roW_VERSION": "AAAAAADPMCM="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 34,
+        "coD_LOCALIDAD_DGI": "2083",
+        "desC_LOCALIDAD_DGI": "ABBURRA ( 5220 )",
+        "codigO_POSTAL_DGI": "5220",
+        "roW_VERSION": "AAAAAADPFmo="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 35,
+        "coD_LOCALIDAD_DGI": "5181",
+        "desC_LOCALIDAD_DGI": "ABDON CASTRO TOLAY ( 4641 )",
+        "codigO_POSTAL_DGI": "4641",
+        "roW_VERSION": "AAAAAADPI78="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 36,
+        "coD_LOCALIDAD_DGI": "1494",
+        "desC_LOCALIDAD_DGI": "ABEL ( 6450 )",
+        "codigO_POSTAL_DGI": "6450",
+        "roW_VERSION": "AAAAAADPE9w="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 37,
+        "coD_LOCALIDAD_DGI": "3763",
+        "desC_LOCALIDAD_DGI": "ABELI ( 3466 )",
+        "codigO_POSTAL_DGI": "3466",
+        "roW_VERSION": "AAAAAADPHbA="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 38,
+        "coD_LOCALIDAD_DGI": "7675",
+        "desC_LOCALIDAD_DGI": "ABIPONES ( 3042 )",
+        "codigO_POSTAL_DGI": "3042",
+        "roW_VERSION": "AAAAAADPLo0="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 39,
+        "coD_LOCALIDAD_DGI": "6546",
+        "desC_LOCALIDAD_DGI": "ABLOME ( 4421 )",
+        "codigO_POSTAL_DGI": "4421",
+        "roW_VERSION": "AAAAAADPKas="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 40,
+        "coD_LOCALIDAD_DGI": "3742",
+        "desC_LOCALIDAD_DGI": "ABO NEZU ( 3461 )",
+        "codigO_POSTAL_DGI": "3461",
+        "roW_VERSION": "AAAAAADPHZo="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 41,
+        "coD_LOCALIDAD_DGI": "3650",
+        "desC_LOCALIDAD_DGI": "ABRA ( 3414 )",
+        "codigO_POSTAL_DGI": "3414",
+        "roW_VERSION": "AAAAAADPHTQ="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 42,
+        "coD_LOCALIDAD_DGI": "3677",
+        "desC_LOCALIDAD_DGI": "ABRA ( 3427 )",
+        "codigO_POSTAL_DGI": "3427",
+        "roW_VERSION": "AAAAAADPHVE="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 43,
+        "coD_LOCALIDAD_DGI": "9662",
+        "desC_LOCALIDAD_DGI": "ABRA CORO ( 4336 )",
+        "codigO_POSTAL_DGI": "4336",
+        "roW_VERSION": "AAAAAADPNzE="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 44,
+        "coD_LOCALIDAD_DGI": "5182",
+        "desC_LOCALIDAD_DGI": "ABRA DE COBRES ( 4641 )",
+        "codigO_POSTAL_DGI": "4641",
+        "roW_VERSION": "AAAAAADPI8A="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 45,
+        "coD_LOCALIDAD_DGI": "5158",
+        "desC_LOCALIDAD_DGI": "ABRA DE CONDOR ( 4630 )",
+        "codigO_POSTAL_DGI": "4630",
+        "roW_VERSION": "AAAAAADPI6U="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 46,
+        "coD_LOCALIDAD_DGI": "907",
+        "desC_LOCALIDAD_DGI": "ABRA DE HINOJO ( 8170 )",
+        "codigO_POSTAL_DGI": "8170",
+        "roW_VERSION": "AAAAAADPNJ4="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 47,
+        "coD_LOCALIDAD_DGI": "8855",
+        "desC_LOCALIDAD_DGI": "ABRA DE LA CRUZ ( 4225 )",
+        "codigO_POSTAL_DGI": "4225",
+        "roW_VERSION": "AAAAAADPM64="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 48,
+        "coD_LOCALIDAD_DGI": "5217",
+        "desC_LOCALIDAD_DGI": "ABRA DE LIZOITE ( 4651 )",
+        "codigO_POSTAL_DGI": "4651",
+        "roW_VERSION": "AAAAAADPI+c="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 49,
+        "coD_LOCALIDAD_DGI": "5214",
+        "desC_LOCALIDAD_DGI": "ABRA DE PEQAS ( 4650 )",
+        "codigO_POSTAL_DGI": "4650",
+        "roW_VERSION": "AAAAAADPI+Q="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 50,
+        "coD_LOCALIDAD_DGI": "8993",
+        "desC_LOCALIDAD_DGI": "ABRA DE QUIMIL ( 4238 )",
+        "codigO_POSTAL_DGI": "4238",
+        "roW_VERSION": "AAAAAADPNEc="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 51,
+        "coD_LOCALIDAD_DGI": "10999",
+        "desC_LOCALIDAD_DGI": "ABRA DE SANTA CRUZ ( 4651 )",
+        "codigO_POSTAL_DGI": "4651",
+        "roW_VERSION": "AAAAAADPEbo="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 52,
+        "coD_LOCALIDAD_DGI": "6520",
+        "desC_LOCALIDAD_DGI": "ABRA DEL GALLO ( 4411 )",
+        "codigO_POSTAL_DGI": "4411",
+        "roW_VERSION": "AAAAAADPKY8="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 53,
+        "coD_LOCALIDAD_DGI": "10663",
+        "desC_LOCALIDAD_DGI": "ABRA DEL INFIERNO ( 4137 )",
+        "codigO_POSTAL_DGI": "4137",
+        "roW_VERSION": "AAAAAADPEFM="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 54,
+        "coD_LOCALIDAD_DGI": "5032",
+        "desC_LOCALIDAD_DGI": "ABRA DEL TRIGO ( 4501 )",
+        "codigO_POSTAL_DGI": "4501",
+        "roW_VERSION": "AAAAAADPIxo="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 55,
+        "coD_LOCALIDAD_DGI": "9663",
+        "desC_LOCALIDAD_DGI": "ABRA GRANDE ( 4336 )",
+        "codigO_POSTAL_DGI": "4336",
+        "roW_VERSION": "AAAAAADPNzI="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 56,
+        "coD_LOCALIDAD_DGI": "3803",
+        "desC_LOCALIDAD_DGI": "ABRA GUAZU ( 3197 )",
+        "codigO_POSTAL_DGI": "3197",
+        "roW_VERSION": "AAAAAADPHd0="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 57,
+        "coD_LOCALIDAD_DGI": "5146",
+        "desC_LOCALIDAD_DGI": "ABRA MAYO ( 4624 )",
+        "codigO_POSTAL_DGI": "4624",
+        "roW_VERSION": "AAAAAADPI5g="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 58,
+        "coD_LOCALIDAD_DGI": "5179",
+        "desC_LOCALIDAD_DGI": "ABRA PAMPA ( 4640 )",
+        "codigO_POSTAL_DGI": "4640",
+        "roW_VERSION": "AAAAAADPI7w="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 59,
+        "coD_LOCALIDAD_DGI": "10734",
+        "desC_LOCALIDAD_DGI": "ABRA RICA ( 4178 )",
+        "codigO_POSTAL_DGI": "4178",
+        "roW_VERSION": "AAAAAADPEJ8="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 60,
+        "coD_LOCALIDAD_DGI": "5532",
+        "desC_LOCALIDAD_DGI": "ABRA VERDE ( 5470 )",
+        "codigO_POSTAL_DGI": "5470",
+        "roW_VERSION": "AAAAAADPJUc="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 61,
+        "coD_LOCALIDAD_DGI": "5168",
+        "desC_LOCALIDAD_DGI": "ABRALAITE ( 4632 )",
+        "codigO_POSTAL_DGI": "4632",
+        "roW_VERSION": "AAAAAADPI7A="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 62,
+        "coD_LOCALIDAD_DGI": "5367",
+        "desC_LOCALIDAD_DGI": "ABRAMO ( 8212 )",
+        "codigO_POSTAL_DGI": "8212",
+        "roW_VERSION": "AAAAAADPJI4="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 63,
+        "coD_LOCALIDAD_DGI": "8856",
+        "desC_LOCALIDAD_DGI": "ABRAS DEL MARTIRIZADO ( 4225 )",
+        "codigO_POSTAL_DGI": "4225",
+        "roW_VERSION": "AAAAAADPM68="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 64,
+        "coD_LOCALIDAD_DGI": "8940",
+        "desC_LOCALIDAD_DGI": "ABRAS DEL MEDIO ( 4233 )",
+        "codigO_POSTAL_DGI": "4233",
+        "roW_VERSION": "AAAAAADPNA4="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 65,
+        "coD_LOCALIDAD_DGI": "8671",
+        "desC_LOCALIDAD_DGI": "ABRITA ( 4206 )",
+        "codigO_POSTAL_DGI": "4206",
+        "roW_VERSION": "AAAAAADPMuE="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 66,
+        "coD_LOCALIDAD_DGI": "8509",
+        "desC_LOCALIDAD_DGI": "ABRITA CHICA ( 4201 )",
+        "codigO_POSTAL_DGI": "4201",
+        "roW_VERSION": "AAAAAADPMi0="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 67,
+        "coD_LOCALIDAD_DGI": "8510",
+        "desC_LOCALIDAD_DGI": "ABRITA GRANDE ( 4201 )",
+        "codigO_POSTAL_DGI": "4201",
+        "roW_VERSION": "AAAAAADPMi8="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 68,
+        "coD_LOCALIDAD_DGI": "6674",
+        "desC_LOCALIDAD_DGI": "ACAMBUCO ( 4568 )",
+        "codigO_POSTAL_DGI": "4568",
+        "roW_VERSION": "AAAAAADPKjc="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 69,
+        "coD_LOCALIDAD_DGI": "5921",
+        "desC_LOCALIDAD_DGI": "ACARAGUA ( 3361 )",
+        "codigO_POSTAL_DGI": "3361",
+        "roW_VERSION": "AAAAAADPJvQ="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 70,
+        "coD_LOCALIDAD_DGI": "7026",
+        "desC_LOCALIDAD_DGI": "ACASAPE ( 5722 )",
+        "codigO_POSTAL_DGI": "5722",
+        "roW_VERSION": "AAAAAADPK7s="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 71,
+        "coD_LOCALIDAD_DGI": "110",
+        "desC_LOCALIDAD_DGI": "ACASSUSO ( 1641 )",
+        "codigO_POSTAL_DGI": "1641",
+        "roW_VERSION": "AAAAAADPEbw="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 72,
+        "coD_LOCALIDAD_DGI": "6521",
+        "desC_LOCALIDAD_DGI": "ACAZOQUE ( 4411 )",
+        "codigO_POSTAL_DGI": "4411",
+        "roW_VERSION": "AAAAAADPKZA="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 73,
+        "coD_LOCALIDAD_DGI": "7847",
+        "desC_LOCALIDAD_DGI": "ACEBAL ( 2109 )",
+        "codigO_POSTAL_DGI": "2109",
+        "roW_VERSION": "AAAAAADPL0s="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 74,
+        "coD_LOCALIDAD_DGI": "1617",
+        "desC_LOCALIDAD_DGI": "ACELLAN ( 7003 )",
+        "codigO_POSTAL_DGI": "7003",
+        "roW_VERSION": "AAAAAADPFGY="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 75,
+        "coD_LOCALIDAD_DGI": "1548",
+        "desC_LOCALIDAD_DGI": "ACEVEDO ( 2717 )",
+        "codigO_POSTAL_DGI": "2717",
+        "roW_VERSION": "AAAAAADPFBk="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 76,
+        "coD_LOCALIDAD_DGI": "1842",
+        "desC_LOCALIDAD_DGI": "ACHALCO ( 4234 )",
+        "codigO_POSTAL_DGI": "4234",
+        "roW_VERSION": "AAAAAADPFV4="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 77,
+        "coD_LOCALIDAD_DGI": "6594",
+        "desC_LOCALIDAD_DGI": "ACHARAS ( 4434 )",
+        "codigO_POSTAL_DGI": "4434",
+        "roW_VERSION": "AAAAAADPKeA="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 78,
+        "coD_LOCALIDAD_DGI": "10279",
+        "desC_LOCALIDAD_DGI": "ACHERAL ( 4134 )",
+        "codigO_POSTAL_DGI": "4134",
+        "roW_VERSION": "AAAAAADPDqg="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 79,
+        "coD_LOCALIDAD_DGI": "6133",
+        "desC_LOCALIDAD_DGI": "ACHICO ( 8315 )",
+        "codigO_POSTAL_DGI": "8315",
+        "roW_VERSION": "AAAAAADPJ+E="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 80,
+        "coD_LOCALIDAD_DGI": "3423",
+        "desC_LOCALIDAD_DGI": "ACHIRAS  ( 5875 )",
+        "codigO_POSTAL_DGI": "5875",
+        "roW_VERSION": "AAAAAADPHDg="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 81,
+        "coD_LOCALIDAD_DGI": "3177",
+        "desC_LOCALIDAD_DGI": "ACHIRAS  ( 5833 )",
+        "codigO_POSTAL_DGI": "5833",
+        "roW_VERSION": "AAAAAADPGyU="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 82,
+        "coD_LOCALIDAD_DGI": "4328",
+        "desC_LOCALIDAD_DGI": "ACHIRAS ( 3246 )",
+        "codigO_POSTAL_DGI": "3246",
+        "roW_VERSION": "AAAAAADPIBA="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 83,
+        "coD_LOCALIDAD_DGI": "1006",
+        "desC_LOCALIDAD_DGI": "ACHUPALLAS ( 6627 )",
+        "codigO_POSTAL_DGI": "6627",
+        "roW_VERSION": "AAAAAADPDbQ="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 84,
+        "coD_LOCALIDAD_DGI": "2084",
+        "desC_LOCALIDAD_DGI": "ACOLLARADO ( 5216 )",
+        "codigO_POSTAL_DGI": "5216",
+        "roW_VERSION": "AAAAAADPFms="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 85,
+        "coD_LOCALIDAD_DGI": "1962",
+        "desC_LOCALIDAD_DGI": "ACONQUIJA ( 4743 )",
+        "codigO_POSTAL_DGI": "4743",
+        "roW_VERSION": "AAAAAADPFeM="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 86,
+        "coD_LOCALIDAD_DGI": "10476",
+        "desC_LOCALIDAD_DGI": "ACONQUIJA ( 4107 )",
+        "codigO_POSTAL_DGI": "4107",
+        "roW_VERSION": "AAAAAADPD4M="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 87,
+        "coD_LOCALIDAD_DGI": "8313",
+        "desC_LOCALIDAD_DGI": "ACOS ( 4176 )",
+        "codigO_POSTAL_DGI": "4176",
+        "roW_VERSION": "AAAAAADPMVQ="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 88,
+        "coD_LOCALIDAD_DGI": "6566",
+        "desC_LOCALIDAD_DGI": "ACOSTA ( 4425 )",
+        "codigO_POSTAL_DGI": "4425",
+        "roW_VERSION": "AAAAAADPKcE="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 89,
+        "coD_LOCALIDAD_DGI": "9181",
+        "desC_LOCALIDAD_DGI": "ACOSTA  ( 4302 )",
+        "codigO_POSTAL_DGI": "4302",
+        "roW_VERSION": "AAAAAADPNRo="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 90,
+        "coD_LOCALIDAD_DGI": "1858",
+        "desC_LOCALIDAD_DGI": "ACOSTILLA  ( 4701 )",
+        "codigO_POSTAL_DGI": "4701",
+        "roW_VERSION": "AAAAAADPFW8="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 91,
+        "coD_LOCALIDAD_DGI": "3424",
+        "desC_LOCALIDAD_DGI": "ACOSTILLA  ( 5871 )",
+        "codigO_POSTAL_DGI": "5871",
+        "roW_VERSION": "AAAAAADPHDk="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 92,
+        "coD_LOCALIDAD_DGI": "10513",
+        "desC_LOCALIDAD_DGI": "ACOSTILLA ( 4113 )",
+        "codigO_POSTAL_DGI": "4113",
+        "roW_VERSION": "AAAAAADPD6w="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 93,
+        "coD_LOCALIDAD_DGI": "6683",
+        "desC_LOCALIDAD_DGI": "ACOYTE ( 4651 )",
+        "codigO_POSTAL_DGI": "4651",
+        "roW_VERSION": "AAAAAADPKj8="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 94,
+        "coD_LOCALIDAD_DGI": "3764",
+        "desC_LOCALIDAD_DGI": "ACUÑA ( 3466 )",
+        "codigO_POSTAL_DGI": "3466",
+        "roW_VERSION": "AAAAAADPHbE="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 95,
+        "coD_LOCALIDAD_DGI": "3662",
+        "desC_LOCALIDAD_DGI": "ACUÑA CUE ( 3420 )",
+        "codigO_POSTAL_DGI": "3420",
+        "roW_VERSION": "AAAAAADPHUE="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 96,
+        "coD_LOCALIDAD_DGI": "6754",
+        "desC_LOCALIDAD_DGI": "ADAN QUIROGA ( 5409 )",
+        "codigO_POSTAL_DGI": "5409",
+        "roW_VERSION": "AAAAAADPKow="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 97,
+        "coD_LOCALIDAD_DGI": "7176",
+        "desC_LOCALIDAD_DGI": "DELA ( 9400 )",
+        "codigO_POSTAL_DGI": "9400",
+        "roW_VERSION": "AAAAAADPLGI="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 98,
+        "coD_LOCALIDAD_DGI": "981",
+        "desC_LOCALIDAD_DGI": "ADELA  ( 7136 )",
+        "codigO_POSTAL_DGI": "7136",
+        "roW_VERSION": "AAAAAADPN9U="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 99,
+        "coD_LOCALIDAD_DGI": "548",
+        "desC_LOCALIDAD_DGI": "ADELA CORTI ( 8000 )",
+        "codigO_POSTAL_DGI": "8000",
+        "roW_VERSION": "AAAAAADPJQw="
+      },
+      {
+        "iD_LOCALIDAD_DGI": 100,
+        "coD_LOCALIDAD_DGI": "549",
+        "desC_LOCALIDAD_DGI": "ADELA SAENZ ( 8129 )",
+        "codigO_POSTAL_DGI": "8129",
+        "roW_VERSION": "AAAAAADPJRc="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

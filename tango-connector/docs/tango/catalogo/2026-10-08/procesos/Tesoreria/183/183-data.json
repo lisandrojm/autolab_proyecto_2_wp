@@ -1,0 +1,49 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "conectA_PAGO_WEB_SERVICE": false,
+        "generA_NOTA_CREDITO_AUTOMATICA": false,
+        "asignA_MISMA_CUENTA_NOTMAPPED": false,
+        "iD_SBA22": 1,
+        "coD_SBA22": "999",
+        "desC_TARJE": "LMB",
+        "habilitado": true,
+        "tipO_TARJETA": "C",
+        "usA_POS": false,
+        "cupoN_MODO": "A",
+        "proX_CUPON": 99999999999,
+        "coD_TARJET": "999",
+        "iD_SBA02_DEP": 36,
+        "iD_SBA02_ACRE": 36,
+        "ctA_PROMO": 10470101,
+        "iD_SBA01_CTA_PROMO": 328,
+        "ctA_RECH": 10470101,
+        "iD_SBA01_CTA_RECH": 328,
+        "ctA_ARAN": 10470101,
+        "iD_SBA01_CTA_ARAN": 328,
+        "ctA_CF": 10470101,
+        "iD_SBA01_CTA_CF": 328,
+        "ctA_IMP": 10470101,
+        "iD_SBA01_CTA_IMP": 328,
+        "ctA_ACRE": 10470101,
+        "iD_SBA01_CTA_ACRE": 328,
+        "ctA_DEP": 10470101,
+        "iD_SBA01_CTA_DEP": 328,
+        "tipO_OPERACION": "",
+        "codigo": "999",
+        "roW_VERSION": "AAAAAADf7ts="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

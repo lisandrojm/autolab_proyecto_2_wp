@@ -1,0 +1,591 @@
+{
+  "title": "Conceptos de liquidación",
+  "moduleId": 8,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"CONCEPTO\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"TIPO_CONCEPTO\",\r\n    \"NRO_CONCEPTO\",\r\n    \"DESC_CONCEPTO\",\r\n    \"PORC_CONCEPTO\",\r\n    \"HABILITADO\",\r\n    \"APLICABLE_A_TODOS\",\r\n    \"AFECTA_HABITUAL_SUELDO\",\r\n    \"EVALUA_RECURRENCIA\",\r\n    \"PROMEDIO_REMUNERACION_VARIABLE\",\r\n    \"AFECTA_MEJOR_SUELDO\",\r\n    \"AJUSTE\",\r\n    \"ANTICIPO_HABER\",\r\n    \"LIQUIDA_IMPORTE_EN_CERO\",\r\n    \"AFECTA_BASE_CALCULO_EMBARGO\",\r\n    \"AFECTA_COSTO_LABORAL\",\r\n    \"AFECTA_BASE_CALCULO_JR\",\r\n    \"APLICA_SOLO_UN_DATO_FIJO_PERIODO\",\r\n    \"AFECTA_TOTAL_BRUTO_DE_RECIBO\",\r\n    \"AFECTA_PAGO\",\r\n    \"AFECTA_SICOSS_LSD\"\r\n  ],\r\n  \"properties\": {\r\n    \"TIPO_CONCEPTO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"NRO_CONCEPTO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"DESC_CONCEPTO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"IMP_CONCEPTO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"PORC_CONCEPTO\": {\r\n      \"type\": \"number\",\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"HABILITADO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"ID_FORMULA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"APLICABLE_A_TODOS\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"AFECTA_HABITUAL_SUELDO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"EVALUA_RECURRENCIA\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"PROMEDIO_REMUNERACION_VARIABLE\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"AFECTA_MEJOR_SUELDO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"AJUSTE\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"ANTICIPO_HABER\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"LIQUIDA_IMPORTE_EN_CERO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"AFECTA_BASE_CALCULO_EMBARGO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"AFECTA_COSTO_LABORAL\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"AFECTA_BASE_CALCULO_JR\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"APLICA_SOLO_UN_DATO_FIJO_PERIODO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"AFECTA_TOTAL_BRUTO_DE_RECIBO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"APERTURA_COMPOSICION_SALARIAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_PAGO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"AFECTA_SICOSS_LSD\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"TIPO_SIJP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"CLASIFICACION_SIJP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI1\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI2\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI3\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI4\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI5\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI6\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI7\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI8\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI9\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ID_CONCEPTO_AFIP\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ES_APORTE_ADICIONAL_OS_FIJO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ES_ANTICIPO_HABERES_LSD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ES_BASE_DE_CALCULO_MATERNIDAD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_SIPA_APORTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_SIPA_CONTRIBUCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_INSSJYP_APORTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_INSSJYP_CONTRIBUCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_OBRA_SOCIAL_APORTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_OBRA_SOCIAL_CONTRIBUCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_FONDO_SOLID_REDIST_APORTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_FONDO_SOLID_REDIST_CONTRIBUCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_RENATEA_APORTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_RENATEA_CONTRIBUCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_REGIMENES_DIFERENCIALES_APORTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_AAFF_CONTRIBUCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_REGIMENES_ESPECIALES_APORTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_FNE_CONTRIBUCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_LRT_CONTRIBUCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"EXENTO_PERSONAL_DE_POZO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_GANANCIAS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"TIPO_GANANCIAS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ID_TIPO_EXCEPCION_GANANCIAS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_RETENCION_GANANCIAS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_CONCEPTO_GANANCIAS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GRUPO_CONCEPTO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ES_CONCEPTO_HABITUAL_GANANCIAS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ES_SAC\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_SAC_PROPORCIONAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"EXENTO_LEY_27549\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO_LIQUIDACION_CONCEPTO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TIPO_LIQUIDACION_CONCEPTO\"\r\n      }\r\n    },\r\n    \"CONCEPTO_SUBTIPO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CONCEPTO_SUBTIPO\"\r\n      }\r\n    },\r\n    \"DETALLE_CONCEPTO_RETENCION\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/DETALLE_CONCEPTO_RETENCION\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"TIPO_LIQUIDACION_CONCEPTO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"HABILITADO\"\r\n      ],\r\n      \"properties\": {\r\n        \"TIPO_LIQUIDACION\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"HABILITADO\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"CHECK\": {\r\n          \"type\": \"boolean\"\r\n        }\r\n      }\r\n    },\r\n    \"CONCEPTO_SUBTIPO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_SUBTIPO\",\r\n        \"COD_SUBTIPO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_SUBTIPO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_SUBTIPO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 10,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"DETALLE_CONCEPTO_RETENCION\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_CONCEPTO_RETENCION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TIPO_LIQUIDACION_CONCEPTO\n    {\n        [Newtonsoft.Json.JsonProperty(\"TIPO_LIQUIDACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? TIPO_LIQUIDACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CHECK\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool CHECK { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CONCEPTO_SUBTIPO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_SUBTIPO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_SUBTIPO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_SUBTIPO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_SUBTIPO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class DETALLE_CONCEPTO_RETENCION\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CONCEPTO_RETENCION\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CONCEPTO_RETENCION { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CONCEPTO\n    {\n        [Newtonsoft.Json.JsonProperty(\"TIPO_CONCEPTO\", Required = Newtonsoft.Json.Required.Always)]\n        public int TIPO_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_CONCEPTO\", Required = Newtonsoft.Json.Required.Always)]\n        public int NRO_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_CONCEPTO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMP_CONCEPTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMP_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_CONCEPTO\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal PORC_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_FORMULA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_FORMULA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"APLICABLE_A_TODOS\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string APLICABLE_A_TODOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_HABITUAL_SUELDO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AFECTA_HABITUAL_SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EVALUA_RECURRENCIA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string EVALUA_RECURRENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROMEDIO_REMUNERACION_VARIABLE\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string PROMEDIO_REMUNERACION_VARIABLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_MEJOR_SUELDO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AFECTA_MEJOR_SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AJUSTE\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AJUSTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ANTICIPO_HABER\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string ANTICIPO_HABER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LIQUIDA_IMPORTE_EN_CERO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string LIQUIDA_IMPORTE_EN_CERO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_BASE_CALCULO_EMBARGO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AFECTA_BASE_CALCULO_EMBARGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_COSTO_LABORAL\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AFECTA_COSTO_LABORAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_BASE_CALCULO_JR\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AFECTA_BASE_CALCULO_JR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"APLICA_SOLO_UN_DATO_FIJO_PERIODO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string APLICA_SOLO_UN_DATO_FIJO_PERIODO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_TOTAL_BRUTO_DE_RECIBO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AFECTA_TOTAL_BRUTO_DE_RECIBO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"APERTURA_COMPOSICION_SALARIAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string APERTURA_COMPOSICION_SALARIAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_PAGO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AFECTA_PAGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_SICOSS_LSD\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AFECTA_SICOSS_LSD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_SIJP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string TIPO_SIJP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CLASIFICACION_SIJP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string CLASIFICACION_SIJP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI2\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI2 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI3\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI3 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI4\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI4 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI5\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI5 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI6\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI6 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI7\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI7 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI8\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI8 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI9\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI9 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CONCEPTO_AFIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CONCEPTO_AFIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ES_APORTE_ADICIONAL_OS_FIJO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ES_APORTE_ADICIONAL_OS_FIJO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ES_ANTICIPO_HABERES_LSD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ES_ANTICIPO_HABERES_LSD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ES_BASE_DE_CALCULO_MATERNIDAD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ES_BASE_DE_CALCULO_MATERNIDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_SIPA_APORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_SIPA_APORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_SIPA_CONTRIBUCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_SIPA_CONTRIBUCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_INSSJYP_APORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_INSSJYP_APORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_INSSJYP_CONTRIBUCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_INSSJYP_CONTRIBUCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_OBRA_SOCIAL_APORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_OBRA_SOCIAL_APORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_OBRA_SOCIAL_CONTRIBUCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_OBRA_SOCIAL_CONTRIBUCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_FONDO_SOLID_REDIST_APORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_FONDO_SOLID_REDIST_APORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_FONDO_SOLID_REDIST_CONTRIBUCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_FONDO_SOLID_REDIST_CONTRIBUCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_RENATEA_APORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_RENATEA_APORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_RENATEA_CONTRIBUCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_RENATEA_CONTRIBUCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_REGIMENES_DIFERENCIALES_APORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_REGIMENES_DIFERENCIALES_APORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_AAFF_CONTRIBUCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_AAFF_CONTRIBUCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_REGIMENES_ESPECIALES_APORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_REGIMENES_ESPECIALES_APORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_FNE_CONTRIBUCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_FNE_CONTRIBUCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_LRT_CONTRIBUCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_LRT_CONTRIBUCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EXENTO_PERSONAL_DE_POZO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string EXENTO_PERSONAL_DE_POZO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_GANANCIAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_GANANCIAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_GANANCIAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string TIPO_GANANCIAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_EXCEPCION_GANANCIAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_EXCEPCION_GANANCIAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_RETENCION_GANANCIAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_RETENCION_GANANCIAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_CONCEPTO_GANANCIAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_CONCEPTO_GANANCIAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GRUPO_CONCEPTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GRUPO_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ES_CONCEPTO_HABITUAL_GANANCIAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ES_CONCEPTO_HABITUAL_GANANCIAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ES_SAC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ES_SAC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_SAC_PROPORCIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_SAC_PROPORCIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EXENTO_LEY_27549\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string EXENTO_LEY_27549 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_LIQUIDACION_CONCEPTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TIPO_LIQUIDACION_CONCEPTO> TIPO_LIQUIDACION_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CONCEPTO_SUBTIPO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CONCEPTO_SUBTIPO> CONCEPTO_SUBTIPO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DETALLE_CONCEPTO_RETENCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<DETALLE_CONCEPTO_RETENCION> DETALLE_CONCEPTO_RETENCION { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface TIPO_LIQUIDACION_CONCEPTO {\n    TIPO_LIQUIDACION: number | undefined;\n    HABILITADO: string;\n    CHECK: boolean;\n}\n\nexport interface CONCEPTO_SUBTIPO {\n    ID_SUBTIPO: number;\n    COD_SUBTIPO: string;\n}\n\nexport interface DETALLE_CONCEPTO_RETENCION {\n    ID_CONCEPTO_RETENCION: number;\n}\n\nexport interface CONCEPTO {\n    TIPO_CONCEPTO: number;\n    NRO_CONCEPTO: number;\n    DESC_CONCEPTO: string;\n    IMP_CONCEPTO: number | undefined;\n    PORC_CONCEPTO: number;\n    HABILITADO: string;\n    ID_FORMULA: number | undefined;\n    APLICABLE_A_TODOS: string;\n    AFECTA_HABITUAL_SUELDO: string;\n    EVALUA_RECURRENCIA: string;\n    PROMEDIO_REMUNERACION_VARIABLE: string;\n    AFECTA_MEJOR_SUELDO: string;\n    AJUSTE: string;\n    ANTICIPO_HABER: string;\n    LIQUIDA_IMPORTE_EN_CERO: string;\n    AFECTA_BASE_CALCULO_EMBARGO: string;\n    AFECTA_COSTO_LABORAL: string;\n    AFECTA_BASE_CALCULO_JR: string;\n    APLICA_SOLO_UN_DATO_FIJO_PERIODO: string;\n    AFECTA_TOTAL_BRUTO_DE_RECIBO: string;\n    APERTURA_COMPOSICION_SALARIAL: string | undefined;\n    AFECTA_PAGO: string;\n    AFECTA_SICOSS_LSD: string;\n    TIPO_SIJP: string | undefined;\n    CLASIFICACION_SIJP: string | undefined;\n    AFECTA_RI: string | undefined;\n    AFECTA_RI1: string | undefined;\n    AFECTA_RI2: string | undefined;\n    AFECTA_RI3: string | undefined;\n    AFECTA_RI4: string | undefined;\n    AFECTA_RI5: string | undefined;\n    AFECTA_RI6: string | undefined;\n    AFECTA_RI7: string | undefined;\n    AFECTA_RI8: string | undefined;\n    AFECTA_RI9: string | undefined;\n    ID_CONCEPTO_AFIP: number | undefined;\n    ES_APORTE_ADICIONAL_OS_FIJO: string | undefined;\n    ES_ANTICIPO_HABERES_LSD: string | undefined;\n    ES_BASE_DE_CALCULO_MATERNIDAD: string | undefined;\n    AFIP_SIPA_APORTE: string | undefined;\n    AFIP_SIPA_CONTRIBUCION: string | undefined;\n    AFIP_INSSJYP_APORTE: string | undefined;\n    AFIP_INSSJYP_CONTRIBUCION: string | undefined;\n    AFIP_OBRA_SOCIAL_APORTE: string | undefined;\n    AFIP_OBRA_SOCIAL_CONTRIBUCION: string | undefined;\n    AFIP_FONDO_SOLID_REDIST_APORTE: string | undefined;\n    AFIP_FONDO_SOLID_REDIST_CONTRIBUCION: string | undefined;\n    AFIP_RENATEA_APORTE: string | undefined;\n    AFIP_RENATEA_CONTRIBUCION: string | undefined;\n    AFIP_REGIMENES_DIFERENCIALES_APORTE: string | undefined;\n    AFIP_AAFF_CONTRIBUCION: string | undefined;\n    AFIP_REGIMENES_ESPECIALES_APORTE: string | undefined;\n    AFIP_FNE_CONTRIBUCION: string | undefined;\n    AFIP_LRT_CONTRIBUCION: string | undefined;\n    EXENTO_PERSONAL_DE_POZO: string | undefined;\n    AFECTA_GANANCIAS: string | undefined;\n    TIPO_GANANCIAS: string | undefined;\n    ID_TIPO_EXCEPCION_GANANCIAS: number | undefined;\n    ID_TIPO_RETENCION_GANANCIAS: number | undefined;\n    ID_TIPO_CONCEPTO_GANANCIAS: number | undefined;\n    ID_GRUPO_CONCEPTO: number | undefined;\n    ES_CONCEPTO_HABITUAL_GANANCIAS: string | undefined;\n    ES_SAC: string | undefined;\n    AFECTA_SAC_PROPORCIONAL: string | undefined;\n    EXENTO_LEY_27549: string | undefined;\n    OBSERVACIONES: string | undefined;\n    TIPO_LIQUIDACION_CONCEPTO: TIPO_LIQUIDACION_CONCEPTO[] | undefined;\n    CONCEPTO_SUBTIPO: CONCEPTO_SUBTIPO[] | undefined;\n    DETALLE_CONCEPTO_RETENCION: DETALLE_CONCEPTO_RETENCION[] | undefined;\n}",
+          "example": {
+            "TIPO_CONCEPTO": 0,
+            "NRO_CONCEPTO": 0,
+            "DESC_CONCEPTO": null,
+            "IMP_CONCEPTO": 0,
+            "PORC_CONCEPTO": 0,
+            "HABILITADO": "S",
+            "ID_FORMULA": 0,
+            "APLICABLE_A_TODOS": "S",
+            "AFECTA_HABITUAL_SUELDO": "S",
+            "EVALUA_RECURRENCIA": "N",
+            "PROMEDIO_REMUNERACION_VARIABLE": "N",
+            "AFECTA_MEJOR_SUELDO": "S",
+            "AJUSTE": "N",
+            "ANTICIPO_HABER": "N",
+            "LIQUIDA_IMPORTE_EN_CERO": "N",
+            "AFECTA_BASE_CALCULO_EMBARGO": "N",
+            "AFECTA_COSTO_LABORAL": null,
+            "AFECTA_BASE_CALCULO_JR": "N",
+            "APLICA_SOLO_UN_DATO_FIJO_PERIODO": "N",
+            "AFECTA_TOTAL_BRUTO_DE_RECIBO": null,
+            "APERTURA_COMPOSICION_SALARIAL": null,
+            "AFECTA_PAGO": "N",
+            "AFECTA_SICOSS_LSD": "N",
+            "TIPO_SIJP": null,
+            "CLASIFICACION_SIJP": null,
+            "AFECTA_RI": "N",
+            "AFECTA_RI1": "N",
+            "AFECTA_RI2": "N",
+            "AFECTA_RI3": "N",
+            "AFECTA_RI4": "N",
+            "AFECTA_RI5": "N",
+            "AFECTA_RI6": "N",
+            "AFECTA_RI7": "N",
+            "AFECTA_RI8": "N",
+            "AFECTA_RI9": "N",
+            "ID_CONCEPTO_AFIP": 0,
+            "ES_APORTE_ADICIONAL_OS_FIJO": "N",
+            "ES_ANTICIPO_HABERES_LSD": "N",
+            "ES_BASE_DE_CALCULO_MATERNIDAD": "N",
+            "AFIP_SIPA_APORTE": "N",
+            "AFIP_SIPA_CONTRIBUCION": "N",
+            "AFIP_INSSJYP_APORTE": "N",
+            "AFIP_INSSJYP_CONTRIBUCION": "N",
+            "AFIP_OBRA_SOCIAL_APORTE": "N",
+            "AFIP_OBRA_SOCIAL_CONTRIBUCION": "N",
+            "AFIP_FONDO_SOLID_REDIST_APORTE": "N",
+            "AFIP_FONDO_SOLID_REDIST_CONTRIBUCION": "N",
+            "AFIP_RENATEA_APORTE": "N",
+            "AFIP_RENATEA_CONTRIBUCION": "N",
+            "AFIP_REGIMENES_DIFERENCIALES_APORTE": "N",
+            "AFIP_AAFF_CONTRIBUCION": "N",
+            "AFIP_REGIMENES_ESPECIALES_APORTE": "N",
+            "AFIP_FNE_CONTRIBUCION": "N",
+            "AFIP_LRT_CONTRIBUCION": "N",
+            "EXENTO_PERSONAL_DE_POZO": "N",
+            "AFECTA_GANANCIAS": "S",
+            "TIPO_GANANCIAS": null,
+            "ID_TIPO_EXCEPCION_GANANCIAS": 0,
+            "ID_TIPO_RETENCION_GANANCIAS": 0,
+            "ID_TIPO_CONCEPTO_GANANCIAS": 0,
+            "ID_GRUPO_CONCEPTO": 0,
+            "ES_CONCEPTO_HABITUAL_GANANCIAS": "N",
+            "ES_SAC": "N",
+            "AFECTA_SAC_PROPORCIONAL": "N",
+            "EXENTO_LEY_27549": "N",
+            "OBSERVACIONES": null,
+            "TIPO_LIQUIDACION_CONCEPTO": [
+              {
+                "TIPO_LIQUIDACION": 1,
+                "HABILITADO": "N",
+                "CHECK": false
+              },
+              {
+                "TIPO_LIQUIDACION": 2,
+                "HABILITADO": "N",
+                "CHECK": false
+              },
+              {
+                "TIPO_LIQUIDACION": 3,
+                "HABILITADO": "N",
+                "CHECK": false
+              },
+              {
+                "TIPO_LIQUIDACION": 4,
+                "HABILITADO": "N",
+                "CHECK": false
+              },
+              {
+                "TIPO_LIQUIDACION": 5,
+                "HABILITADO": "N",
+                "CHECK": false
+              },
+              {
+                "TIPO_LIQUIDACION": 6,
+                "HABILITADO": "N",
+                "CHECK": false
+              },
+              {
+                "TIPO_LIQUIDACION": 7,
+                "HABILITADO": "N",
+                "CHECK": false
+              },
+              {
+                "TIPO_LIQUIDACION": 8,
+                "HABILITADO": "N",
+                "CHECK": false
+              },
+              {
+                "TIPO_LIQUIDACION": 9,
+                "HABILITADO": "N",
+                "CHECK": false
+              }
+            ],
+            "CONCEPTO_SUBTIPO": [
+              {
+                "ID_SUBTIPO": 0,
+                "COD_SUBTIPO": null
+              }
+            ],
+            "DETALLE_CONCEPTO_RETENCION": [
+              {
+                "ID_CONCEPTO_RETENCION": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"CONCEPTO\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"TIPO_CONCEPTO\",\r\n    \"NRO_CONCEPTO\",\r\n    \"DESC_CONCEPTO\",\r\n    \"PORC_CONCEPTO\",\r\n    \"HABILITADO\",\r\n    \"APLICABLE_A_TODOS\",\r\n    \"AFECTA_HABITUAL_SUELDO\",\r\n    \"EVALUA_RECURRENCIA\",\r\n    \"PROMEDIO_REMUNERACION_VARIABLE\",\r\n    \"AFECTA_MEJOR_SUELDO\",\r\n    \"AJUSTE\",\r\n    \"ANTICIPO_HABER\",\r\n    \"LIQUIDA_IMPORTE_EN_CERO\",\r\n    \"AFECTA_BASE_CALCULO_EMBARGO\",\r\n    \"AFECTA_COSTO_LABORAL\",\r\n    \"AFECTA_BASE_CALCULO_JR\",\r\n    \"APLICA_SOLO_UN_DATO_FIJO_PERIODO\",\r\n    \"AFECTA_TOTAL_BRUTO_DE_RECIBO\",\r\n    \"AFECTA_PAGO\",\r\n    \"AFECTA_SICOSS_LSD\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_CONCEPTO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"TIPO_CONCEPTO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"NRO_CONCEPTO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"DESC_CONCEPTO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"IMP_CONCEPTO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"PORC_CONCEPTO\": {\r\n      \"type\": \"number\",\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"HABILITADO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"ID_FORMULA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"APLICABLE_A_TODOS\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"AFECTA_HABITUAL_SUELDO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"EVALUA_RECURRENCIA\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"PROMEDIO_REMUNERACION_VARIABLE\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"AFECTA_MEJOR_SUELDO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"AJUSTE\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"ANTICIPO_HABER\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"LIQUIDA_IMPORTE_EN_CERO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"AFECTA_BASE_CALCULO_EMBARGO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"AFECTA_COSTO_LABORAL\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"AFECTA_BASE_CALCULO_JR\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"APLICA_SOLO_UN_DATO_FIJO_PERIODO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"AFECTA_TOTAL_BRUTO_DE_RECIBO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"APERTURA_COMPOSICION_SALARIAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_PAGO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"AFECTA_SICOSS_LSD\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"TIPO_SIJP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"CLASIFICACION_SIJP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI1\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI2\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI3\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI4\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI5\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI6\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI7\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI8\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_RI9\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ID_CONCEPTO_AFIP\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ES_APORTE_ADICIONAL_OS_FIJO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ES_ANTICIPO_HABERES_LSD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ES_BASE_DE_CALCULO_MATERNIDAD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_SIPA_APORTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_SIPA_CONTRIBUCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_INSSJYP_APORTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_INSSJYP_CONTRIBUCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_OBRA_SOCIAL_APORTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_OBRA_SOCIAL_CONTRIBUCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_FONDO_SOLID_REDIST_APORTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_FONDO_SOLID_REDIST_CONTRIBUCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_RENATEA_APORTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_RENATEA_CONTRIBUCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_REGIMENES_DIFERENCIALES_APORTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_AAFF_CONTRIBUCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_REGIMENES_ESPECIALES_APORTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_FNE_CONTRIBUCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFIP_LRT_CONTRIBUCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"EXENTO_PERSONAL_DE_POZO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_GANANCIAS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"TIPO_GANANCIAS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ID_TIPO_EXCEPCION_GANANCIAS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_RETENCION_GANANCIAS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_CONCEPTO_GANANCIAS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GRUPO_CONCEPTO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ES_CONCEPTO_HABITUAL_GANANCIAS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ES_SAC\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AFECTA_SAC_PROPORCIONAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"EXENTO_LEY_27549\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO_LIQUIDACION_CONCEPTO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TIPO_LIQUIDACION_CONCEPTO\"\r\n      }\r\n    },\r\n    \"CONCEPTO_SUBTIPO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CONCEPTO_SUBTIPO\"\r\n      }\r\n    },\r\n    \"DETALLE_CONCEPTO_RETENCION\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/DETALLE_CONCEPTO_RETENCION\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"TIPO_LIQUIDACION_CONCEPTO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"HABILITADO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_TIPO_LIQUIDACION_CONCEPTO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_CONCEPTO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"TIPO_LIQUIDACION\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"HABILITADO\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"CHECK\": {\r\n          \"type\": \"boolean\"\r\n        }\r\n      }\r\n    },\r\n    \"CONCEPTO_SUBTIPO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_CONCEPTO\",\r\n        \"ID_SUBTIPO\",\r\n        \"COD_SUBTIPO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_CONCEPTO_SUBTIPO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_CONCEPTO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SUBTIPO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_SUBTIPO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 10,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"DETALLE_CONCEPTO_RETENCION\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_DETALLE_CONCEPTO_RETENCION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_CONCEPTO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_CONCEPTO_RETENCION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TIPO_LIQUIDACION_CONCEPTO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_LIQUIDACION_CONCEPTO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TIPO_LIQUIDACION_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CONCEPTO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_LIQUIDACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? TIPO_LIQUIDACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CHECK\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool CHECK { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CONCEPTO_SUBTIPO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CONCEPTO_SUBTIPO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CONCEPTO_SUBTIPO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CONCEPTO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SUBTIPO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_SUBTIPO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_SUBTIPO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_SUBTIPO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class DETALLE_CONCEPTO_RETENCION\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_DETALLE_CONCEPTO_RETENCION\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_DETALLE_CONCEPTO_RETENCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CONCEPTO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CONCEPTO_RETENCION\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CONCEPTO_RETENCION { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CONCEPTO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CONCEPTO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_CONCEPTO\", Required = Newtonsoft.Json.Required.Always)]\n        public int TIPO_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_CONCEPTO\", Required = Newtonsoft.Json.Required.Always)]\n        public int NRO_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_CONCEPTO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMP_CONCEPTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMP_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_CONCEPTO\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal PORC_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_FORMULA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_FORMULA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"APLICABLE_A_TODOS\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string APLICABLE_A_TODOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_HABITUAL_SUELDO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AFECTA_HABITUAL_SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EVALUA_RECURRENCIA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string EVALUA_RECURRENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROMEDIO_REMUNERACION_VARIABLE\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string PROMEDIO_REMUNERACION_VARIABLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_MEJOR_SUELDO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AFECTA_MEJOR_SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AJUSTE\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AJUSTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ANTICIPO_HABER\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string ANTICIPO_HABER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LIQUIDA_IMPORTE_EN_CERO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string LIQUIDA_IMPORTE_EN_CERO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_BASE_CALCULO_EMBARGO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AFECTA_BASE_CALCULO_EMBARGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_COSTO_LABORAL\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AFECTA_COSTO_LABORAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_BASE_CALCULO_JR\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AFECTA_BASE_CALCULO_JR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"APLICA_SOLO_UN_DATO_FIJO_PERIODO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string APLICA_SOLO_UN_DATO_FIJO_PERIODO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_TOTAL_BRUTO_DE_RECIBO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AFECTA_TOTAL_BRUTO_DE_RECIBO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"APERTURA_COMPOSICION_SALARIAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string APERTURA_COMPOSICION_SALARIAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_PAGO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AFECTA_PAGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_SICOSS_LSD\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string AFECTA_SICOSS_LSD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_SIJP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string TIPO_SIJP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CLASIFICACION_SIJP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string CLASIFICACION_SIJP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI2\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI2 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI3\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI3 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI4\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI4 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI5\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI5 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI6\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI6 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI7\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI7 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI8\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI8 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_RI9\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_RI9 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CONCEPTO_AFIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CONCEPTO_AFIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ES_APORTE_ADICIONAL_OS_FIJO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ES_APORTE_ADICIONAL_OS_FIJO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ES_ANTICIPO_HABERES_LSD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ES_ANTICIPO_HABERES_LSD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ES_BASE_DE_CALCULO_MATERNIDAD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ES_BASE_DE_CALCULO_MATERNIDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_SIPA_APORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_SIPA_APORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_SIPA_CONTRIBUCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_SIPA_CONTRIBUCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_INSSJYP_APORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_INSSJYP_APORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_INSSJYP_CONTRIBUCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_INSSJYP_CONTRIBUCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_OBRA_SOCIAL_APORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_OBRA_SOCIAL_APORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_OBRA_SOCIAL_CONTRIBUCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_OBRA_SOCIAL_CONTRIBUCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_FONDO_SOLID_REDIST_APORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_FONDO_SOLID_REDIST_APORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_FONDO_SOLID_REDIST_CONTRIBUCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_FONDO_SOLID_REDIST_CONTRIBUCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_RENATEA_APORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_RENATEA_APORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_RENATEA_CONTRIBUCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_RENATEA_CONTRIBUCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_REGIMENES_DIFERENCIALES_APORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_REGIMENES_DIFERENCIALES_APORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_AAFF_CONTRIBUCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_AAFF_CONTRIBUCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_REGIMENES_ESPECIALES_APORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_REGIMENES_ESPECIALES_APORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_FNE_CONTRIBUCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_FNE_CONTRIBUCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFIP_LRT_CONTRIBUCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFIP_LRT_CONTRIBUCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EXENTO_PERSONAL_DE_POZO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string EXENTO_PERSONAL_DE_POZO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_GANANCIAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_GANANCIAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_GANANCIAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string TIPO_GANANCIAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_EXCEPCION_GANANCIAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_EXCEPCION_GANANCIAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_RETENCION_GANANCIAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_RETENCION_GANANCIAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_CONCEPTO_GANANCIAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_CONCEPTO_GANANCIAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GRUPO_CONCEPTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GRUPO_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ES_CONCEPTO_HABITUAL_GANANCIAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ES_CONCEPTO_HABITUAL_GANANCIAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ES_SAC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ES_SAC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_SAC_PROPORCIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_SAC_PROPORCIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EXENTO_LEY_27549\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string EXENTO_LEY_27549 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_LIQUIDACION_CONCEPTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TIPO_LIQUIDACION_CONCEPTO> TIPO_LIQUIDACION_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CONCEPTO_SUBTIPO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CONCEPTO_SUBTIPO> CONCEPTO_SUBTIPO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DETALLE_CONCEPTO_RETENCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<DETALLE_CONCEPTO_RETENCION> DETALLE_CONCEPTO_RETENCION { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface TIPO_LIQUIDACION_CONCEPTO {\n    ID_TIPO_LIQUIDACION_CONCEPTO: number;\n    ID_CONCEPTO: number;\n    TIPO_LIQUIDACION: number | undefined;\n    HABILITADO: string;\n    CHECK: boolean;\n}\n\nexport interface CONCEPTO_SUBTIPO {\n    ID_CONCEPTO_SUBTIPO: number;\n    ID_CONCEPTO: number;\n    ID_SUBTIPO: number;\n    COD_SUBTIPO: string;\n}\n\nexport interface DETALLE_CONCEPTO_RETENCION {\n    ID_DETALLE_CONCEPTO_RETENCION: number;\n    ID_CONCEPTO: number;\n    ID_CONCEPTO_RETENCION: number;\n}\n\nexport interface CONCEPTO {\n    ID_CONCEPTO: number;\n    TIPO_CONCEPTO: number;\n    NRO_CONCEPTO: number;\n    DESC_CONCEPTO: string;\n    IMP_CONCEPTO: number | undefined;\n    PORC_CONCEPTO: number;\n    HABILITADO: string;\n    ID_FORMULA: number | undefined;\n    APLICABLE_A_TODOS: string;\n    AFECTA_HABITUAL_SUELDO: string;\n    EVALUA_RECURRENCIA: string;\n    PROMEDIO_REMUNERACION_VARIABLE: string;\n    AFECTA_MEJOR_SUELDO: string;\n    AJUSTE: string;\n    ANTICIPO_HABER: string;\n    LIQUIDA_IMPORTE_EN_CERO: string;\n    AFECTA_BASE_CALCULO_EMBARGO: string;\n    AFECTA_COSTO_LABORAL: string;\n    AFECTA_BASE_CALCULO_JR: string;\n    APLICA_SOLO_UN_DATO_FIJO_PERIODO: string;\n    AFECTA_TOTAL_BRUTO_DE_RECIBO: string;\n    APERTURA_COMPOSICION_SALARIAL: string | undefined;\n    AFECTA_PAGO: string;\n    AFECTA_SICOSS_LSD: string;\n    TIPO_SIJP: string | undefined;\n    CLASIFICACION_SIJP: string | undefined;\n    AFECTA_RI: string | undefined;\n    AFECTA_RI1: string | undefined;\n    AFECTA_RI2: string | undefined;\n    AFECTA_RI3: string | undefined;\n    AFECTA_RI4: string | undefined;\n    AFECTA_RI5: string | undefined;\n    AFECTA_RI6: string | undefined;\n    AFECTA_RI7: string | undefined;\n    AFECTA_RI8: string | undefined;\n    AFECTA_RI9: string | undefined;\n    ID_CONCEPTO_AFIP: number | undefined;\n    ES_APORTE_ADICIONAL_OS_FIJO: string | undefined;\n    ES_ANTICIPO_HABERES_LSD: string | undefined;\n    ES_BASE_DE_CALCULO_MATERNIDAD: string | undefined;\n    AFIP_SIPA_APORTE: string | undefined;\n    AFIP_SIPA_CONTRIBUCION: string | undefined;\n    AFIP_INSSJYP_APORTE: string | undefined;\n    AFIP_INSSJYP_CONTRIBUCION: string | undefined;\n    AFIP_OBRA_SOCIAL_APORTE: string | undefined;\n    AFIP_OBRA_SOCIAL_CONTRIBUCION: string | undefined;\n    AFIP_FONDO_SOLID_REDIST_APORTE: string | undefined;\n    AFIP_FONDO_SOLID_REDIST_CONTRIBUCION: string | undefined;\n    AFIP_RENATEA_APORTE: string | undefined;\n    AFIP_RENATEA_CONTRIBUCION: string | undefined;\n    AFIP_REGIMENES_DIFERENCIALES_APORTE: string | undefined;\n    AFIP_AAFF_CONTRIBUCION: string | undefined;\n    AFIP_REGIMENES_ESPECIALES_APORTE: string | undefined;\n    AFIP_FNE_CONTRIBUCION: string | undefined;\n    AFIP_LRT_CONTRIBUCION: string | undefined;\n    EXENTO_PERSONAL_DE_POZO: string | undefined;\n    AFECTA_GANANCIAS: string | undefined;\n    TIPO_GANANCIAS: string | undefined;\n    ID_TIPO_EXCEPCION_GANANCIAS: number | undefined;\n    ID_TIPO_RETENCION_GANANCIAS: number | undefined;\n    ID_TIPO_CONCEPTO_GANANCIAS: number | undefined;\n    ID_GRUPO_CONCEPTO: number | undefined;\n    ES_CONCEPTO_HABITUAL_GANANCIAS: string | undefined;\n    ES_SAC: string | undefined;\n    AFECTA_SAC_PROPORCIONAL: string | undefined;\n    EXENTO_LEY_27549: string | undefined;\n    OBSERVACIONES: string | undefined;\n    TIPO_LIQUIDACION_CONCEPTO: TIPO_LIQUIDACION_CONCEPTO[] | undefined;\n    CONCEPTO_SUBTIPO: CONCEPTO_SUBTIPO[] | undefined;\n    DETALLE_CONCEPTO_RETENCION: DETALLE_CONCEPTO_RETENCION[] | undefined;\n}",
+          "example": {
+            "ID_CONCEPTO": 0,
+            "TIPO_CONCEPTO": 0,
+            "NRO_CONCEPTO": 0,
+            "DESC_CONCEPTO": null,
+            "IMP_CONCEPTO": 0,
+            "PORC_CONCEPTO": 0,
+            "HABILITADO": "S",
+            "ID_FORMULA": 0,
+            "APLICABLE_A_TODOS": "S",
+            "AFECTA_HABITUAL_SUELDO": "S",
+            "EVALUA_RECURRENCIA": "N",
+            "PROMEDIO_REMUNERACION_VARIABLE": "N",
+            "AFECTA_MEJOR_SUELDO": "S",
+            "AJUSTE": "N",
+            "ANTICIPO_HABER": "N",
+            "LIQUIDA_IMPORTE_EN_CERO": "N",
+            "AFECTA_BASE_CALCULO_EMBARGO": "N",
+            "AFECTA_COSTO_LABORAL": null,
+            "AFECTA_BASE_CALCULO_JR": "N",
+            "APLICA_SOLO_UN_DATO_FIJO_PERIODO": "N",
+            "AFECTA_TOTAL_BRUTO_DE_RECIBO": null,
+            "APERTURA_COMPOSICION_SALARIAL": null,
+            "AFECTA_PAGO": "N",
+            "AFECTA_SICOSS_LSD": "N",
+            "TIPO_SIJP": null,
+            "CLASIFICACION_SIJP": null,
+            "AFECTA_RI": "N",
+            "AFECTA_RI1": "N",
+            "AFECTA_RI2": "N",
+            "AFECTA_RI3": "N",
+            "AFECTA_RI4": "N",
+            "AFECTA_RI5": "N",
+            "AFECTA_RI6": "N",
+            "AFECTA_RI7": "N",
+            "AFECTA_RI8": "N",
+            "AFECTA_RI9": "N",
+            "ID_CONCEPTO_AFIP": 0,
+            "ES_APORTE_ADICIONAL_OS_FIJO": "N",
+            "ES_ANTICIPO_HABERES_LSD": "N",
+            "ES_BASE_DE_CALCULO_MATERNIDAD": "N",
+            "AFIP_SIPA_APORTE": "N",
+            "AFIP_SIPA_CONTRIBUCION": "N",
+            "AFIP_INSSJYP_APORTE": "N",
+            "AFIP_INSSJYP_CONTRIBUCION": "N",
+            "AFIP_OBRA_SOCIAL_APORTE": "N",
+            "AFIP_OBRA_SOCIAL_CONTRIBUCION": "N",
+            "AFIP_FONDO_SOLID_REDIST_APORTE": "N",
+            "AFIP_FONDO_SOLID_REDIST_CONTRIBUCION": "N",
+            "AFIP_RENATEA_APORTE": "N",
+            "AFIP_RENATEA_CONTRIBUCION": "N",
+            "AFIP_REGIMENES_DIFERENCIALES_APORTE": "N",
+            "AFIP_AAFF_CONTRIBUCION": "N",
+            "AFIP_REGIMENES_ESPECIALES_APORTE": "N",
+            "AFIP_FNE_CONTRIBUCION": "N",
+            "AFIP_LRT_CONTRIBUCION": "N",
+            "EXENTO_PERSONAL_DE_POZO": "N",
+            "AFECTA_GANANCIAS": "S",
+            "TIPO_GANANCIAS": null,
+            "ID_TIPO_EXCEPCION_GANANCIAS": 0,
+            "ID_TIPO_RETENCION_GANANCIAS": 0,
+            "ID_TIPO_CONCEPTO_GANANCIAS": 0,
+            "ID_GRUPO_CONCEPTO": 0,
+            "ES_CONCEPTO_HABITUAL_GANANCIAS": "N",
+            "ES_SAC": "N",
+            "AFECTA_SAC_PROPORCIONAL": "N",
+            "EXENTO_LEY_27549": "N",
+            "OBSERVACIONES": null,
+            "TIPO_LIQUIDACION_CONCEPTO": [
+              {
+                "ID_TIPO_LIQUIDACION_CONCEPTO": -1,
+                "ID_CONCEPTO": 0,
+                "TIPO_LIQUIDACION": 1,
+                "HABILITADO": "N",
+                "CHECK": false
+              },
+              {
+                "ID_TIPO_LIQUIDACION_CONCEPTO": -2,
+                "ID_CONCEPTO": 0,
+                "TIPO_LIQUIDACION": 2,
+                "HABILITADO": "N",
+                "CHECK": false
+              },
+              {
+                "ID_TIPO_LIQUIDACION_CONCEPTO": -3,
+                "ID_CONCEPTO": 0,
+                "TIPO_LIQUIDACION": 3,
+                "HABILITADO": "N",
+                "CHECK": false
+              },
+              {
+                "ID_TIPO_LIQUIDACION_CONCEPTO": -4,
+                "ID_CONCEPTO": 0,
+                "TIPO_LIQUIDACION": 4,
+                "HABILITADO": "N",
+                "CHECK": false
+              },
+              {
+                "ID_TIPO_LIQUIDACION_CONCEPTO": -5,
+                "ID_CONCEPTO": 0,
+                "TIPO_LIQUIDACION": 5,
+                "HABILITADO": "N",
+                "CHECK": false
+              },
+              {
+                "ID_TIPO_LIQUIDACION_CONCEPTO": -6,
+                "ID_CONCEPTO": 0,
+                "TIPO_LIQUIDACION": 6,
+                "HABILITADO": "N",
+                "CHECK": false
+              },
+              {
+                "ID_TIPO_LIQUIDACION_CONCEPTO": -7,
+                "ID_CONCEPTO": 0,
+                "TIPO_LIQUIDACION": 7,
+                "HABILITADO": "N",
+                "CHECK": false
+              },
+              {
+                "ID_TIPO_LIQUIDACION_CONCEPTO": -8,
+                "ID_CONCEPTO": 0,
+                "TIPO_LIQUIDACION": 8,
+                "HABILITADO": "N",
+                "CHECK": false
+              },
+              {
+                "ID_TIPO_LIQUIDACION_CONCEPTO": -9,
+                "ID_CONCEPTO": 0,
+                "TIPO_LIQUIDACION": 9,
+                "HABILITADO": "N",
+                "CHECK": false
+              }
+            ],
+            "CONCEPTO_SUBTIPO": [
+              {
+                "ID_CONCEPTO_SUBTIPO": 0,
+                "ID_CONCEPTO": 0,
+                "ID_SUBTIPO": 0,
+                "COD_SUBTIPO": null
+              }
+            ],
+            "DETALLE_CONCEPTO_RETENCION": [
+              {
+                "ID_DETALLE_CONCEPTO_RETENCION": 0,
+                "ID_CONCEPTO": 0,
+                "ID_CONCEPTO_RETENCION": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "AXV_CONCEPTO_LIQUIDACION": [
+      "ULTIMO_PERIODO_LIQUIDADO",
+      "TIPO_LIQUIDACION_HABILITADO",
+      "NRO_CONCEPTO",
+      "DESC_CONCEPTO",
+      "TIPO_CONCEPTO",
+      "IMP_CONCEPTO",
+      "PORC_CONCEPTO",
+      "APLICABLE_A_TODOS",
+      "AFECTA_HABITUAL_SUELDO",
+      "EVALUA_RECURRENCIA",
+      "PROMEDIO_REMUNERACION_VARIABLE",
+      "AFECTA_MEJOR_SUELDO",
+      "AJUSTE",
+      "ANTICIPO_HABER",
+      "LIQUIDA_IMPORTE_EN_CERO",
+      "AFECTA_BASE_CALCULO_EMBARGO",
+      "AFECTA_COSTO_LABORAL",
+      "AFECTA_BASE_CALCULO_JR",
+      "APLICA_SOLO_UN_DATO_FIJO_PERIODO",
+      "AFECTA_TOTAL_BRUTO_DE_RECIBO",
+      "APERTURA_COMPOSICION_SALARIAL",
+      "AFECTA_PAGO",
+      "AFECTA_SICOSS_LSD",
+      "TIPO_SIJP",
+      "CLASIFICACION_SIJP",
+      "AFECTA_RI",
+      "AFECTA_RI1",
+      "AFECTA_RI2",
+      "AFECTA_RI3",
+      "AFECTA_RI4",
+      "AFECTA_RI5",
+      "AFECTA_RI6",
+      "AFECTA_RI7",
+      "AFECTA_RI8",
+      "AFECTA_RI9",
+      "AFECTA_BASE_CALCULO_RG5008",
+      "EXENTO_PERSONAL_DE_POZO",
+      "AFECTA_GANANCIAS",
+      "TIPO_GANANCIAS",
+      "ES_CONCEPTO_HABITUAL_GANANCIAS",
+      "ES_SAC",
+      "AFECTA_SAC_PROPORCIONAL",
+      "ES_APORTE_ADICIONAL_OS_FIJO",
+      "ES_ANTICIPO_HABERES_LSD",
+      "ES_BASE_DE_CALCULO_MATERNIDAD",
+      "AFIP_SIPA_APORTE",
+      "AFIP_SIPA_CONTRIBUCION",
+      "AFIP_INSSJYP_APORTE",
+      "AFIP_INSSJYP_CONTRIBUCION",
+      "AFIP_OBRA_SOCIAL_APORTE",
+      "AFIP_OBRA_SOCIAL_CONTRIBUCION",
+      "AFIP_FONDO_SOLID_REDIST_APORTE",
+      "AFIP_FONDO_SOLID_REDIST_CONTRIBUCION",
+      "AFIP_RENATEA_APORTE",
+      "AFIP_RENATEA_CONTRIBUCION",
+      "AFIP_REGIMENES_DIFERENCIALES_APORTE",
+      "AFIP_AAFF_CONTRIBUCION",
+      "AFIP_REGIMENES_ESPECIALES_APORTE",
+      "AFIP_FNE_CONTRIBUCION",
+      "AFIP_LRT_CONTRIBUCION",
+      "AFECTA_SIJP_DTO788",
+      "EXENTO_LEY_27549",
+      "ID_TIPO_EXCEPCION_GANANCIAS",
+      "COD_TIPO_EXCEPCION_GANANCIAS",
+      "DESC_TIPO_EXCEPCION_GANANCIAS",
+      "COD_DESC_TIPO_EXCEPCION_GANANCIAS",
+      "ID_TIPO_RETENCION_GANANCIAS",
+      "COD_TIPO_RETENCION_GANANCIAS",
+      "DESC_TIPO_RETENCION_GANANCIAS",
+      "COD_DESC_TIPO_RETENCION_GANANCIAS",
+      "ID_TIPO_CONCEPTO_GANANCIAS",
+      "COD_TIPO_CONCEPTO_GANANCIAS",
+      "DESC_TIPO_CONCEPTO_GANANCIAS",
+      "COD_DESC_TIPO_CONCEPTO_GANANCIAS",
+      "ID_CONCEPTO_AFIP",
+      "COD_CONCEPTO_AFIP",
+      "DESC_CONCEPTO_AFIP",
+      "ID_FORMULA",
+      "NRO_FORMULA",
+      "HABILITADO",
+      "CALCULO_IMPORTE",
+      "CALCULO_CANTIDAD",
+      "CALCULO_VALOR"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

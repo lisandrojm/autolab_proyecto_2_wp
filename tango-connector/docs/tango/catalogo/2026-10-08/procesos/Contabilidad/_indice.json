@@ -1,0 +1,402 @@
+{
+  "modulo": "Contabilidad",
+  "capturado": "2026-10-08T17:18:25.388Z",
+  "procesos": {
+    "448": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ContabilidadDetallePorCuentaModel"
+      ],
+      "titulo": "Detalle por cuenta"
+    },
+    "559": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ContabilidadDetallePorAsientoBaseModel"
+      ],
+      "titulo": "Detalle por asiento"
+    },
+    "560": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ContabilidadDetallePorAuxiliarModel"
+      ],
+      "titulo": "Detalle por auxiliar"
+    },
+    "561": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ContabilidadDetallePorSubauxiliarModel"
+      ],
+      "titulo": "Detalle por subauxiliar"
+    },
+    "562": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ContabilidadNominaDeCuentasContablesModel"
+      ],
+      "titulo": "Nómina de cuentas contables"
+    },
+    "647": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ContabilidadCuentasJerarquiasModel"
+      ],
+      "titulo": "Jerarquías"
+    },
+    "648": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ContabilidadCuentasNoAsignadasModel"
+      ],
+      "titulo": "Cuentas no asignadas"
+    },
+    "649": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ContabilidadDetallePorComprobanteModel"
+      ],
+      "titulo": "Contabilización de comprobantes"
+    },
+    "1442": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "EJERCICIO"
+      ],
+      "titulo": "Ejercicios"
+    },
+    "1600": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_ASIENTO_ANALITICO_CN",
+        "AXV_RENGLON_ASIENTO_ANALITICO_CN",
+        "AXV_LIQUIDACION_EXT_ASIENTO_ANALITICO",
+        "AXV_COMPROBANTE_EXT_ASIENTO_ANALITICO"
+      ],
+      "titulo": "Asientos extracontables"
+    },
+    "1601": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "CLASE_INDICADOR_CONTABLE"
+      ],
+      "titulo": "Clases para análisis contable"
+    },
+    "1610": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TIPO_VALORIZACION"
+      ],
+      "titulo": "Tipos de valorización"
+    },
+    "1618": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "UNIDAD_ADICIONAL",
+        "VALORIZACION_UNIDAD_ADICIONAL"
+      ],
+      "titulo": "Unidades adicionales"
+    },
+    "1626": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_CUENTA"
+      ],
+      "titulo": "Cuentas contables"
+    },
+    "1642": {
+      "estado": "sin-api",
+      "tablas": [
+        "PARAMETRO_CN "
+      ],
+      "titulo": "Parámetros de Contabilidad"
+    },
+    "1652": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "VALORIZACION_UNIDAD_ADICIONAL",
+        "RENGLON_VALORIZACION_UNIDAD_ADICIONAL"
+      ],
+      "titulo": "Valorización de unidades adicionales"
+    },
+    "1664": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_ASIENTO_ANALITICO_CN",
+        "AXV_RENGLON_ASIENTO_ANALITICO_CN",
+        "AXV_LIQUIDACION_EXT_ASIENTO_ANALITICO",
+        "AXV_COMPROBANTE_EXT_ASIENTO_ANALITICO"
+      ],
+      "titulo": "Asientos contables"
+    },
+    "1670": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MONEDA",
+        "SBA37",
+        "MONEDA_CONTABLE",
+        "MONEDA_ALTERNATIVA"
+      ],
+      "titulo": "Monedas contables"
+    },
+    "1704": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "VARIABLE_GRUPO_CN"
+      ],
+      "titulo": "Grupos para variables contables"
+    },
+    "1705": {
+      "estado": "sin-api",
+      "tablas": [
+        "EliminacionMasivaDeAsientosApiParams",
+        "PeriodosACambiarGrid"
+      ],
+      "titulo": "Eliminación masiva de asientos"
+    },
+    "1726": {
+      "estado": "sin-api",
+      "tablas": [
+        "CambioDeEstadoAsientosApiParams",
+        "PeriodosACambiarGrid"
+      ],
+      "titulo": "Cambio de estado de asientos"
+    },
+    "1748": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "RenumeracionAsientosApiParams"
+      ],
+      "titulo": "Renumeración de asientos"
+    },
+    "1750": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "GeneracionAsientosResumenApiParams",
+        "EJERCICIO",
+        "PERIODO"
+      ],
+      "titulo": "Generación de asientos resumen"
+    },
+    "1751": {
+      "estado": "error",
+      "detalle": "Se detectó una situación inesperada",
+      "titulo": null
+    },
+    "1764": {
+      "estado": "error",
+      "detalle": "Se detectó una situación inesperada",
+      "titulo": null
+    },
+    "2339": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "GeneracionMasivaAsientosApiParams",
+        "ModeloAGenerarGrid",
+        "ASIENTO_COTIZACION_ANALITICO_CN"
+      ],
+      "titulo": "Generación masiva de asientos"
+    },
+    "14232": {
+      "estado": "sin-api",
+      "tablas": [
+        "CUENTA_CONTABLE",
+        "LEYENDAS",
+        "MODULOS",
+        "TIPOS_AUXILIARES",
+        "AUXILIARES",
+        "SUBAUXILIARES",
+        "ULTIMOS_MOVIMIENTOS"
+      ],
+      "titulo": "Ficha Live de cuenta contables"
+    },
+    "21610": {
+      "estado": "sin-api",
+      "tablas": [
+        "EliminacionAsientosResumenApiParams"
+      ],
+      "titulo": "Eliminación de asientos resumen"
+    },
+    "21714": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ContabilidadDetallePorAsientoResumenModel"
+      ],
+      "titulo": "Detalle por asiento"
+    },
+    "21715": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ContabilidadDetallePorCuentaResumenModel"
+      ],
+      "titulo": "Detalle por cuenta"
+    },
+    "21716": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ContabilidadDetallePorAuxiliarResumenModel"
+      ],
+      "titulo": "Detalle por auxiliar"
+    },
+    "21717": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ContabilidadDetallePorSubauxiliarResumenModel"
+      ],
+      "titulo": "Detalle por subauxiliar"
+    }
+  }
+}

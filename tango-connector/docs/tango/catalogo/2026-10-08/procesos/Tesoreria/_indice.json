@@ -1,0 +1,928 @@
+{
+  "modulo": "Tesoreria",
+  "capturado": "2026-10-08T17:18:12.272Z",
+  "procesos": {
+    "59": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "SBA11"
+      ],
+      "titulo": "Códigos de operación"
+    },
+    "172": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "CUENTA_SB",
+        "APROPIACION_CUENTA_SB",
+        "AUXILIAR_REGLA_CUENTA_SB",
+        "SUBAUXILIAR_REGLA_CUENTA_SB"
+      ],
+      "titulo": "Parametrización contable de cuentas de Tesorería"
+    },
+    "173": {
+      "estado": "sin-api",
+      "tablas": [
+        "PARAMETRO_SB"
+      ],
+      "titulo": "Parámetros contables"
+    },
+    "175": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TIPO_COMPROBANTE_SB"
+      ],
+      "titulo": "Parametrización contable de tipos de comprobantes"
+    },
+    "183": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "SBA22",
+        "TARJETA_VIGENCIA_COEFICIENTE",
+        "TARJETA_COEFICIENTE_CUOTA",
+        "SBA21",
+        "TARJETA_ABREVIATURA",
+        "TARJETA_PLAN_COEFICIENTE",
+        "TARJETA_REGALO_CONFIGURACION",
+        "TARJETA_CONCEPTO_DESCUENTO_TARJETA"
+      ],
+      "titulo": "Tarjetas"
+    },
+    "187": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "HOST"
+      ],
+      "titulo": "Host de tarjetas"
+    },
+    "191": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TERMINAL_POS",
+        "TERMINAL_POS_HOST",
+        "TERMINAL_POS_TARJETA",
+        "TERMINAL_POS_NO_INTEGRADO"
+      ],
+      "titulo": "Terminales POS"
+    },
+    "198": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "PROMOCION_TARJETA",
+        "PROMOCION_TARJETA_HABILITADA",
+        "COEFICIENTE_PROMOCION_TARJETA",
+        "CTA_PROMOCION_TARJETA_POR_SUCURSAL"
+      ],
+      "titulo": "Promociones de tarjetas"
+    },
+    "202": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "CONCEPTO_DESCUENTO_TARJETA"
+      ],
+      "titulo": "Conceptos de gastos"
+    },
+    "206": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "PLAN_TARJETA"
+      ],
+      "titulo": "Planes"
+    },
+    "214": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "SBA03"
+      ],
+      "titulo": "Agrupaciones"
+    },
+    "218": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "SBA02"
+      ],
+      "titulo": "Tipos de comprobante"
+    },
+    "251": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "CONCEPTO_CONCILIACION"
+      ],
+      "titulo": "Conceptos de conciliación"
+    },
+    "259": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_CHEQUERA_TESORERIA"
+      ],
+      "titulo": "Chequeras"
+    },
+    "308": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "CODIGO_RELACION"
+      ],
+      "titulo": "Códigos de relación"
+    },
+    "548": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_CUENTA_TESORERIA"
+      ],
+      "titulo": "Cuentas de Tesorería"
+    },
+    "577": {
+      "estado": "sin-api",
+      "tablas": [
+        "SBA31"
+      ],
+      "titulo": "Parámetros de Tesorería"
+    },
+    "599": {
+      "estado": "error",
+      "detalle": "Se detectó una situación inesperada",
+      "titulo": null
+    },
+    "605": {
+      "estado": "error",
+      "detalle": "Se detectó una situación inesperada",
+      "titulo": null
+    },
+    "10505": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaDiferidosPendientesDeTransferirModel"
+      ],
+      "titulo": "Diferidos pendientes de transferir"
+    },
+    "10551": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "PasajeHistoricoComprobantesParam"
+      ],
+      "titulo": "Pasaje a histórico de comprobantes"
+    },
+    "10552": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "PasajeHistoricoChequesParam"
+      ],
+      "titulo": "Pasaje a histórico de cheques"
+    },
+    "10553": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "PasajeHistoricoCuponesParam"
+      ],
+      "titulo": "Pasaje a histórico de cupones"
+    },
+    "10558": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaResumenModel"
+      ],
+      "titulo": "Resumen"
+    },
+    "11249": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaValoresPendientesDeRegistrarModel"
+      ],
+      "titulo": "Valores Pendientes de Registración"
+    },
+    "11456": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaDetallePorCuentaModel"
+      ],
+      "titulo": "Detalle por cuenta"
+    },
+    "11457": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaContabilizacionDeComprobantesModel"
+      ],
+      "titulo": "Contabilización de comprobantes"
+    },
+    "11500": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaDetallePorAuxiliarModel"
+      ],
+      "titulo": "Detalle por auxiliar"
+    },
+    "11504": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaDetallePorSubauxiliarModel"
+      ],
+      "titulo": "Detalle por subauxiliar"
+    },
+    "11583": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaChequesDeTercerosConsultaDeChequesDeTercerosModel"
+      ],
+      "titulo": "Consulta de cheques de terceros"
+    },
+    "11584": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaChequesPropiosConsultaDeChequesPropiosModel"
+      ],
+      "titulo": "Consulta de cheques propios"
+    },
+    "11585": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaCuponesConsultaDeCuponesModel"
+      ],
+      "titulo": "Consulta de cupones"
+    },
+    "11591": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaConsultaModel"
+      ],
+      "titulo": "Consulta"
+    },
+    "11617": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaDetallePorComprobanteModel"
+      ],
+      "titulo": "Detalle por comprobante"
+    },
+    "11620": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaComprobantesMovimientosConciliadosModel"
+      ],
+      "titulo": "Movimientos Conciliados"
+    },
+    "11621": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaMovimientosPendientesDeRegistrarModel"
+      ],
+      "titulo": "Movimientos pendientes de registrar"
+    },
+    "11643": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaMultidimensionalDeAsientosModel"
+      ],
+      "titulo": "Multidimensional de asientos"
+    },
+    "11647": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaCuponesConsultaDeLiquidacionesModel"
+      ],
+      "titulo": "Consulta de liquidaciones"
+    },
+    "11654": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaProyeccionDeAcreditacionesDeCuponesDeTarjetasDeCreditoModel"
+      ],
+      "titulo": "Proyección de acreditaciones de cupones de tarjetas de crédito"
+    },
+    "11656": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaResumenPorCuentaModel"
+      ],
+      "titulo": "Resumen por cuenta"
+    },
+    "11657": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaHistoricoDeComprobantesModel"
+      ],
+      "titulo": "Histórico de comprobantes"
+    },
+    "11658": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaCuentasNominaDeCuentasModel"
+      ],
+      "titulo": "Nómina de cuentas"
+    },
+    "11659": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaComprobantesNominaDeClasificacionesModel"
+      ],
+      "titulo": "Nómina de Clasificaciones"
+    },
+    "11660": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaIngresosYEgresosPorCuentaModel"
+      ],
+      "titulo": "Ingresos y egresos por cuenta"
+    },
+    "11662": {
+      "estado": "sin-api",
+      "tablas": [
+        "CUENTAS",
+        "ULTIMOS_MOVIMIENTOS",
+        "SALDOS",
+        "CHEQUES",
+        "CUPONES"
+      ],
+      "titulo": "Ficha Live de cuentas"
+    },
+    "11663": {
+      "estado": "sin-api",
+      "tablas": [
+        "COMPROBANTES",
+        "VALORES",
+        "IMPUTACION_CONTABLE"
+      ],
+      "titulo": "Ficha Live de comprobantes de Tesorería"
+    },
+    "11664": {
+      "estado": "sin-api",
+      "tablas": [
+        "CHEQUES_TERCEROS",
+        "MOVIMIENTOS_CHEQUE",
+        "HISTORIAL_SUBESTADOS"
+      ],
+      "titulo": "Ficha Live de cheques de terceros"
+    },
+    "11665": {
+      "estado": "sin-api",
+      "tablas": [
+        "CHEQUES_PROPIOS",
+        "FACTURAS_RELACIONADAS"
+      ],
+      "titulo": "Ficha Live de cheques propios"
+    },
+    "11666": {
+      "estado": "sin-api",
+      "tablas": [
+        "CUPONES",
+        "GASTOS_CUPON",
+        "CUOTAS",
+        "HISTORIAL"
+      ],
+      "titulo": "Ficha Live de cupones"
+    },
+    "11667": {
+      "estado": "sin-api",
+      "tablas": [
+        "CLASIFICACIONES",
+        "ENCABEZADOS_RENGLONES_CLASIFICACION_COMPROBANTES",
+        "TESORERIA_RENGLONES_CLASIFICACION_COMPROBANTES"
+      ],
+      "titulo": "Ficha Live de clasificación de comprobantes"
+    },
+    "11668": {
+      "estado": "sin-api",
+      "tablas": [
+        "RESUMEN"
+      ],
+      "titulo": "Ficha Live de liquidaciones"
+    },
+    "11669": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaHistoricoDeComprobantesPorCuentaModel"
+      ],
+      "titulo": "Histórico de comprobantes por cuenta"
+    },
+    "11823": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaDetalleDeChequesDeTercerosModel"
+      ],
+      "titulo": "Detalle de cheques de terceros"
+    },
+    "11824": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaChequesDeTercerosAgrupadosPorMes_anioModel"
+      ],
+      "titulo": "Cheques de terceros agrupados por mes/año"
+    },
+    "11825": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaChequesPropiosChequesPropiosModel"
+      ],
+      "titulo": "Detalle de cheques propios"
+    },
+    "11826": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaPendientesDeDebitarModel"
+      ],
+      "titulo": "Pendientes de debitar"
+    },
+    "11887": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaChequesPropiosChequesPropiosPorBancoModel"
+      ],
+      "titulo": "Cheques propios por banco"
+    },
+    "11892": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaComprobantesMovimientosNoConciliadosModel"
+      ],
+      "titulo": "Movimientos No Conciliados"
+    },
+    "12180": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaDetalleDeChequesPorEstadoModel"
+      ],
+      "titulo": "Detalle de cheques por estado"
+    },
+    "12480": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaDetalleDeComprobantesModel"
+      ],
+      "titulo": "Detalle de comprobantes"
+    },
+    "13013": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "DepuracionAuditoriaApiParams"
+      ],
+      "titulo": "Depuración de auditorías de importación de ventas Restô"
+    },
+    "17747": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaSaldosModel"
+      ],
+      "titulo": "Saldos"
+    },
+    "17748": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaResumenPorTipoDeOperacionModel"
+      ],
+      "titulo": "Resumen por tipo de operación"
+    },
+    "17750": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaChequesPropiosResumenDeChequesPropiosModel"
+      ],
+      "titulo": "Resumen de cheques propios"
+    },
+    "17751": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaRankingDeChequesRechazadosModel"
+      ],
+      "titulo": "Ranking de cheques rechazados"
+    },
+    "17752": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaResumenDeChequesDeTercerosModel"
+      ],
+      "titulo": "Resumen de cheques de terceros"
+    },
+    "17756": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaCuponesResumenModel"
+      ],
+      "titulo": "Resumen"
+    },
+    "17787": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaTransferenciaDeValoresDesdeSucursalesValoresIngresadosModel"
+      ],
+      "titulo": "Registración de valores"
+    },
+    "20367": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "PERFIL_BANKING",
+        "PERFIL_BANKING_CUENTA",
+        "PERFIL_BANKING_USUARIO"
+      ],
+      "titulo": "Perfiles para Tango Banking"
+    },
+    "20428": {
+      "estado": "sin-api",
+      "tablas": [
+        "SALDOS_MOVIMIENTOS_BANKING",
+        "SALDOS_MOVIMIENTOS_BANKING_MOVIMIENTOS_BANCO_ITEM",
+        "SALDOS_MOVIMIENTOS_BANKING_MOVIMIENTOS_TESORERIA_ITEM"
+      ],
+      "titulo": "Consulta de saldo y últimos movimientos"
+    },
+    "20442": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaAuditoriaIngresoMasivoMovimientosModel"
+      ],
+      "titulo": "Auditoría ingreso masivo de movimientos de Tesorería"
+    },
+    "20445": {
+      "estado": "sin-api",
+      "tablas": [
+        "TangoBankingApiParams"
+      ],
+      "titulo": "Configuración de Tango Banking"
+    },
+    "20446": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ConsultaPorBancoModel"
+      ],
+      "titulo": "Comparativo de saldos con Tesorería"
+    },
+    "21169": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "DetalleDeSaldosModel"
+      ],
+      "titulo": "Saldos por cuenta Tango Banking"
+    },
+    "21260": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "FondosExtractosImportadosModel"
+      ],
+      "titulo": "Consulta de extractos importados"
+    },
+    "21497": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaContabilizacionDeComprobantesPendientesExportarModel"
+      ],
+      "titulo": "Contabilización de comprobantes pendientes de exportar"
+    },
+    "21512": {
+      "estado": "sin-api",
+      "tablas": [
+        "COMPROBANTES_HISTORICO",
+        "VALORES_HISTORICO"
+      ],
+      "titulo": "Ficha Live de comprobantes históricos de Tesorería"
+    },
+    "21564": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "BILLETERA_VIRTUAL"
+      ],
+      "titulo": "Billeteras virtuales"
+    }
+  }
+}

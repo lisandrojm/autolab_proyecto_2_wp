@@ -1,0 +1,36 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_GVA117": 1,
+        "emP_COBRO1": 1,
+        "descripcio": "LMB",
+        "empresA_DE_COBRO": "P",
+        "coD_EMPRES": "1",
+        "separA_CAM": false,
+        "separA_FEC": false,
+        "masC_FECHA": "dd/mm/aaaa",
+        "separA_NUM": false,
+        "separA_DEC": false,
+        "canT_DECI": 2,
+        "masC_NUM": "C",
+        "coD_FAC_A": "1",
+        "coD_FAC_B": "2",
+        "coD_FAC_C": "3",
+        "simboL_CTE": "0",
+        "simboL_EXT": "1",
+        "roW_VERSION": "AAAAAADfryA="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

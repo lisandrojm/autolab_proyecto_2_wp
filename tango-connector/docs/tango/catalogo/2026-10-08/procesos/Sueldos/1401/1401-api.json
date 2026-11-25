@@ -1,0 +1,325 @@
+{
+  "title": "Grupos para novedades",
+  "moduleId": 8,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"GRUPO_NOVEDAD\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_GRUPO_NOVEDAD\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_GRUPO_NOVEDAD\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_GRUPO_NOVEDAD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"NOVEDAD\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/NOVEDAD\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"NOVEDAD\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"COD_NOVEDAD\",\r\n        \"CLASE_NOVEDAD\",\r\n        \"TIPO_NOVEDAD\",\r\n        \"VALIDA_PERIODO_LICENCIA_POR_MES\",\r\n        \"UNIDAD_CANTIDAD\",\r\n        \"INGRESA_CANTIDAD\",\r\n        \"INGRESA_VALOR\",\r\n        \"HABITUAL\",\r\n        \"MES_INICIO_TOPE_ANUAL\",\r\n        \"MES_INICIO_TOPE_SEMESTRAL\"\r\n      ],\r\n      \"properties\": {\r\n        \"COD_NOVEDAD\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 10,\r\n          \"minLength\": 0\r\n        },\r\n        \"DESC_NOVEDAD\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 40,\r\n          \"minLength\": 0\r\n        },\r\n        \"CLASE_NOVEDAD\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"TIPO_NOVEDAD\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"VALIDA_PERIODO_LICENCIA_POR_MES\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"UNIDAD_CANTIDAD\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 15,\r\n          \"minLength\": 0\r\n        },\r\n        \"INGRESA_CANTIDAD\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"INGRESA_VALOR\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"HABITUAL\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"VALOR_OTORGABLE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"CANT_OTORGABLE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TOPE_CANT_OTORGABLE_ANUAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TOPE_VALOR_OTORGABLE_ANUAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TOPE_CANT_OTORGABLE_SEMESTRAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TOPE_VALOR_OTORGABLE_SEMESTRAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TOPE_CANT_OTORGABLE_MENSUAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TOPE_VALOR_OTORGABLE_MENSUAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TOPE_CANT_OTORGABLE_QUINCENAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TOPE_VALOR_OTORGABLE_QUINCENAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"MES_INICIO_TOPE_ANUAL\": {\r\n          \"type\": \"integer\"\r\n        },\r\n        \"MES_INICIO_TOPE_SEMESTRAL\": {\r\n          \"type\": \"integer\"\r\n        },\r\n        \"OBSERVACIONES\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1000,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class NOVEDAD\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_NOVEDAD\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_NOVEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_NOVEDAD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_NOVEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CLASE_NOVEDAD\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string CLASE_NOVEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_NOVEDAD\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string TIPO_NOVEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VALIDA_PERIODO_LICENCIA_POR_MES\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string VALIDA_PERIODO_LICENCIA_POR_MES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"UNIDAD_CANTIDAD\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string UNIDAD_CANTIDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INGRESA_CANTIDAD\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string INGRESA_CANTIDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INGRESA_VALOR\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string INGRESA_VALOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABITUAL\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABITUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VALOR_OTORGABLE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? VALOR_OTORGABLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_OTORGABLE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CANT_OTORGABLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_CANT_OTORGABLE_ANUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? TOPE_CANT_OTORGABLE_ANUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_VALOR_OTORGABLE_ANUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? TOPE_VALOR_OTORGABLE_ANUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_CANT_OTORGABLE_SEMESTRAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? TOPE_CANT_OTORGABLE_SEMESTRAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_VALOR_OTORGABLE_SEMESTRAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? TOPE_VALOR_OTORGABLE_SEMESTRAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_CANT_OTORGABLE_MENSUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? TOPE_CANT_OTORGABLE_MENSUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_VALOR_OTORGABLE_MENSUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? TOPE_VALOR_OTORGABLE_MENSUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_CANT_OTORGABLE_QUINCENAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? TOPE_CANT_OTORGABLE_QUINCENAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_VALOR_OTORGABLE_QUINCENAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? TOPE_VALOR_OTORGABLE_QUINCENAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MES_INICIO_TOPE_ANUAL\", Required = Newtonsoft.Json.Required.Always)]\n        public int MES_INICIO_TOPE_ANUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MES_INICIO_TOPE_SEMESTRAL\", Required = Newtonsoft.Json.Required.Always)]\n        public int MES_INICIO_TOPE_SEMESTRAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GRUPO_NOVEDAD\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_GRUPO_NOVEDAD\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_GRUPO_NOVEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_GRUPO_NOVEDAD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_GRUPO_NOVEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NOVEDAD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<NOVEDAD> NOVEDAD { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface NOVEDAD {\n    COD_NOVEDAD: string;\n    DESC_NOVEDAD: string | undefined;\n    CLASE_NOVEDAD: string;\n    TIPO_NOVEDAD: string;\n    VALIDA_PERIODO_LICENCIA_POR_MES: string;\n    UNIDAD_CANTIDAD: string;\n    INGRESA_CANTIDAD: string;\n    INGRESA_VALOR: string;\n    HABITUAL: string;\n    VALOR_OTORGABLE: number | undefined;\n    CANT_OTORGABLE: number | undefined;\n    TOPE_CANT_OTORGABLE_ANUAL: number | undefined;\n    TOPE_VALOR_OTORGABLE_ANUAL: number | undefined;\n    TOPE_CANT_OTORGABLE_SEMESTRAL: number | undefined;\n    TOPE_VALOR_OTORGABLE_SEMESTRAL: number | undefined;\n    TOPE_CANT_OTORGABLE_MENSUAL: number | undefined;\n    TOPE_VALOR_OTORGABLE_MENSUAL: number | undefined;\n    TOPE_CANT_OTORGABLE_QUINCENAL: number | undefined;\n    TOPE_VALOR_OTORGABLE_QUINCENAL: number | undefined;\n    MES_INICIO_TOPE_ANUAL: number;\n    MES_INICIO_TOPE_SEMESTRAL: number;\n    OBSERVACIONES: string | undefined;\n}\n\nexport interface GRUPO_NOVEDAD {\n    COD_GRUPO_NOVEDAD: string;\n    DESC_GRUPO_NOVEDAD: string | undefined;\n    OBSERVACIONES: string | undefined;\n    NOVEDAD: NOVEDAD[] | undefined;\n}",
+          "example": {
+            "COD_GRUPO_NOVEDAD": null,
+            "DESC_GRUPO_NOVEDAD": null,
+            "OBSERVACIONES": null,
+            "NOVEDAD": [
+              {
+                "COD_NOVEDAD": null,
+                "DESC_NOVEDAD": null,
+                "CLASE_NOVEDAD": null,
+                "TIPO_NOVEDAD": null,
+                "VALIDA_PERIODO_LICENCIA_POR_MES": null,
+                "UNIDAD_CANTIDAD": null,
+                "INGRESA_CANTIDAD": null,
+                "INGRESA_VALOR": null,
+                "HABITUAL": null,
+                "VALOR_OTORGABLE": 0,
+                "CANT_OTORGABLE": 0,
+                "TOPE_CANT_OTORGABLE_ANUAL": 0,
+                "TOPE_VALOR_OTORGABLE_ANUAL": 0,
+                "TOPE_CANT_OTORGABLE_SEMESTRAL": 0,
+                "TOPE_VALOR_OTORGABLE_SEMESTRAL": 0,
+                "TOPE_CANT_OTORGABLE_MENSUAL": 0,
+                "TOPE_VALOR_OTORGABLE_MENSUAL": 0,
+                "TOPE_CANT_OTORGABLE_QUINCENAL": 0,
+                "TOPE_VALOR_OTORGABLE_QUINCENAL": 0,
+                "MES_INICIO_TOPE_ANUAL": 0,
+                "MES_INICIO_TOPE_SEMESTRAL": 0,
+                "OBSERVACIONES": null
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"GRUPO_NOVEDAD\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_GRUPO_NOVEDAD\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_GRUPO_NOVEDAD\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_GRUPO_NOVEDAD\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_GRUPO_NOVEDAD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"NOVEDAD\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/NOVEDAD\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"NOVEDAD\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"COD_NOVEDAD\",\r\n        \"CLASE_NOVEDAD\",\r\n        \"TIPO_NOVEDAD\",\r\n        \"VALIDA_PERIODO_LICENCIA_POR_MES\",\r\n        \"UNIDAD_CANTIDAD\",\r\n        \"INGRESA_CANTIDAD\",\r\n        \"INGRESA_VALOR\",\r\n        \"HABITUAL\",\r\n        \"MES_INICIO_TOPE_ANUAL\",\r\n        \"MES_INICIO_TOPE_SEMESTRAL\"\r\n      ],\r\n      \"properties\": {\r\n        \"COD_NOVEDAD\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 10,\r\n          \"minLength\": 0\r\n        },\r\n        \"DESC_NOVEDAD\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 40,\r\n          \"minLength\": 0\r\n        },\r\n        \"CLASE_NOVEDAD\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"TIPO_NOVEDAD\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"VALIDA_PERIODO_LICENCIA_POR_MES\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"UNIDAD_CANTIDAD\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 15,\r\n          \"minLength\": 0\r\n        },\r\n        \"INGRESA_CANTIDAD\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"INGRESA_VALOR\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"HABITUAL\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"VALOR_OTORGABLE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"CANT_OTORGABLE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TOPE_CANT_OTORGABLE_ANUAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TOPE_VALOR_OTORGABLE_ANUAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TOPE_CANT_OTORGABLE_SEMESTRAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TOPE_VALOR_OTORGABLE_SEMESTRAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TOPE_CANT_OTORGABLE_MENSUAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TOPE_VALOR_OTORGABLE_MENSUAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TOPE_CANT_OTORGABLE_QUINCENAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TOPE_VALOR_OTORGABLE_QUINCENAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"MES_INICIO_TOPE_ANUAL\": {\r\n          \"type\": \"integer\"\r\n        },\r\n        \"MES_INICIO_TOPE_SEMESTRAL\": {\r\n          \"type\": \"integer\"\r\n        },\r\n        \"OBSERVACIONES\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1000,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_NOVEDAD\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class NOVEDAD\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_NOVEDAD\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_NOVEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_NOVEDAD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_NOVEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CLASE_NOVEDAD\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string CLASE_NOVEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_NOVEDAD\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string TIPO_NOVEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VALIDA_PERIODO_LICENCIA_POR_MES\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string VALIDA_PERIODO_LICENCIA_POR_MES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"UNIDAD_CANTIDAD\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string UNIDAD_CANTIDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INGRESA_CANTIDAD\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string INGRESA_CANTIDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INGRESA_VALOR\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string INGRESA_VALOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABITUAL\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABITUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VALOR_OTORGABLE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? VALOR_OTORGABLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_OTORGABLE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CANT_OTORGABLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_CANT_OTORGABLE_ANUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? TOPE_CANT_OTORGABLE_ANUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_VALOR_OTORGABLE_ANUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? TOPE_VALOR_OTORGABLE_ANUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_CANT_OTORGABLE_SEMESTRAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? TOPE_CANT_OTORGABLE_SEMESTRAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_VALOR_OTORGABLE_SEMESTRAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? TOPE_VALOR_OTORGABLE_SEMESTRAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_CANT_OTORGABLE_MENSUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? TOPE_CANT_OTORGABLE_MENSUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_VALOR_OTORGABLE_MENSUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? TOPE_VALOR_OTORGABLE_MENSUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_CANT_OTORGABLE_QUINCENAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? TOPE_CANT_OTORGABLE_QUINCENAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_VALOR_OTORGABLE_QUINCENAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? TOPE_VALOR_OTORGABLE_QUINCENAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MES_INICIO_TOPE_ANUAL\", Required = Newtonsoft.Json.Required.Always)]\n        public int MES_INICIO_TOPE_ANUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MES_INICIO_TOPE_SEMESTRAL\", Required = Newtonsoft.Json.Required.Always)]\n        public int MES_INICIO_TOPE_SEMESTRAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_NOVEDAD\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_NOVEDAD { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GRUPO_NOVEDAD\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_GRUPO_NOVEDAD\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_GRUPO_NOVEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_GRUPO_NOVEDAD\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_GRUPO_NOVEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_GRUPO_NOVEDAD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_GRUPO_NOVEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NOVEDAD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<NOVEDAD> NOVEDAD { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface NOVEDAD {\n    COD_NOVEDAD: string;\n    DESC_NOVEDAD: string | undefined;\n    CLASE_NOVEDAD: string;\n    TIPO_NOVEDAD: string;\n    VALIDA_PERIODO_LICENCIA_POR_MES: string;\n    UNIDAD_CANTIDAD: string;\n    INGRESA_CANTIDAD: string;\n    INGRESA_VALOR: string;\n    HABITUAL: string;\n    VALOR_OTORGABLE: number | undefined;\n    CANT_OTORGABLE: number | undefined;\n    TOPE_CANT_OTORGABLE_ANUAL: number | undefined;\n    TOPE_VALOR_OTORGABLE_ANUAL: number | undefined;\n    TOPE_CANT_OTORGABLE_SEMESTRAL: number | undefined;\n    TOPE_VALOR_OTORGABLE_SEMESTRAL: number | undefined;\n    TOPE_CANT_OTORGABLE_MENSUAL: number | undefined;\n    TOPE_VALOR_OTORGABLE_MENSUAL: number | undefined;\n    TOPE_CANT_OTORGABLE_QUINCENAL: number | undefined;\n    TOPE_VALOR_OTORGABLE_QUINCENAL: number | undefined;\n    MES_INICIO_TOPE_ANUAL: number;\n    MES_INICIO_TOPE_SEMESTRAL: number;\n    OBSERVACIONES: string | undefined;\n    ID_NOVEDAD: number;\n}\n\nexport interface GRUPO_NOVEDAD {\n    ID_GRUPO_NOVEDAD: number;\n    COD_GRUPO_NOVEDAD: string;\n    DESC_GRUPO_NOVEDAD: string | undefined;\n    OBSERVACIONES: string | undefined;\n    NOVEDAD: NOVEDAD[] | undefined;\n}",
+          "example": {
+            "ID_GRUPO_NOVEDAD": 0,
+            "COD_GRUPO_NOVEDAD": null,
+            "DESC_GRUPO_NOVEDAD": null,
+            "OBSERVACIONES": null,
+            "NOVEDAD": [
+              {
+                "COD_NOVEDAD": null,
+                "DESC_NOVEDAD": null,
+                "CLASE_NOVEDAD": null,
+                "TIPO_NOVEDAD": null,
+                "VALIDA_PERIODO_LICENCIA_POR_MES": null,
+                "UNIDAD_CANTIDAD": null,
+                "INGRESA_CANTIDAD": null,
+                "INGRESA_VALOR": null,
+                "HABITUAL": null,
+                "VALOR_OTORGABLE": 0,
+                "CANT_OTORGABLE": 0,
+                "TOPE_CANT_OTORGABLE_ANUAL": 0,
+                "TOPE_VALOR_OTORGABLE_ANUAL": 0,
+                "TOPE_CANT_OTORGABLE_SEMESTRAL": 0,
+                "TOPE_VALOR_OTORGABLE_SEMESTRAL": 0,
+                "TOPE_CANT_OTORGABLE_MENSUAL": 0,
+                "TOPE_VALOR_OTORGABLE_MENSUAL": 0,
+                "TOPE_CANT_OTORGABLE_QUINCENAL": 0,
+                "TOPE_VALOR_OTORGABLE_QUINCENAL": 0,
+                "MES_INICIO_TOPE_ANUAL": 0,
+                "MES_INICIO_TOPE_SEMESTRAL": 0,
+                "OBSERVACIONES": null,
+                "ID_NOVEDAD": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "GRUPO_NOVEDAD": [
+      "NOVEDAD",
+      "COD_GRUPO_NOVEDAD",
+      "DESC_GRUPO_NOVEDAD",
+      "OBSERVACIONES"
+    ],
+    "NOVEDAD": [
+      "COD_NOVEDAD",
+      "DESC_NOVEDAD",
+      "CLASE_NOVEDAD",
+      "TIPO_NOVEDAD",
+      "VALIDA_PERIODO_LICENCIA_POR_MES",
+      "UNIDAD_CANTIDAD",
+      "INGRESA_CANTIDAD",
+      "INGRESA_VALOR",
+      "HABITUAL",
+      "CANT_OTORGABLE",
+      "VALOR_OTORGABLE",
+      "TOPE_CANT_OTORGABLE_ANUAL",
+      "TOPE_VALOR_OTORGABLE_ANUAL",
+      "TOPE_CANT_OTORGABLE_SEMESTRAL",
+      "TOPE_VALOR_OTORGABLE_SEMESTRAL",
+      "TOPE_CANT_OTORGABLE_MENSUAL",
+      "TOPE_VALOR_OTORGABLE_MENSUAL",
+      "TOPE_CANT_OTORGABLE_QUINCENAL",
+      "TOPE_VALOR_OTORGABLE_QUINCENAL",
+      "MES_INICIO_TOPE_ANUAL",
+      "MES_INICIO_TOPE_SEMESTRAL",
+      "OBSERVACIONES"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

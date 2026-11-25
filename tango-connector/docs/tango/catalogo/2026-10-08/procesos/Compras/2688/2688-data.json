@@ -1,0 +1,24 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_CPA_CONCEPTO_AUTORIZACION": 1,
+        "coD_CONCEPTO_AUTORIZACION": "TOTAL",
+        "desC_CONCEPTO_AUTORIZACION": "IMPORTE TOTAL",
+        "iD_CPA_CAMPO_AUTORIZACION": 12,
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADO1AU="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

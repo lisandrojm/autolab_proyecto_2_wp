@@ -1,0 +1,330 @@
+{
+  "title": "Criterios de actualización de precios",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"CRITERIO_ACTUALIZACION_PRECIOS\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_CRITERIO_ACTUALIZACION_PRECIOS\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_CRITERIO_ACTUALIZACION_PRECIOS\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_CRITERIO_ACTUALIZACION_PRECIOS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"BASE_DE_CALCULO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_GVA10_BASE_VENTAS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CPA43_BASE_COMPRAS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"PROVEEDOR_HABITUAL\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"ID_CPA01\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CONSIDERA_BONIFICACION\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"CRITERIO_ACTUALIZACION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"VALOR_CRITERIO_ACTUALIZACION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"CRITERIO_CORRECCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"POSICION_CORRECCION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_POLITICA_REDONDEO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_COTIZACION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CONSIDERA_IMPUESTOS\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"ACTUALIZA_ART_SINPRECIO\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"RESPETA_PRECIO_MODIFICADO_MANUAL\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ACTUALIZA_PEDIDOS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"DIAS_ACT_PEDIDOS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8000,\r\n      \"minLength\": 0\r\n    },\r\n    \"DECIMALES_PRECIOS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CRITERIO_ACTUALIZACION_RANGOS\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CRITERIO_ACTUALIZACION_RANGOS\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"CRITERIO_ACTUALIZACION_RANGOS\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"DESDE_RANGO\",\r\n        \"HASTA_RANGO\"\r\n      ],\r\n      \"properties\": {\r\n        \"DESDE_RANGO\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"HASTA_RANGO\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"VALOR_RANGO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"VALOR_RANGO_PORC\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"VALOR_RANGO_IMPORTE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CRITERIO_ACTUALIZACION_RANGOS\n    {\n        [Newtonsoft.Json.JsonProperty(\"DESDE_RANGO\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal DESDE_RANGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HASTA_RANGO\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal HASTA_RANGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VALOR_RANGO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? VALOR_RANGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VALOR_RANGO_PORC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? VALOR_RANGO_PORC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VALOR_RANGO_IMPORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? VALOR_RANGO_IMPORTE { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CRITERIO_ACTUALIZACION_PRECIOS\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_CRITERIO_ACTUALIZACION_PRECIOS\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_CRITERIO_ACTUALIZACION_PRECIOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_CRITERIO_ACTUALIZACION_PRECIOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string DESC_CRITERIO_ACTUALIZACION_PRECIOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"BASE_DE_CALCULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string BASE_DE_CALCULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA10_BASE_VENTAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA10_BASE_VENTAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA43_BASE_COMPRAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CPA43_BASE_COMPRAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROVEEDOR_HABITUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? PROVEEDOR_HABITUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA01\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CPA01 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CONSIDERA_BONIFICACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? CONSIDERA_BONIFICACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CRITERIO_ACTUALIZACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string CRITERIO_ACTUALIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VALOR_CRITERIO_ACTUALIZACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? VALOR_CRITERIO_ACTUALIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CRITERIO_CORRECCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string CRITERIO_CORRECCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"POSICION_CORRECCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? POSICION_CORRECCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_POLITICA_REDONDEO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_POLITICA_REDONDEO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_COTIZACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_COTIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CONSIDERA_IMPUESTOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? CONSIDERA_IMPUESTOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACTUALIZA_ART_SINPRECIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? ACTUALIZA_ART_SINPRECIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"RESPETA_PRECIO_MODIFICADO_MANUAL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool RESPETA_PRECIO_MODIFICADO_MANUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACTUALIZA_PEDIDOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string ACTUALIZA_PEDIDOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIAS_ACT_PEDIDOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? DIAS_ACT_PEDIDOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DECIMALES_PRECIOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? DECIMALES_PRECIOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CRITERIO_ACTUALIZACION_RANGOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CRITERIO_ACTUALIZACION_RANGOS> CRITERIO_ACTUALIZACION_RANGOS { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface CRITERIO_ACTUALIZACION_RANGOS {\n    DESDE_RANGO: number;\n    HASTA_RANGO: number;\n    VALOR_RANGO: number | undefined;\n    VALOR_RANGO_PORC: number | undefined;\n    VALOR_RANGO_IMPORTE: number | undefined;\n}\n\nexport interface CRITERIO_ACTUALIZACION_PRECIOS {\n    COD_CRITERIO_ACTUALIZACION_PRECIOS: string;\n    DESC_CRITERIO_ACTUALIZACION_PRECIOS: string | undefined;\n    BASE_DE_CALCULO: string | undefined;\n    ID_GVA10_BASE_VENTAS: number | undefined;\n    ID_CPA43_BASE_COMPRAS: number | undefined;\n    PROVEEDOR_HABITUAL: boolean | undefined;\n    ID_CPA01: number | undefined;\n    CONSIDERA_BONIFICACION: boolean | undefined;\n    CRITERIO_ACTUALIZACION: string | undefined;\n    VALOR_CRITERIO_ACTUALIZACION: number | undefined;\n    CRITERIO_CORRECCION: string | undefined;\n    POSICION_CORRECCION: number | undefined;\n    ID_POLITICA_REDONDEO: number | undefined;\n    ID_TIPO_COTIZACION: number | undefined;\n    CONSIDERA_IMPUESTOS: boolean | undefined;\n    ACTUALIZA_ART_SINPRECIO: boolean | undefined;\n    RESPETA_PRECIO_MODIFICADO_MANUAL: boolean;\n    ACTUALIZA_PEDIDOS: string | undefined;\n    DIAS_ACT_PEDIDOS: number | undefined;\n    OBSERVACIONES: string | undefined;\n    DECIMALES_PRECIOS: number | undefined;\n    CRITERIO_ACTUALIZACION_RANGOS: CRITERIO_ACTUALIZACION_RANGOS[] | undefined;\n}",
+          "example": {
+            "COD_CRITERIO_ACTUALIZACION_PRECIOS": null,
+            "DESC_CRITERIO_ACTUALIZACION_PRECIOS": null,
+            "BASE_DE_CALCULO": "V",
+            "ID_GVA10_BASE_VENTAS": 0,
+            "ID_CPA43_BASE_COMPRAS": 0,
+            "PROVEEDOR_HABITUAL": false,
+            "ID_CPA01": 0,
+            "CONSIDERA_BONIFICACION": false,
+            "CRITERIO_ACTUALIZACION": "P",
+            "VALOR_CRITERIO_ACTUALIZACION": 0,
+            "CRITERIO_CORRECCION": "N",
+            "POSICION_CORRECCION": 0,
+            "ID_POLITICA_REDONDEO": 0,
+            "ID_TIPO_COTIZACION": 0,
+            "CONSIDERA_IMPUESTOS": false,
+            "ACTUALIZA_ART_SINPRECIO": false,
+            "RESPETA_PRECIO_MODIFICADO_MANUAL": false,
+            "ACTUALIZA_PEDIDOS": "N",
+            "DIAS_ACT_PEDIDOS": 0,
+            "OBSERVACIONES": null,
+            "DECIMALES_PRECIOS": 2,
+            "CRITERIO_ACTUALIZACION_RANGOS": [
+              {
+                "DESDE_RANGO": 0,
+                "HASTA_RANGO": 0,
+                "VALOR_RANGO": 0,
+                "VALOR_RANGO_PORC": 0,
+                "VALOR_RANGO_IMPORTE": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"CRITERIO_ACTUALIZACION_PRECIOS\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_CRITERIO_ACTUALIZACION_PRECIOS\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_CRITERIO_ACTUALIZACION_PRECIOS\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_CRITERIO_ACTUALIZACION_PRECIOS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"BASE_DE_CALCULO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_GVA10_BASE_VENTAS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CPA43_BASE_COMPRAS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"PROVEEDOR_HABITUAL\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"ID_CPA01\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CONSIDERA_BONIFICACION\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"CRITERIO_ACTUALIZACION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"VALOR_CRITERIO_ACTUALIZACION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"CRITERIO_CORRECCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"POSICION_CORRECCION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_POLITICA_REDONDEO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_COTIZACION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CONSIDERA_IMPUESTOS\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"ACTUALIZA_ART_SINPRECIO\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"RESPETA_PRECIO_MODIFICADO_MANUAL\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ACTUALIZA_PEDIDOS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"DIAS_ACT_PEDIDOS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8000,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_CRITERIO_ACTUALIZACION_PRECIOS\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"DECIMALES_PRECIOS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CRITERIO_ACTUALIZACION_RANGOS\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CRITERIO_ACTUALIZACION_RANGOS\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"CRITERIO_ACTUALIZACION_RANGOS\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"DESDE_RANGO\",\r\n        \"HASTA_RANGO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_CRITERIO_ACTUALIZACION_RANGOS\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_CRITERIO_ACTUALIZACION_PRECIOS\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"DESDE_RANGO\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"HASTA_RANGO\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"VALOR_RANGO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"VALOR_RANGO_PORC\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"VALOR_RANGO_IMPORTE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CRITERIO_ACTUALIZACION_RANGOS\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CRITERIO_ACTUALIZACION_RANGOS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CRITERIO_ACTUALIZACION_RANGOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CRITERIO_ACTUALIZACION_PRECIOS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CRITERIO_ACTUALIZACION_PRECIOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESDE_RANGO\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal DESDE_RANGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HASTA_RANGO\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal HASTA_RANGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VALOR_RANGO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? VALOR_RANGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VALOR_RANGO_PORC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? VALOR_RANGO_PORC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VALOR_RANGO_IMPORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? VALOR_RANGO_IMPORTE { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CRITERIO_ACTUALIZACION_PRECIOS\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_CRITERIO_ACTUALIZACION_PRECIOS\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_CRITERIO_ACTUALIZACION_PRECIOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_CRITERIO_ACTUALIZACION_PRECIOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string DESC_CRITERIO_ACTUALIZACION_PRECIOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"BASE_DE_CALCULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string BASE_DE_CALCULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA10_BASE_VENTAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA10_BASE_VENTAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA43_BASE_COMPRAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CPA43_BASE_COMPRAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROVEEDOR_HABITUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? PROVEEDOR_HABITUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA01\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CPA01 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CONSIDERA_BONIFICACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? CONSIDERA_BONIFICACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CRITERIO_ACTUALIZACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string CRITERIO_ACTUALIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VALOR_CRITERIO_ACTUALIZACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? VALOR_CRITERIO_ACTUALIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CRITERIO_CORRECCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string CRITERIO_CORRECCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"POSICION_CORRECCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? POSICION_CORRECCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_POLITICA_REDONDEO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_POLITICA_REDONDEO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_COTIZACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_COTIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CONSIDERA_IMPUESTOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? CONSIDERA_IMPUESTOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACTUALIZA_ART_SINPRECIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? ACTUALIZA_ART_SINPRECIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"RESPETA_PRECIO_MODIFICADO_MANUAL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool RESPETA_PRECIO_MODIFICADO_MANUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACTUALIZA_PEDIDOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string ACTUALIZA_PEDIDOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIAS_ACT_PEDIDOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? DIAS_ACT_PEDIDOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CRITERIO_ACTUALIZACION_PRECIOS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CRITERIO_ACTUALIZACION_PRECIOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DECIMALES_PRECIOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? DECIMALES_PRECIOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CRITERIO_ACTUALIZACION_RANGOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CRITERIO_ACTUALIZACION_RANGOS> CRITERIO_ACTUALIZACION_RANGOS { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface CRITERIO_ACTUALIZACION_RANGOS {\n    ID_CRITERIO_ACTUALIZACION_RANGOS: number;\n    ID_CRITERIO_ACTUALIZACION_PRECIOS: number;\n    DESDE_RANGO: number;\n    HASTA_RANGO: number;\n    VALOR_RANGO: number | undefined;\n    VALOR_RANGO_PORC: number | undefined;\n    VALOR_RANGO_IMPORTE: number | undefined;\n}\n\nexport interface CRITERIO_ACTUALIZACION_PRECIOS {\n    COD_CRITERIO_ACTUALIZACION_PRECIOS: string;\n    DESC_CRITERIO_ACTUALIZACION_PRECIOS: string | undefined;\n    BASE_DE_CALCULO: string | undefined;\n    ID_GVA10_BASE_VENTAS: number | undefined;\n    ID_CPA43_BASE_COMPRAS: number | undefined;\n    PROVEEDOR_HABITUAL: boolean | undefined;\n    ID_CPA01: number | undefined;\n    CONSIDERA_BONIFICACION: boolean | undefined;\n    CRITERIO_ACTUALIZACION: string | undefined;\n    VALOR_CRITERIO_ACTUALIZACION: number | undefined;\n    CRITERIO_CORRECCION: string | undefined;\n    POSICION_CORRECCION: number | undefined;\n    ID_POLITICA_REDONDEO: number | undefined;\n    ID_TIPO_COTIZACION: number | undefined;\n    CONSIDERA_IMPUESTOS: boolean | undefined;\n    ACTUALIZA_ART_SINPRECIO: boolean | undefined;\n    RESPETA_PRECIO_MODIFICADO_MANUAL: boolean;\n    ACTUALIZA_PEDIDOS: string | undefined;\n    DIAS_ACT_PEDIDOS: number | undefined;\n    OBSERVACIONES: string | undefined;\n    ID_CRITERIO_ACTUALIZACION_PRECIOS: number;\n    DECIMALES_PRECIOS: number | undefined;\n    CRITERIO_ACTUALIZACION_RANGOS: CRITERIO_ACTUALIZACION_RANGOS[] | undefined;\n}",
+          "example": {
+            "COD_CRITERIO_ACTUALIZACION_PRECIOS": null,
+            "DESC_CRITERIO_ACTUALIZACION_PRECIOS": null,
+            "BASE_DE_CALCULO": "V",
+            "ID_GVA10_BASE_VENTAS": 0,
+            "ID_CPA43_BASE_COMPRAS": 0,
+            "PROVEEDOR_HABITUAL": false,
+            "ID_CPA01": 0,
+            "CONSIDERA_BONIFICACION": false,
+            "CRITERIO_ACTUALIZACION": "P",
+            "VALOR_CRITERIO_ACTUALIZACION": 0,
+            "CRITERIO_CORRECCION": "N",
+            "POSICION_CORRECCION": 0,
+            "ID_POLITICA_REDONDEO": 0,
+            "ID_TIPO_COTIZACION": 0,
+            "CONSIDERA_IMPUESTOS": false,
+            "ACTUALIZA_ART_SINPRECIO": false,
+            "RESPETA_PRECIO_MODIFICADO_MANUAL": false,
+            "ACTUALIZA_PEDIDOS": "N",
+            "DIAS_ACT_PEDIDOS": 0,
+            "OBSERVACIONES": null,
+            "ID_CRITERIO_ACTUALIZACION_PRECIOS": 0,
+            "DECIMALES_PRECIOS": 2,
+            "CRITERIO_ACTUALIZACION_RANGOS": [
+              {
+                "ID_CRITERIO_ACTUALIZACION_RANGOS": 0,
+                "ID_CRITERIO_ACTUALIZACION_PRECIOS": 0,
+                "DESDE_RANGO": 0,
+                "HASTA_RANGO": 0,
+                "VALOR_RANGO": 0,
+                "VALOR_RANGO_PORC": 0,
+                "VALOR_RANGO_IMPORTE": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "CRITERIO_ACTUALIZACION_PRECIOS": [
+      "CRITERIO_ACTUALIZACION_RANGOS",
+      "DECIMALES_PRECIOS",
+      "COD_CRITERIO_ACTUALIZACION_PRECIOS",
+      "DESC_CRITERIO_ACTUALIZACION_PRECIOS",
+      "BASE_DE_CALCULO",
+      "ID_GVA10_BASE_VENTAS",
+      "ID_CPA43_BASE_COMPRAS",
+      "PROVEEDOR_HABITUAL",
+      "ID_CPA01",
+      "CONSIDERA_BONIFICACION",
+      "CRITERIO_ACTUALIZACION",
+      "VALOR_CRITERIO_ACTUALIZACION",
+      "CRITERIO_CORRECCION",
+      "POSICION_CORRECCION",
+      "ID_POLITICA_REDONDEO",
+      "ID_TIPO_COTIZACION",
+      "CONSIDERA_IMPUESTOS",
+      "ACTUALIZA_ART_SINPRECIO",
+      "ACTUALIZA_PEDIDOS",
+      "DIAS_ACT_PEDIDOS",
+      "RESPETA_PRECIO_MODIFICADO_MANUAL",
+      "OBSERVACIONES"
+    ],
+    "CRITERIO_ACTUALIZACION_RANGOS": [
+      "VALOR_RANGO_PORC",
+      "VALOR_RANGO_IMPORTE",
+      "ID_CRITERIO_ACTUALIZACION_PRECIOS",
+      "DESDE_RANGO",
+      "HASTA_RANGO",
+      "VALOR_RANGO"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

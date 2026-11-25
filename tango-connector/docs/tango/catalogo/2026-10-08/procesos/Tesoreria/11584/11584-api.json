@@ -1,0 +1,124 @@
+{
+  "title": "Consulta de cheques propios",
+  "moduleId": 10005,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "TesoreriaChequesPropiosConsultaDeChequesPropiosModel": [
+      "NRO_CHEQUERA",
+      "ID_SBA15",
+      "NRO_DE_CHEQUE",
+      "FECHA_DE_EMISION",
+      "FECHA_DEL_CHEQUE",
+      "ID_CPA01",
+      "COD_PROVEEDOR",
+      "RAZON_SOCIAL",
+      "COD_ESTADO",
+      "ESTADO",
+      "TIPO_DE_CHEQUE",
+      "COD_BANCO",
+      "BANCO",
+      "COD_CTA_EMISION",
+      "CUENTA_EMISION",
+      "CTA_BANCO",
+      "CONCILIADO",
+      "CONCILIADO_RECHAZADO",
+      "FECHA_EXTRACTO",
+      "FECHA_EXTRACTO_RECHAZADO",
+      "IMPORTE",
+      "IMPORTE_REEXP_CTE",
+      "IMPORTE_REEXP_EXT",
+      "TELEFONO",
+      "TELEFONO_2",
+      "MOVIL",
+      "EMAIL",
+      "EMAIL_COMPROBANTES",
+      "EMAILS_ENVIO_ORDEN_COMPRA",
+      "MOVILES_ENVIO_ORDEN_COMPRA",
+      "EMAILS_ENVIO_ORDEN_PAGOS",
+      "MOVILES_ENVIO_ORDEN_PAGOS"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

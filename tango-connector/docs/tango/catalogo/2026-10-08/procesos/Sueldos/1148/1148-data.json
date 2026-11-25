@@ -1,0 +1,716 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 1,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "01",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Producción Primaria -excepto actividad agropecuaria-",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzkk="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 2,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "02",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Producción de bienes sin comercialización",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzko="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 3,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "03",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Construcción de inmuebles",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzks="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 4,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "04",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Turismo",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzkw="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 5,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "05",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Investigación Científica y Tecnológica",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzk0="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 6,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "06",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Administración Pública con Obra Social Ley 23.660",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzk4="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 7,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "07",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Enseñanza Privada Ley 13.047",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzk8="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 8,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "08",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Servicio Doméstico",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzlA="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 9,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "09",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Inc b) art 12 Ley 19.316 ISSARA modificada por la Ley 22.673",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzlE="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 10,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "10",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Personal de Dirección RG 4.158 Art.10",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzlI="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 11,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "11",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Personal Permanente Discontínuo de empresas de Servicios Eventuales",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzlU="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 12,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "12",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "PIT -Programas Intensivos de Trabajo-",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzlY="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 13,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "13",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Personal embarcado",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzlc="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 14,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "14",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Personal embarcado. Decreto 1.255 S/resolución SSS 18/99",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzlg="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 15,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "15",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "LRT - Directores SA, municipios, centralizado y descentralizado. Emp mixt provinciales y otros",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzlk="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 16,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "16",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "No obligados con el SIJP (colegios, reciprocidad previsional y otros)",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzlo="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 17,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "17",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Obligados al SIJP - sin obra social nacional (administración pública y otros)",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzls="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 18,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "18",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Provincia incorporada al SIJP sin obra social nacional con ART",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzlw="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 19,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "19",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Provincia incorporada al SIJP sin obra social nacional sin ART",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzl0="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 20,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "45",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Provincia incorporada al SIJP con obra social nacional con ART",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOznc="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 21,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "46",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Provincia incorporada al SIJP con obra social nacional sin ART",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzng="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 22,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "47",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Ley Nº 15.223 con obra social",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOznk="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 23,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "48",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Régimen Nacional sin obra social nacional",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzno="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 24,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "49",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Actividades no clasificadas",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzns="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 25,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "50",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILT) para actividades 01,02,03,04,05,11,13,49",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOznw="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 26,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "51",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILT) para actividades 06,92,93",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzn0="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 27,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "52",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILT) para actividad 12",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzn4="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 28,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "53",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILT) para actividad 16",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzn8="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 29,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "54",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILT) para actividad 17",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzoA="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 30,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "55",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILT) para actividades 18,19",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzoE="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 31,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "56",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILT) para actividades 45,46",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzoI="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 32,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "57",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILT) para actividad 47",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzoM="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 33,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "58",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILT) para actividad 48",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzoQ="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 34,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "59",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILT) para actividad 95",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzoU="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 35,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "60",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPPP) para actividades 01,02,03,04,05,11,13,49",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzoY="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 36,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "61",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPPP) y (ILPPD) para actividades 06,92,93",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzoc="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 37,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "62",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPPP) y (ILPPD) para actividad 12",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzog="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 38,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "63",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPPP) y (ILPPD) para actividad 16",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzok="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 39,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "64",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPPP) y (ILPPD) para actividad 17",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzoo="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 40,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "65",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPPP) y (ILPPD) para actividades 18,19",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzos="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 41,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "66",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPPP) y (ILPPD) para actividades 45,46",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzow="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 42,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "67",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPPP) y (ILPPD) para actividad 47",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzo0="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 43,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "68",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPPP) y (ILPPD) para actividad 48",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzo4="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 44,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "69",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Legisladores nacionales (diputados y senadores)",
+        "aportE_DIFERENCIAL": "S",
+        "roW_VERSION": "AAAAAADOzo8="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 45,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "70",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPPD) para actividades 01,02,03,04,05,11,13,49",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzpA="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 46,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "71",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPTP) para actividades 18,19",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzpE="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 47,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "72",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPTP) para actividades 45,46",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzpI="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 48,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "73",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILT) para actividad 91",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzpM="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 49,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "74",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPPP) o (ILPPD) para actividad 91",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzpQ="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 50,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "80",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPTP) para actividades 01,02,03,04,05,11,13,49,91",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzpo="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 51,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "81",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Magistrados y funcionarios del Poder Judicial de la Nación.  Ley Nº 24.018\r\n",
+        "aportE_DIFERENCIAL": "S",
+        "roW_VERSION": "AAAAAADOzps="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 52,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "82",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Funcionarios del Poder Ejecutivo y otros. Ley Nº 24.018\r\n",
+        "aportE_DIFERENCIAL": "S",
+        "roW_VERSION": "AAAAAADOzpw="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 53,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "83",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPTP) para actividades 06,16,92,93",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzp0="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 54,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "84",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPTP) para actividad 47",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzp4="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 55,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "85",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPTP) para actividad 48",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzp8="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 56,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "86",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPTP) para actividad 95",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzqA="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 57,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "87",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILT) para actividad 97",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzqE="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 58,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "88",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPPP) y (ILPPD) para actividad 97",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzqI="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 59,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "89",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPTP) para actividad 97",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzqM="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 60,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "90",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILT) o (ILPPP) o (ILPPD) o (ILPTP) para actividad 15",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzqQ="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 61,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "91",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Régimen previsional propio.  Obra Social Ley 23.660 y 24.714",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzqU="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 62,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "92",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Resolución 71/99 SSS y otros",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzqY="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 63,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "93",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Universidades Privadas. Personal Docente Decreto 1123/99",
+        "aportE_DIFERENCIAL": "S",
+        "roW_VERSION": "AAAAAADOzqc="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 64,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "94",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Decreto 953/99",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzqg="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 65,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "95",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Ley 15.223 sin obra social",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzqk="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 66,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "96",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Personal Permanete Discontínuo Servicios Eventuales alcanzados p/Decreto 96/99",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzqo="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 67,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "97",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Trabajador Agrario - Ley 25.191",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzqs="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 68,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "20",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Ley N° 24.331 Zona Franca",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzl4="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 69,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "21",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Dec N° 1024/93 Empresas del Estado, Org. y Entes Públicos con OS y FNE",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzl8="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 70,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "22",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Dec N° 1024/93 Empreses del Estado, Org. y Entes Públicos sin OS y con FNE",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzmA="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 71,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "23",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILT) para actividad 21",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzmE="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 72,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "24",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPPP) o (ILPPD) para actividad 21",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzmI="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 73,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "25",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPTP) para actividad 21",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzmM="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 74,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "26",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILT) para actividad 22",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzmQ="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 75,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "27",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Servicio exterior, Ley Nº 22.731\r\n",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzmU="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 76,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "28",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "(ILPTP) para actividad 22",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzmY="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 77,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "41",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Trabajador de la Construcción Ley 25.345 art. 36",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOznM="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 78,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "42",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Asignaciones familiares y FNE con obra social nacional",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOznQ="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 79,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "43",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Asignaciones familiares y FNE sin obra social nacional",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOznU="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 80,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "44",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Ley 24061. Decreto 249/92",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOznY="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 81,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "00",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Zona de Desastre. Decreto 1386/01 -excepto actividad agropecuaria-",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzkg="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 82,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "29",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Personal embarcado Dec. 1255 s/res. SSS 18/99 con OS",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzmc="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 83,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "30",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "AFA Decreto 1212/03. Aportante Autónomo",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzmg="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 84,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "31",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Trabajador rural de la Armada Argentina",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzmk="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 85,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "32",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Corte Suprema de Justicia de la Nación",
+        "aportE_DIFERENCIAL": "S",
+        "roW_VERSION": "AAAAAADOzmo="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 86,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "33",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Representante gremial en uso de licencia",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzms="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 87,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "98",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Zona de Desastre. Decreto 1386/01. Actividad Agropecuaria. Ley 25.191",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzqw="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 88,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "34",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Docentes estatales nacionales c/OS L.23660-Dto.137/05",
+        "aportE_DIFERENCIAL": "S",
+        "roW_VERSION": "AAAAAADOzmw="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 89,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "35",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Docentes estatales nacionales s/OS L.23660-Dto.137/05",
+        "aportE_DIFERENCIAL": "S",
+        "roW_VERSION": "AAAAAADOzm0="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 90,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "36",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Investigador científico/tecnológico estatal nacional c/OS L.23660-Dto.160/05",
+        "aportE_DIFERENCIAL": "S",
+        "roW_VERSION": "AAAAAADOzm4="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 91,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "37",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Investigador científico/tecnológico estatal nacional s/OS L.23660-Dto.160/05",
+        "aportE_DIFERENCIAL": "S",
+        "roW_VERSION": "AAAAAADOzm8="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 92,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "38",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Docentes privados  Res.71/99 SSS - Dto.137/05",
+        "aportE_DIFERENCIAL": "S",
+        "roW_VERSION": "AAAAAADOznA="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 93,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "39",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "No docentes privados Res.71/99 SSS",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOznE="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 97,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "75",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Docente de Provincia incorporada al SIJP s/OS con ART Dto.137/05",
+        "aportE_DIFERENCIAL": "S",
+        "roW_VERSION": "AAAAAADOzpU="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 98,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "76",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Docente de Provincia incorporada al SIJP s/OS sin ART Dto.137/05",
+        "aportE_DIFERENCIAL": "S",
+        "roW_VERSION": "AAAAAADOzpY="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 99,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "77",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Docente de Provincia incorporada al SIJP c/OS con ART Dto.137/05",
+        "aportE_DIFERENCIAL": "S",
+        "roW_VERSION": "AAAAAADOzpc="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 100,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "78",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Investigador científico/tecnológico/Provincia incorporada al SIJP s/OS con ART Dto.160/05",
+        "aportE_DIFERENCIAL": "S",
+        "roW_VERSION": "AAAAAADOzpg="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 101,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "79",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Investigador científico/tecnológico/Provincia incorporada al SIJP s/OS con ART Dto.160/05",
+        "aportE_DIFERENCIAL": "S",
+        "roW_VERSION": "AAAAAADOzpk="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 102,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "40",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "Industria del Software L.25922",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOznI="
+      },
+      {
+        "iD_ACTIVIDAD_LEGAJO_DGI": 103,
+        "coD_ACTIVIDAD_LEGAJO_DGI": "100",
+        "desC_ACTIVIDAD_LEGAJO_DGI": "CSJN Corte Supr de Justicia, Magistrados provinciales, Revisores de Cta sin ART",
+        "aportE_DIFERENCIAL": "N",
+        "roW_VERSION": "AAAAAADOzlM="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

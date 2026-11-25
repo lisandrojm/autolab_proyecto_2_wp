@@ -1,0 +1,47 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_UNIDAD_ADICIONAL": 3,
+        "coD_UNIDAD_ADICIONAL": "LMBINIO",
+        "desC_UNIDAD_ADICIONAL": "Lumbinio",
+        "iD_MEDIDA": 3,
+        "iD_TIPO_VALORIZACION": 4,
+        "editA_TIPO_VALORIZACION": "N",
+        "editA_VALORIZACION": "S",
+        "coD_DESCRIP": "LMBINIO - Lumbinio",
+        "roW_VERSION": "AAAAAADf0kM="
+      },
+      {
+        "iD_UNIDAD_ADICIONAL": 5,
+        "coD_UNIDAD_ADICIONAL": "LMB1",
+        "iD_MEDIDA": 2,
+        "iD_TIPO_VALORIZACION": 4,
+        "editA_TIPO_VALORIZACION": "S",
+        "editA_VALORIZACION": "N",
+        "coD_DESCRIP": "LMB1",
+        "roW_VERSION": "AAAAAADf4+c="
+      },
+      {
+        "iD_UNIDAD_ADICIONAL": 6,
+        "coD_UNIDAD_ADICIONAL": "LMB2",
+        "iD_MEDIDA": 5,
+        "iD_TIPO_VALORIZACION": 4,
+        "editA_TIPO_VALORIZACION": "N",
+        "editA_VALORIZACION": "S",
+        "coD_DESCRIP": "LMB2",
+        "roW_VERSION": "AAAAAADf4+g="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

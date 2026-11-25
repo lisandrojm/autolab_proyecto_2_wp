@@ -1,0 +1,133 @@
+{
+  "title": "Ingresos y egresos por cuenta",
+  "moduleId": 10005,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "TesoreriaIngresosYEgresosPorCuentaModel": [
+      "ID_SBA04",
+      "COMPROBANTE",
+      "NRO_COMPROBANTE",
+      "COD_COMPROBANTE",
+      "DESC_TIPO_COMPROBANTE",
+      "BARRA",
+      "TIPO_COMPROBANTE",
+      "NRO_INTERNO",
+      "FECHA_DE_EMISION",
+      "FECHA",
+      "COD_CUENTA",
+      "DESC_CUENTA",
+      "CLASE",
+      "TIPO",
+      "REPRESENTA_FONDOS",
+      "AGRUPACION",
+      "COD_RELACIONADO",
+      "CLASIFICACION",
+      "MONEDA",
+      "DEBITOS_CTE",
+      "DEBITOS_UNI",
+      "CREDITOS_CTE",
+      "CREDITOS_UNI",
+      "SALDO_CTE",
+      "SALDO_UNI",
+      "LEYENDA",
+      "ID_SBA01",
+      "TIPO_CUENTA",
+      "ID_MONEDA",
+      "CTA_CARPETA_NIVEL_1",
+      "CTA_CARPETA_NIVEL_2",
+      "CTA_CARPETA_NIVEL_3",
+      "CTA_CARPETA_NIVEL_4",
+      "CTA_CARPETA_NIVEL_5",
+      "CTA_CARPETA_NIVEL_6",
+      "CTA_CARPETA_NIVEL_7",
+      "CTA_CARPETA_NIVEL_8",
+      "CTA_CARPETA_NIVEL_9",
+      "CTA_CARPETA_NIVEL_10",
+      "CTA_CARPETA_NIVEL_11",
+      "CTA_CARPETA_NIVEL_12"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

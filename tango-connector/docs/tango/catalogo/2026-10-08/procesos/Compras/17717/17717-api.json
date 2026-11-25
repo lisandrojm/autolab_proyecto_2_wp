@@ -1,0 +1,125 @@
+{
+  "title": "Solicitudes de compras",
+  "moduleId": 10003,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "CompraseImportacionesSolicitudesDeCompraPendientesDeAutorizarModel": [
+      "ID_SUCURSAL",
+      "COD_TALONARIO",
+      "DESC_TALONARIO",
+      "NRO_SOLICITUD_DE_COMPRA",
+      "FECHA_DE_INGRESO",
+      "INGRESO",
+      "FECHA_DE_EMISION",
+      "EMITIO",
+      "FECHA_AUTORIZACION",
+      "AUTORIZO",
+      "COD_SOLICITANTE",
+      "NOMBRE_SOLICITANTE",
+      "DESTINO",
+      "COD_CLASIFICACION_1",
+      "DESCRIPCION_CLASIFICACION_1",
+      "COD_CLASIFICACION_2",
+      "DESCRIPCION_CLASIFICACION_2",
+      "COD_CLASIFICACION",
+      "DESCRIPCION_CLASIFICACION",
+      "COD_SUCURSAL",
+      "DESC_SUCURSAL",
+      "COD_SECTOR",
+      "DESCRIPCION_SECTOR",
+      "COD_COMPRADOR",
+      "NOMBRE_DEL_COMPRADOR",
+      "ESTADO_DE_LA_SOLICITUD",
+      "MONEDA",
+      "TOTAL",
+      "LEYENDA_1",
+      "LEYENDA_2",
+      "LEYENDA_3",
+      "LEYENDA_4",
+      "LEYENDA_5"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

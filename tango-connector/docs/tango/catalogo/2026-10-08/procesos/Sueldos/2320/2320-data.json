@@ -1,0 +1,165 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_ITEM_COSTO_LABORAL": 1,
+        "coD_ITEM_COSTO_LABORAL": "TICKETS",
+        "desC_ITEM_COSTO_LABORAL": "Aportes por tickets canasta",
+        "habilitado": "N",
+        "tipO_VALOR_COSTO_LABORAL": "Porcentaje",
+        "porC_ITEM_COSTO_LABORAL": 14,
+        "aplicA_TOPE_ITEM": "N",
+        "roW_VERSION": "AAAAAADO22A="
+      },
+      {
+        "iD_ITEM_COSTO_LABORAL": 2,
+        "coD_ITEM_COSTO_LABORAL": "JUBILACION",
+        "desC_ITEM_COSTO_LABORAL": "Aporte Jubilación",
+        "habilitado": "N",
+        "tipO_VALOR_COSTO_LABORAL": "Porcentaje",
+        "porC_ITEM_COSTO_LABORAL": 10.17,
+        "aplicA_TOPE_ITEM": "N",
+        "roW_VERSION": "AAAAAADO21o="
+      },
+      {
+        "iD_ITEM_COSTO_LABORAL": 3,
+        "coD_ITEM_COSTO_LABORAL": "INSSJP",
+        "desC_ITEM_COSTO_LABORAL": "Aporte INSSJP ",
+        "habilitado": "N",
+        "tipO_VALOR_COSTO_LABORAL": "Porcentaje",
+        "porC_ITEM_COSTO_LABORAL": 1.5,
+        "aplicA_TOPE_ITEM": "N",
+        "roW_VERSION": "AAAAAADO21k="
+      },
+      {
+        "iD_ITEM_COSTO_LABORAL": 4,
+        "coD_ITEM_COSTO_LABORAL": "SUBFAMILIA",
+        "desC_ITEM_COSTO_LABORAL": "Aporte Subsidio Familiar",
+        "habilitado": "N",
+        "tipO_VALOR_COSTO_LABORAL": "Porcentaje",
+        "porC_ITEM_COSTO_LABORAL": 4.44,
+        "aplicA_TOPE_ITEM": "N",
+        "roW_VERSION": "AAAAAADO218="
+      },
+      {
+        "iD_ITEM_COSTO_LABORAL": 5,
+        "coD_ITEM_COSTO_LABORAL": "FNE",
+        "desC_ITEM_COSTO_LABORAL": "Aporte Fondo Nac. del Empleo",
+        "habilitado": "N",
+        "tipO_VALOR_COSTO_LABORAL": "Porcentaje",
+        "porC_ITEM_COSTO_LABORAL": 0.89,
+        "aplicA_TOPE_ITEM": "N",
+        "roW_VERSION": "AAAAAADO21g="
+      },
+      {
+        "iD_ITEM_COSTO_LABORAL": 6,
+        "coD_ITEM_COSTO_LABORAL": "ANSSALC10%",
+        "desC_ITEM_COSTO_LABORAL": "Aporte ANSSAL 10% (Convenio sdo.<$1000)",
+        "habilitado": "N",
+        "tipO_VALOR_COSTO_LABORAL": "Porcentaje",
+        "porC_ITEM_COSTO_LABORAL": 0.6,
+        "aplicA_TOPE_ITEM": "S",
+        "aplicA_TOPE_DE": "RI4",
+        "roW_VERSION": "AAAAAADO21M="
+      },
+      {
+        "iD_ITEM_COSTO_LABORAL": 7,
+        "coD_ITEM_COSTO_LABORAL": "ANSSALC15%",
+        "desC_ITEM_COSTO_LABORAL": "Aporte ANSSAL 15% (Convenio sdo.>$1000)",
+        "habilitado": "N",
+        "tipO_VALOR_COSTO_LABORAL": "Porcentaje",
+        "porC_ITEM_COSTO_LABORAL": 0.9,
+        "aplicA_TOPE_ITEM": "S",
+        "aplicA_TOPE_DE": "RI4",
+        "roW_VERSION": "AAAAAADO21Q="
+      },
+      {
+        "iD_ITEM_COSTO_LABORAL": 8,
+        "coD_ITEM_COSTO_LABORAL": "ANSSALF15%",
+        "desC_ITEM_COSTO_LABORAL": "Aporte ANSSAL 15%(Fuera de C. sdo<$1000)",
+        "habilitado": "N",
+        "tipO_VALOR_COSTO_LABORAL": "Porcentaje",
+        "porC_ITEM_COSTO_LABORAL": 0.9,
+        "aplicA_TOPE_ITEM": "S",
+        "aplicA_TOPE_DE": "RI4",
+        "roW_VERSION": "AAAAAADO21U="
+      },
+      {
+        "iD_ITEM_COSTO_LABORAL": 9,
+        "coD_ITEM_COSTO_LABORAL": "ANSSALF20%",
+        "desC_ITEM_COSTO_LABORAL": "Aporte ANSSAL 20%(Fuera de C. sdo>$1000)",
+        "habilitado": "N",
+        "tipO_VALOR_COSTO_LABORAL": "Porcentaje",
+        "porC_ITEM_COSTO_LABORAL": 1.2,
+        "aplicA_TOPE_ITEM": "S",
+        "aplicA_TOPE_DE": "RI4",
+        "roW_VERSION": "AAAAAADO21Y="
+      },
+      {
+        "iD_ITEM_COSTO_LABORAL": 10,
+        "coD_ITEM_COSTO_LABORAL": "OBRASC90%",
+        "desC_ITEM_COSTO_LABORAL": "Aporte O.S. 90% (Convenio sdo.<$1000)",
+        "habilitado": "N",
+        "tipO_VALOR_COSTO_LABORAL": "Porcentaje",
+        "porC_ITEM_COSTO_LABORAL": 5.4,
+        "aplicA_TOPE_ITEM": "S",
+        "aplicA_TOPE_DE": "RI4",
+        "roW_VERSION": "AAAAAADO21w="
+      },
+      {
+        "iD_ITEM_COSTO_LABORAL": 11,
+        "coD_ITEM_COSTO_LABORAL": "OBRASC85%",
+        "desC_ITEM_COSTO_LABORAL": "Aporte O.S. 85% (Convenio sdo.>$1000)",
+        "habilitado": "N",
+        "tipO_VALOR_COSTO_LABORAL": "Porcentaje",
+        "porC_ITEM_COSTO_LABORAL": 5.1,
+        "aplicA_TOPE_ITEM": "S",
+        "aplicA_TOPE_DE": "RI4",
+        "roW_VERSION": "AAAAAADO21s="
+      },
+      {
+        "iD_ITEM_COSTO_LABORAL": 12,
+        "coD_ITEM_COSTO_LABORAL": "OBRASF85%",
+        "desC_ITEM_COSTO_LABORAL": "Aporte O.S. 85% (Fuera de C. sdo<$1000)",
+        "habilitado": "N",
+        "tipO_VALOR_COSTO_LABORAL": "Porcentaje",
+        "porC_ITEM_COSTO_LABORAL": 5.1,
+        "aplicA_TOPE_ITEM": "S",
+        "aplicA_TOPE_DE": "RI4",
+        "roW_VERSION": "AAAAAADO214="
+      },
+      {
+        "iD_ITEM_COSTO_LABORAL": 13,
+        "coD_ITEM_COSTO_LABORAL": "OBRASF80%",
+        "desC_ITEM_COSTO_LABORAL": "Aporte O.S. 20% (Fuera de C. sdo>$1000)",
+        "habilitado": "N",
+        "tipO_VALOR_COSTO_LABORAL": "Porcentaje",
+        "porC_ITEM_COSTO_LABORAL": 4.8,
+        "aplicA_TOPE_ITEM": "S",
+        "aplicA_TOPE_DE": "RI4",
+        "roW_VERSION": "AAAAAADO210="
+      },
+      {
+        "iD_ITEM_COSTO_LABORAL": 14,
+        "coD_ITEM_COSTO_LABORAL": "ART",
+        "desC_ITEM_COSTO_LABORAL": "Aporte ART",
+        "habilitado": "N",
+        "tipO_VALOR_COSTO_LABORAL": "Porcentaje",
+        "porC_ITEM_COSTO_LABORAL": 0.48,
+        "aplicA_TOPE_ITEM": "S",
+        "aplicA_TOPE_DE": "RI4",
+        "roW_VERSION": "AAAAAADO21c="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

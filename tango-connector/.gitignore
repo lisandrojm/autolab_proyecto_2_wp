@@ -1,0 +1,30 @@
+# Dependencias y builds
+node_modules/
+dist/
+coverage/
+logs/
+*.log
+
+# Variables de entorno: nunca se commitean (solo los *.example)
+.env
+.env.*
+!.env.example
+
+# Conexion al VPS (credenciales SSH): nunca se commitea
+.vps*
+!.vps.example
+*.pem
+*.ppk
+id_rsa*
+id_ed25519*
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+build/
+*.tgz

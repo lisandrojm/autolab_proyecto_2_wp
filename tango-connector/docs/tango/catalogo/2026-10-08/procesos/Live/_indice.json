@@ -1,0 +1,37 @@
+{
+  "modulo": "Live",
+  "capturado": "2026-10-08T17:21:08.712Z",
+  "procesos": {
+    "2394": {
+      "estado": "error",
+      "detalle": "Se detectó una situación inesperada",
+      "titulo": null
+    },
+    "-10001": {
+      "estado": "sin-api",
+      "tablas": [
+        "AdministradorDeCarpetasApiParam"
+      ],
+      "titulo": "Administrador de mis carpetas personalizadas"
+    },
+    "-4": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_TAREA_PLANIFICADA"
+      ],
+      "titulo": "Suscripciones"
+    },
+    "-10002": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "Object"
+      ],
+      "titulo": null,
+      "nota": "id negativo, no guardado"
+    }
+  }
+}

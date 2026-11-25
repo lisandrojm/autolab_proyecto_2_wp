@@ -1,0 +1,450 @@
+{
+  "modulo": "Administrador",
+  "capturado": "2026-10-08T17:20:58.507Z",
+  "procesos": {
+    "1418": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "Empresa"
+      ],
+      "titulo": "Empresas"
+    },
+    "1570": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "Rol",
+        "RolPluginTangoAI"
+      ],
+      "titulo": "Roles"
+    },
+    "1593": {
+      "estado": "sin-api",
+      "tablas": [
+        "SERVER"
+      ],
+      "titulo": "Servidores de bases de datos"
+    },
+    "1595": {
+      "estado": "sin-api",
+      "tablas": [
+        "FUENTEACTUALIZACION"
+      ],
+      "titulo": "Fuentes de actualización"
+    },
+    "1714": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "Permiso"
+      ],
+      "titulo": "Permisos"
+    },
+    "1821": {
+      "estado": "sin-api",
+      "tablas": [
+        "Usuario"
+      ],
+      "titulo": "Usuarios"
+    },
+    "3237": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "PTA03"
+      ],
+      "titulo": "Frecuencias"
+    },
+    "3263": {
+      "estado": "sin-api",
+      "tablas": [
+        "PTA02",
+        "TAREA_EMPRESA",
+        "PTA04"
+      ],
+      "titulo": "Tareas de copia de seguridad"
+    },
+    "3267": {
+      "estado": "sin-api",
+      "tablas": [
+        "PTA02",
+        "TAREA_EMPRESA",
+        "PTA04"
+      ],
+      "titulo": "Tareas de automatización de listas de precios de ventas"
+    },
+    "3271": {
+      "estado": "sin-api",
+      "tablas": [
+        "PTA02",
+        "TAREA_EMPRESA",
+        "PTA04"
+      ],
+      "titulo": "Tareas de depuración"
+    },
+    "3283": {
+      "estado": "sin-api",
+      "tablas": [
+        "PTA06"
+      ],
+      "titulo": "Terminales para tareas"
+    },
+    "3346": {
+      "estado": "sin-api",
+      "tablas": [
+        "InstalarLicenciaApiParams"
+      ],
+      "titulo": "Instalar licencia"
+    },
+    "3358": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "CopiaSeguridadApiParams"
+      ],
+      "titulo": "Crear nueva copia de seguridad"
+    },
+    "3359": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "CompactarBaseDeDatosApiParams"
+      ],
+      "titulo": "Compactar base de datos"
+    },
+    "3366": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "RestablecerConfiguracionTecnicaApiParams"
+      ],
+      "titulo": "Restablecer configuración técnica"
+    },
+    "3434": {
+      "estado": "sin-api",
+      "tablas": [
+        "TGANUM",
+        "MONEDA"
+      ],
+      "titulo": "Configuración de decimales"
+    },
+    "3435": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "ConvertirEmpresasApiParams"
+      ],
+      "titulo": "Convertir Empresas"
+    },
+    "3436": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "InstalarActualizacionesEmpresasApiParams"
+      ],
+      "titulo": "Instalar actualizaciones"
+    },
+    "3437": {
+      "estado": "sin-api",
+      "tablas": [
+        "IngresarCuotaApiParams"
+      ],
+      "titulo": "Ingresar cuota"
+    },
+    "3438": {
+      "estado": "sin-api",
+      "tablas": [
+        "HabilitacionTelellaveApiParams"
+      ],
+      "titulo": "Habilitación de Telellave"
+    },
+    "19735": {
+      "estado": "sin-api",
+      "tablas": [
+        "PTA02",
+        "TAREA_EMPRESA",
+        "PTA04"
+      ],
+      "titulo": "Tareas de automatización de Factura de crédito de compras"
+    },
+    "19771": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "VerificarEstructuraApiParams"
+      ],
+      "titulo": "Verificar estructura de empresas"
+    },
+    "19780": {
+      "estado": "sin-api",
+      "tablas": [
+        "TangoService",
+        "TangoServiceDetail"
+      ],
+      "titulo": "Monitoreo de servicios"
+    },
+    "19781": {
+      "estado": "sin-api",
+      "tablas": [
+        "PTA02",
+        "TAREA_EMPRESA",
+        "PTA04"
+      ],
+      "titulo": "Tareas de automatización de Factura de crédito de ventas"
+    },
+    "19785": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "ReemplazarBaseDeDatosDeEmpresaApiParams"
+      ],
+      "titulo": "Restaurar empresa"
+    },
+    "19786": {
+      "estado": "sin-api",
+      "tablas": [
+        "PTA02",
+        "TAREA_EMPRESA",
+        "PTA04"
+      ],
+      "titulo": "Tareas de automatización de Central"
+    },
+    "19805": {
+      "estado": "sin-api",
+      "tablas": [
+        "LlaveVirtualOfflineApiParams"
+      ],
+      "titulo": "Habilitación de Llave Virtual Offline"
+    },
+    "19840": {
+      "estado": "sin-api",
+      "tablas": [
+        "DatosLicencia",
+        "DATO_LICENCIA_MODULO",
+        "DATO_LICENCIA_OPCIONAL",
+        "DATO_LICENCIA_LEGAJO",
+        "DATO_LICENCIA_LEGAJO_POR_SISTEMA"
+      ],
+      "titulo": "Datos de licencia"
+    },
+    "20077": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "CopiarCamposAdicionalesApiParams"
+      ],
+      "titulo": "Copiar campos adicionales"
+    },
+    "20177": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "EmpresasModel"
+      ],
+      "titulo": "Empresas"
+    },
+    "20178": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ServidoresModel"
+      ],
+      "titulo": "Servidores"
+    },
+    "20179": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "UsuariosModel"
+      ],
+      "titulo": "Usuarios"
+    },
+    "20180": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "CamposAdicionalesModel"
+      ],
+      "titulo": "Campos Adicionales"
+    },
+    "20183": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "RolesModel"
+      ],
+      "titulo": "Roles"
+    },
+    "20184": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "PermisosModel"
+      ],
+      "titulo": "Permisos"
+    },
+    "20186": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "CopiasDeSeguridadModel"
+      ],
+      "titulo": "Copias de Seguridad"
+    },
+    "20187": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "DepuracionModel"
+      ],
+      "titulo": "Depuración"
+    },
+    "20188": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TareasDeAutomatizacionContableModel"
+      ],
+      "titulo": "Tareas de automatización contable"
+    },
+    "20195": {
+      "estado": "sin-api",
+      "tablas": [
+        "PTA02",
+        "TAREA_EMPRESA",
+        "PTA04"
+      ],
+      "titulo": "Tareas de automatización de obtención de CAEA"
+    },
+    "20199": {
+      "estado": "sin-api",
+      "tablas": [
+        "PTA02",
+        "TAREA_EMPRESA",
+        "PTA04"
+      ],
+      "titulo": "Tareas de automatización de informar CAEA"
+    },
+    "20240": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "PermisosUsuariosModel"
+      ],
+      "titulo": "Permisos de usuarios"
+    },
+    "20389": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SuscripcionesModel"
+      ],
+      "titulo": "Suscripciones"
+    },
+    "20390": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_TAREA_PLANIFICADA"
+      ],
+      "titulo": "Suscripciones"
+    }
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "title": "Movimientos ingresados al stock o rechazados",
+  "moduleId": 10002,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "StockMovimientosIngresadosAlStockORechazadosModel": [
+      "ID_STA14",
+      "ID_CTA115",
+      "ID_SUCURSAL",
+      "TIENE_DIFERENCIA",
+      "COD_COMPROBANTE",
+      "NRO_COMPROBANTE",
+      "ESTADO",
+      "FECHA_DE_EMISION",
+      "NRO_SUCURSAL",
+      "DESC_SUCURSAL_ORIGEN",
+      "INGRESADO_CON_REVISION",
+      "ID_GVA14",
+      "COD_CLIENTE",
+      "RAZON_SOCIAL",
+      "COD_COMPROBANTE_STOCK",
+      "NRO_COMPROBANTE_STOCK",
+      "DESCRIPCION_COMPROBANTE",
+      "DESCRIPCION_COMPROBANTE_ORIGEN",
+      "ARTICULO",
+      "PARTIDA",
+      "SERIE",
+      "COD_RUBRO_COMERCIAL",
+      "RUBRO_COMERCIAL",
+      "USUARIO",
+      "TELEFONO",
+      "TELEFONO_2",
+      "TELEFONO_MOVIL_WA",
+      "MOVIL",
+      "EMAIL",
+      "EMAIL_COMPROBANTES",
+      "EMAILS_ENVIO_COTIZACION",
+      "MOVILES_ENVIO_COTIZACION",
+      "EMAILS_ENVIO_RECIBO",
+      "MOVILES_ENVIO_RECIBO",
+      "EMAILS_ENVIO_PEDIDO",
+      "MOVILES_ENVIO_PEDIDO",
+      "EMAILS_RESPONSABLES_PAGOS",
+      "MOVILES_RESPONSABLES_PAGOS"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

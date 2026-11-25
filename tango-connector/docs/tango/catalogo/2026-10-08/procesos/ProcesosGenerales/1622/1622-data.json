@@ -1,0 +1,179 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_TIPO_ASIENTO": 10,
+        "coD_TIPO_ASIENTO": "SUELDOS",
+        "desC_TIPO_ASIENTO": "Liquidaciones de sueldos",
+        "habilitado": "S",
+        "generA_ASIENTO_RESUMEN": "N",
+        "estadO_INICIAL_ASIENTOS": "Borrador",
+        "editA_ESTADO_ASIENTOS": "S",
+        "iD_AGRUPACION_ASIENTO": 4,
+        "coD_DESCRIP": "SUELDOS - Liquidaciones de sueldos",
+        "roW_VERSION": "AAAAAADPVcM="
+      },
+      {
+        "iD_TIPO_ASIENTO": 11,
+        "coD_TIPO_ASIENTO": "TEN",
+        "desC_TIPO_ASIENTO": "Tenencia",
+        "habilitado": "S",
+        "generA_ASIENTO_RESUMEN": "N",
+        "estadO_INICIAL_ASIENTOS": "Ingresado",
+        "editA_ESTADO_ASIENTOS": "S",
+        "iD_AGRUPACION_ASIENTO": 6,
+        "coD_DESCRIP": "TEN - Tenencia",
+        "roW_VERSION": "AAAAAADPVcQ="
+      },
+      {
+        "iD_TIPO_ASIENTO": 16,
+        "coD_TIPO_ASIENTO": "PAT01",
+        "desC_TIPO_ASIENTO": "Cierre de cuentas patrimoniales",
+        "habilitado": "S",
+        "generA_ASIENTO_RESUMEN": "N",
+        "estadO_INICIAL_ASIENTOS": "Registrado",
+        "editA_ESTADO_ASIENTOS": "S",
+        "iD_AGRUPACION_ASIENTO": 7,
+        "coD_DESCRIP": "PAT01 - Cierre de cuentas patrimoniales",
+        "roW_VERSION": "AAAAAADPVb4="
+      },
+      {
+        "iD_TIPO_ASIENTO": 17,
+        "coD_TIPO_ASIENTO": "RES01",
+        "desC_TIPO_ASIENTO": "Refundición de cuentas de resultado",
+        "habilitado": "S",
+        "generA_ASIENTO_RESUMEN": "N",
+        "estadO_INICIAL_ASIENTOS": "Registrado",
+        "editA_ESTADO_ASIENTOS": "S",
+        "iD_AGRUPACION_ASIENTO": 11,
+        "coD_DESCRIP": "RES01 - Refundición de cuentas de resultado",
+        "roW_VERSION": "AAAAAADPVcA="
+      },
+      {
+        "iD_TIPO_ASIENTO": 18,
+        "coD_TIPO_ASIENTO": "RES02",
+        "desC_TIPO_ASIENTO": "Pasaje a resultados acumulados",
+        "habilitado": "S",
+        "generA_ASIENTO_RESUMEN": "N",
+        "estadO_INICIAL_ASIENTOS": "Registrado",
+        "editA_ESTADO_ASIENTOS": "S",
+        "iD_AGRUPACION_ASIENTO": 11,
+        "coD_DESCRIP": "RES02 - Pasaje a resultados acumulados",
+        "roW_VERSION": "AAAAAADPVcE="
+      },
+      {
+        "iD_TIPO_ASIENTO": 19,
+        "coD_TIPO_ASIENTO": "PAT02",
+        "desC_TIPO_ASIENTO": "Apertura de cuentas patrimoniales",
+        "habilitado": "S",
+        "generA_ASIENTO_RESUMEN": "N",
+        "estadO_INICIAL_ASIENTOS": "Borrador",
+        "editA_ESTADO_ASIENTOS": "S",
+        "iD_AGRUPACION_ASIENTO": 8,
+        "coD_DESCRIP": "PAT02 - Apertura de cuentas patrimoniales",
+        "roW_VERSION": "AAAAAADPVb8="
+      },
+      {
+        "iD_TIPO_ASIENTO": 20,
+        "coD_TIPO_ASIENTO": "AJU",
+        "desC_TIPO_ASIENTO": "Ajuste por inflación",
+        "habilitado": "S",
+        "generA_ASIENTO_RESUMEN": "N",
+        "estadO_INICIAL_ASIENTOS": "Borrador",
+        "editA_ESTADO_ASIENTOS": "S",
+        "iD_AGRUPACION_ASIENTO": 9,
+        "coD_DESCRIP": "AJU - Ajuste por inflación",
+        "roW_VERSION": "AAAAAADPVbo="
+      },
+      {
+        "iD_TIPO_ASIENTO": 21,
+        "coD_TIPO_ASIENTO": "CONVER",
+        "desC_TIPO_ASIENTO": "Conversión",
+        "habilitado": "S",
+        "generA_ASIENTO_RESUMEN": "N",
+        "estadO_INICIAL_ASIENTOS": "Ingresado",
+        "editA_ESTADO_ASIENTOS": "S",
+        "iD_AGRUPACION_ASIENTO": 6,
+        "coD_DESCRIP": "CONVER - Conversión",
+        "roW_VERSION": "AAAAAADPVb0="
+      },
+      {
+        "iD_TIPO_ASIENTO": 22,
+        "coD_TIPO_ASIENTO": "SB",
+        "desC_TIPO_ASIENTO": "Asientos de Tesorería",
+        "habilitado": "S",
+        "generA_ASIENTO_RESUMEN": "S",
+        "estadO_INICIAL_ASIENTOS": "Ingresado",
+        "editA_ESTADO_ASIENTOS": "S",
+        "coD_DESCRIP": "SB - Asientos de Tesorería",
+        "roW_VERSION": "AAAAAADPVcI="
+      },
+      {
+        "iD_TIPO_ASIENTO": 23,
+        "coD_TIPO_ASIENTO": "COMPRAS",
+        "desC_TIPO_ASIENTO": "COMPRAS",
+        "habilitado": "S",
+        "generA_ASIENTO_RESUMEN": "S",
+        "estadO_INICIAL_ASIENTOS": "Ingresado",
+        "editA_ESTADO_ASIENTOS": "S",
+        "iD_AGRUPACION_ASIENTO": 3,
+        "coD_DESCRIP": "COMPRAS - COMPRAS",
+        "roW_VERSION": "AAAAAADPVbw="
+      },
+      {
+        "iD_TIPO_ASIENTO": 24,
+        "coD_TIPO_ASIENTO": "VENTAS",
+        "desC_TIPO_ASIENTO": "VENTAS",
+        "habilitado": "S",
+        "generA_ASIENTO_RESUMEN": "S",
+        "estadO_INICIAL_ASIENTOS": "Ingresado",
+        "editA_ESTADO_ASIENTOS": "S",
+        "coD_DESCRIP": "VENTAS - VENTAS",
+        "roW_VERSION": "AAAAAADPVcU="
+      },
+      {
+        "iD_TIPO_ASIENTO": 25,
+        "coD_TIPO_ASIENTO": "CN",
+        "desC_TIPO_ASIENTO": "ASIENTO DE CONTABILIDAD",
+        "habilitado": "S",
+        "generA_ASIENTO_RESUMEN": "N",
+        "estadO_INICIAL_ASIENTOS": "Ingresado",
+        "editA_ESTADO_ASIENTOS": "S",
+        "coD_DESCRIP": "CN - ASIENTO DE CONTABILIDAD",
+        "roW_VERSION": "AAAAAADPVbs="
+      },
+      {
+        "iD_TIPO_ASIENTO": 31,
+        "coD_TIPO_ASIENTO": "NOHABCON",
+        "desC_TIPO_ASIENTO": "",
+        "habilitado": "N",
+        "generA_ASIENTO_RESUMEN": "N",
+        "estadO_INICIAL_ASIENTOS": "Ingresado",
+        "editA_ESTADO_ASIENTOS": "N",
+        "coD_DESCRIP": "NOHABCON",
+        "roW_VERSION": "AAAAAADf4+s="
+      },
+      {
+        "iD_TIPO_ASIENTO": 32,
+        "coD_TIPO_ASIENTO": "LMBVENTAS",
+        "desC_TIPO_ASIENTO": "",
+        "habilitado": "S",
+        "generA_ASIENTO_RESUMEN": "N",
+        "estadO_INICIAL_ASIENTOS": "Ingresado",
+        "editA_ESTADO_ASIENTOS": "N",
+        "coD_DESCRIP": "LMBVENTAS",
+        "roW_VERSION": "AAAAAADf5JA="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

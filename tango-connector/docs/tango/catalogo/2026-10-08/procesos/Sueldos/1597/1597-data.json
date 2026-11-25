@@ -1,0 +1,21 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_PARAMETRIZACION": 1,
+        "iD_ENTIDAD": 12,
+        "roW_VERSION": "AAAAAADfrt4="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

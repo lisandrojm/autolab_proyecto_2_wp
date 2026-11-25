@@ -1,0 +1,1612 @@
+{
+  "56": {
+    "modulo": "Stock",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 250502,
+    "dataBytes": 21102
+  },
+  "59": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 58283,
+    "dataBytes": 449
+  },
+  "65": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 181981,
+    "dataBytes": 794
+  },
+  "85": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 156125,
+    "dataBytes": 181
+  },
+  "87": {
+    "modulo": "Stock",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 1080277,
+    "dataBytes": 195550
+  },
+  "106": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 151454,
+    "dataBytes": 685
+  },
+  "122": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=5",
+    "formBytes": 81853,
+    "dataBytes": 1215
+  },
+  "134": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 151331,
+    "dataBytes": 570
+  },
+  "138": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=7",
+    "formBytes": 76211,
+    "dataBytes": 1444
+  },
+  "158": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=3",
+    "formBytes": 82998,
+    "dataBytes": 439
+  },
+  "170": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=3",
+    "formBytes": 149291,
+    "dataBytes": 501
+  },
+  "172": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 152596,
+    "dataBytes": 15939
+  },
+  "175": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=0 filas=30",
+    "formBytes": 82971,
+    "dataBytes": 4833
+  },
+  "183": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 510210,
+    "dataBytes": 885
+  },
+  "187": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=0 filas=4",
+    "formBytes": 62201,
+    "dataBytes": 746
+  },
+  "191": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 213057,
+    "dataBytes": 556
+  },
+  "198": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 348623,
+    "dataBytes": 181
+  },
+  "202": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 95516,
+    "dataBytes": 517
+  },
+  "206": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=0 filas=3",
+    "formBytes": 56459,
+    "dataBytes": 561
+  },
+  "214": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 54268,
+    "dataBytes": 181
+  },
+  "218": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=0 filas=33",
+    "formBytes": 151457,
+    "dataBytes": 18772
+  },
+  "251": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 66948,
+    "dataBytes": 330
+  },
+  "259": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=29 filas=29",
+    "formBytes": 83990,
+    "dataBytes": 10241,
+    "dataNota": "columns explícitas (10, las de la grilla del form); con columns:[] Tango pide columnas que no existen en la base"
+  },
+  "308": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 54337,
+    "dataBytes": 181
+  },
+  "326": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=14",
+    "formBytes": 155049,
+    "dataBytes": 8613
+  },
+  "360": {
+    "modulo": "Stock",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 823037,
+    "dataBytes": 181
+  },
+  "370": {
+    "modulo": "Stock",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 238377,
+    "dataBytes": 181
+  },
+  "412": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 70069,
+    "dataBytes": 181
+  },
+  "540": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 121322,
+    "dataBytes": 513
+  },
+  "548": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 307404,
+    "dataBytes": 43559
+  },
+  "747": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 121367,
+    "dataBytes": 181
+  },
+  "751": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 562997,
+    "dataBytes": 181
+  },
+  "767": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 54327,
+    "dataBytes": 181
+  },
+  "842": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=9",
+    "formBytes": 58939,
+    "dataBytes": 1509
+  },
+  "852": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=30",
+    "formBytes": 77305,
+    "dataBytes": 11569
+  },
+  "864": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=86",
+    "formBytes": 62681,
+    "dataBytes": 16963
+  },
+  "876": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 56355,
+    "dataBytes": 181
+  },
+  "884": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 56358,
+    "dataBytes": 181
+  },
+  "896": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 56522,
+    "dataBytes": 325
+  },
+  "908": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=5",
+    "formBytes": 89344,
+    "dataBytes": 1261
+  },
+  "920": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 55649,
+    "dataBytes": 364
+  },
+  "932": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=12",
+    "formBytes": 69744,
+    "dataBytes": 2806
+  },
+  "940": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 56351,
+    "dataBytes": 181
+  },
+  "944": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 60948,
+    "dataBytes": 181
+  },
+  "952": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 108216,
+    "dataBytes": 40546
+  },
+  "960": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=4",
+    "formBytes": 100116,
+    "dataBytes": 1454
+  },
+  "972": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 142791,
+    "dataBytes": 982
+  },
+  "984": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 128575,
+    "dataBytes": 802
+  },
+  "996": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 197271,
+    "dataBytes": 447
+  },
+  "1012": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=4",
+    "formBytes": 492698,
+    "dataBytes": 7314
+  },
+  "1020": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 54229,
+    "dataBytes": 15430
+  },
+  "1021": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 1023422,
+    "dataBytes": 181
+  },
+  "1023": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 54199,
+    "dataBytes": 303
+  },
+  "1025": {
+    "modulo": "ControlDePersonal",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 54355,
+    "dataBytes": 181
+  },
+  "1030": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=25",
+    "formBytes": 64596,
+    "dataBytes": 4759
+  },
+  "1031": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=10",
+    "formBytes": 57574,
+    "dataBytes": 1714
+  },
+  "1032": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=3",
+    "formBytes": 83189,
+    "dataBytes": 841
+  },
+  "1033": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 97726,
+    "dataBytes": 181
+  },
+  "1034": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 86590,
+    "dataBytes": 181
+  },
+  "1036": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 50128,
+    "dataBytes": 181
+  },
+  "1038": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=48",
+    "formBytes": 1025107,
+    "dataBytes": 85219
+  },
+  "1039": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 377205,
+    "dataBytes": 181
+  },
+  "1041": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 125376,
+    "dataBytes": 645
+  },
+  "1043": {
+    "modulo": "ControlDePersonal",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 68330,
+    "dataBytes": 753
+  },
+  "1055": {
+    "modulo": "ControlDePersonal",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 72971,
+    "dataBytes": 519
+  },
+  "1058": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 122665,
+    "dataBytes": 181
+  },
+  "1060": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 259614,
+    "dataBytes": 181
+  },
+  "1061": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 114225,
+    "dataBytes": 181
+  },
+  "1062": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 474466,
+    "dataBytes": 1856
+  },
+  "1063": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 119087,
+    "dataBytes": 367
+  },
+  "1066": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 157945,
+    "dataBytes": 746
+  },
+  "1067": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 63882,
+    "dataBytes": 17346
+  },
+  "1070": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 147422,
+    "dataBytes": 33750
+  },
+  "1074": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=78",
+    "formBytes": 80591,
+    "dataBytes": 23153
+  },
+  "1075": {
+    "modulo": "ControlDePersonal",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 54864,
+    "dataBytes": 181
+  },
+  "1078": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 54264,
+    "dataBytes": 314
+  },
+  "1082": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 152890,
+    "dataBytes": 407
+  },
+  "1083": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 155386,
+    "dataBytes": 181
+  },
+  "1084": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 54250,
+    "dataBytes": 15817
+  },
+  "1086": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 125663,
+    "dataBytes": 181
+  },
+  "1089": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 162414,
+    "dataBytes": 974
+  },
+  "1093": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 173229,
+    "dataBytes": 181
+  },
+  "1096": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 54373,
+    "dataBytes": 288
+  },
+  "1110": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=7",
+    "formBytes": 83868,
+    "dataBytes": 1193
+  },
+  "1112": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 146463,
+    "dataBytes": 181
+  },
+  "1115": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=56",
+    "formBytes": 52784,
+    "dataBytes": 5797
+  },
+  "1118": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 76250,
+    "dataBytes": 468
+  },
+  "1124": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=50",
+    "formBytes": 1335306,
+    "dataBytes": 118061
+  },
+  "1125": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 149759,
+    "dataBytes": 18904
+  },
+  "1127": {
+    "modulo": "ControlDePersonal",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 407168,
+    "dataBytes": 1265
+  },
+  "1145": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 651466,
+    "dataBytes": 399
+  },
+  "1148": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 57320,
+    "dataBytes": 19338
+  },
+  "1149": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 269842,
+    "dataBytes": 181
+  },
+  "1152": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 118454,
+    "dataBytes": 10282
+  },
+  "1154": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 507357,
+    "dataBytes": 181
+  },
+  "1245": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=9",
+    "formBytes": 93065,
+    "dataBytes": 3976
+  },
+  "1273": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=10 filas=10",
+    "formBytes": 193948,
+    "dataBytes": 7362,
+    "dataNota": "columns explícitas (23, las de la grilla del form); con columns:[] Tango pide columnas que no existen en la base"
+  },
+  "1344": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 110855,
+    "dataBytes": 9182
+  },
+  "1345": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 231642,
+    "dataBytes": 181
+  },
+  "1346": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 136063,
+    "dataBytes": 181
+  },
+  "1366": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 57358,
+    "dataBytes": 181
+  },
+  "1377": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=483 filas=100",
+    "formBytes": 325024,
+    "dataBytes": 32885,
+    "dataNota": "columns explícitas (10, las de la grilla del form); con columns:[] Tango pide columnas que no existen en la base"
+  },
+  "1386": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=33",
+    "formBytes": 50003,
+    "dataBytes": 4708
+  },
+  "1401": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 69535,
+    "dataBytes": 181
+  },
+  "1418": {
+    "modulo": "Administrador",
+    "form": "ok",
+    "data": "ok total=0 filas=13",
+    "formBytes": 408330,
+    "dataBytes": 7062
+  },
+  "1419": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=10",
+    "formBytes": 55116,
+    "dataBytes": 1736
+  },
+  "1420": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=43",
+    "formBytes": 54331,
+    "dataBytes": 8597
+  },
+  "1442": {
+    "modulo": "Contabilidad",
+    "form": "ok",
+    "data": "ok total=0 filas=16",
+    "formBytes": 110438,
+    "dataBytes": 5708
+  },
+  "1443": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=4",
+    "formBytes": 94199,
+    "dataBytes": 920
+  },
+  "1539": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=13",
+    "formBytes": 55152,
+    "dataBytes": 2595
+  },
+  "1569": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 95274,
+    "dataBytes": 181
+  },
+  "1570": {
+    "modulo": "Administrador",
+    "form": "ok",
+    "data": "ok total=0 filas=8",
+    "formBytes": 66545,
+    "dataBytes": 1500
+  },
+  "1575": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 350551,
+    "dataBytes": 125513
+  },
+  "1588": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 54323,
+    "dataBytes": 469
+  },
+  "1597": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 139378,
+    "dataBytes": 260
+  },
+  "1598": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 57659,
+    "dataBytes": 468
+  },
+  "1600": {
+    "modulo": "Contabilidad",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 418222,
+    "dataBytes": 181
+  },
+  "1601": {
+    "modulo": "Contabilidad",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 57513,
+    "dataBytes": 181
+  },
+  "1610": {
+    "modulo": "Contabilidad",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 66392,
+    "dataBytes": 310
+  },
+  "1614": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 54254,
+    "dataBytes": 556
+  },
+  "1618": {
+    "modulo": "Contabilidad",
+    "form": "ok",
+    "data": "ok total=0 filas=3",
+    "formBytes": 116121,
+    "dataBytes": 842
+  },
+  "1622": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=14",
+    "formBytes": 101482,
+    "dataBytes": 4268
+  },
+  "1626": {
+    "modulo": "Contabilidad",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 350560,
+    "dataBytes": 125513
+  },
+  "1630": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 83530,
+    "dataBytes": 330
+  },
+  "1634": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=8",
+    "formBytes": 54242,
+    "dataBytes": 1095
+  },
+  "1640": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=11",
+    "formBytes": 54319,
+    "dataBytes": 1617
+  },
+  "1648": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 98744,
+    "dataBytes": 314
+  },
+  "1652": {
+    "modulo": "Contabilidad",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 98584,
+    "dataBytes": 307
+  },
+  "1656": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=6",
+    "formBytes": 130023,
+    "dataBytes": 2199
+  },
+  "1660": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=5",
+    "formBytes": 163393,
+    "dataBytes": 1890
+  },
+  "1664": {
+    "modulo": "Contabilidad",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 457800,
+    "dataBytes": 91578
+  },
+  "1668": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=7",
+    "formBytes": 126437,
+    "dataBytes": 2048
+  },
+  "1670": {
+    "modulo": "Contabilidad",
+    "form": "ok",
+    "data": "ok total=0 filas=5",
+    "formBytes": 165240,
+    "dataBytes": 1890
+  },
+  "1704": {
+    "modulo": "Contabilidad",
+    "form": "ok",
+    "data": "ok total=0 filas=11",
+    "formBytes": 50033,
+    "dataBytes": 1181
+  },
+  "1706": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 53614,
+    "dataBytes": 15224
+  },
+  "1707": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 56901,
+    "dataBytes": 19737
+  },
+  "1711": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 60011,
+    "dataBytes": 22667
+  },
+  "1714": {
+    "modulo": "Administrador",
+    "form": "ok",
+    "data": "ok total=0 filas=54",
+    "formBytes": 185762,
+    "dataBytes": 5038
+  },
+  "1733": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 143063,
+    "dataBytes": 19424
+  },
+  "1832": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 91369,
+    "dataBytes": 974
+  },
+  "1842": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 110290,
+    "dataBytes": 181
+  },
+  "1853": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 141909,
+    "dataBytes": 300
+  },
+  "1873": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 91287,
+    "dataBytes": 356
+  },
+  "1910": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 86147,
+    "dataBytes": 181
+  },
+  "1913": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=20",
+    "formBytes": 54108,
+    "dataBytes": 3092
+  },
+  "1921": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 60953,
+    "dataBytes": 181
+  },
+  "1975": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 56352,
+    "dataBytes": 181
+  },
+  "2117": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 830915,
+    "dataBytes": 141649
+  },
+  "2122": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 115531,
+    "dataBytes": 181
+  },
+  "2132": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 83128,
+    "dataBytes": 392
+  },
+  "2295": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=21",
+    "formBytes": 55036,
+    "dataBytes": 3265
+  },
+  "2302": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=19",
+    "formBytes": 54199,
+    "dataBytes": 3153
+  },
+  "2308": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=3",
+    "formBytes": 53493,
+    "dataBytes": 677
+  },
+  "2320": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=14",
+    "formBytes": 80381,
+    "dataBytes": 4127
+  },
+  "2321": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 95462,
+    "dataBytes": 408
+  },
+  "2342": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 91740,
+    "dataBytes": 181
+  },
+  "2383": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 122272,
+    "dataBytes": 353
+  },
+  "2497": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=9",
+    "formBytes": 194596,
+    "dataBytes": 3707
+  },
+  "2552": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=6",
+    "formBytes": 107599,
+    "dataBytes": 3847
+  },
+  "2603": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=43",
+    "formBytes": 73801,
+    "dataBytes": 10007
+  },
+  "2628": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=3",
+    "formBytes": 100239,
+    "dataBytes": 1220
+  },
+  "2656": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 56358,
+    "dataBytes": 181
+  },
+  "2664": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=86",
+    "formBytes": 62686,
+    "dataBytes": 16963
+  },
+  "2688": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 63460,
+    "dataBytes": 385
+  },
+  "2700": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 546071,
+    "dataBytes": 889
+  },
+  "2728": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=25",
+    "formBytes": 70199,
+    "dataBytes": 5920
+  },
+  "2748": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=6",
+    "formBytes": 61592,
+    "dataBytes": 1196
+  },
+  "2782": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 57090,
+    "dataBytes": 181
+  },
+  "2792": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 214783,
+    "dataBytes": 181
+  },
+  "2824": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 145295,
+    "dataBytes": 181
+  },
+  "2832": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 239413,
+    "dataBytes": 241,
+    "dataNota": "columns explícitas (60, las de la grilla del form); con columns:[] Tango pide columnas que no existen en la base (se excluye TIPO_CUENTA_BANCO, como hace la web)"
+  },
+  "2847": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 56370,
+    "dataBytes": 181
+  },
+  "2860": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 59886,
+    "dataBytes": 181
+  },
+  "2874": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=52",
+    "formBytes": 60566,
+    "dataBytes": 9308
+  },
+  "2908": {
+    "modulo": "Stock",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 60641,
+    "dataBytes": 181
+  },
+  "2916": {
+    "modulo": "Stock",
+    "form": "ok",
+    "data": "ok total=0 filas=19",
+    "formBytes": 56350,
+    "dataBytes": 2756
+  },
+  "2933": {
+    "modulo": "Stock",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 108320,
+    "dataBytes": 46757
+  },
+  "2941": {
+    "modulo": "Stock",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 71222,
+    "dataBytes": 444
+  },
+  "2957": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 56362,
+    "dataBytes": 181
+  },
+  "2973": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=8",
+    "formBytes": 110888,
+    "dataBytes": 3735
+  },
+  "3010": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=10",
+    "formBytes": 113978,
+    "dataBytes": 2948
+  },
+  "3142": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 628013,
+    "dataBytes": 159950
+  },
+  "3158": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=4",
+    "formBytes": 153776,
+    "dataBytes": 90707
+  },
+  "3187": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 118899,
+    "dataBytes": 181
+  },
+  "3237": {
+    "modulo": "Administrador",
+    "form": "ok",
+    "data": "ok total=0 filas=26",
+    "formBytes": 129012,
+    "dataBytes": 13821
+  },
+  "3275": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 60310,
+    "dataBytes": 181
+  },
+  "3297": {
+    "modulo": "Stock",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 113307,
+    "dataBytes": 1169
+  },
+  "3347": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 55085,
+    "dataBytes": 181
+  },
+  "3367": {
+    "modulo": "Stock",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 73337,
+    "dataBytes": 514
+  },
+  "3378": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 99259,
+    "dataBytes": 181
+  },
+  "3457": {
+    "modulo": "Stock",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 84270,
+    "dataBytes": 181
+  },
+  "3471": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 363844,
+    "dataBytes": 181
+  },
+  "3479": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=7",
+    "formBytes": 86487,
+    "dataBytes": 1049
+  },
+  "12263": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=6 filas=6",
+    "formBytes": 836607,
+    "dataBytes": 42261,
+    "dataNota": "columns explícitas (181, las de la grilla del form); con columns:[] Tango pide columnas que no existen en la base"
+  },
+  "12289": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 872663,
+    "dataBytes": 1218
+  },
+  "12290": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 1890345,
+    "dataBytes": 181
+  },
+  "12961": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 306862,
+    "dataBytes": 181
+  },
+  "19646": {
+    "modulo": "Stock",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 67696,
+    "dataBytes": 181
+  },
+  "19654": {
+    "modulo": "Stock",
+    "form": "ok",
+    "data": "ok total=0 filas=3",
+    "formBytes": 77694,
+    "dataBytes": 586
+  },
+  "19677": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 207113,
+    "dataBytes": 952
+  },
+  "19706": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=16",
+    "formBytes": 256149,
+    "dataBytes": 7037
+  },
+  "19729": {
+    "modulo": "Stock",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 103296,
+    "dataBytes": 955
+  },
+  "19744": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 158364,
+    "dataBytes": 522
+  },
+  "19759": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=12",
+    "formBytes": 112994,
+    "dataBytes": 5626
+  },
+  "19845": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 1641236,
+    "dataBytes": 156048
+  },
+  "20008": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=70",
+    "formBytes": 140964,
+    "dataBytes": 9627
+  },
+  "20020": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=6 filas=6",
+    "formBytes": 708289,
+    "dataBytes": 33213,
+    "dataNota": "columns explícitas (139, las de la grilla del form); con columns:[] Tango pide columnas que no existen en la base"
+  },
+  "20091": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 116500,
+    "dataBytes": 36515
+  },
+  "20104": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=2",
+    "formBytes": 337924,
+    "dataBytes": 1914
+  },
+  "20123": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 119658,
+    "dataBytes": 181
+  },
+  "20250": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 77293,
+    "dataBytes": 181
+  },
+  "20255": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=100",
+    "formBytes": 52846,
+    "dataBytes": 17961
+  },
+  "20259": {
+    "modulo": "Stock",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 60402,
+    "dataBytes": 310
+  },
+  "20342": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 108744,
+    "dataBytes": 181
+  },
+  "20350": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 231290,
+    "dataBytes": 181
+  },
+  "20367": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 114571,
+    "dataBytes": 424
+  },
+  "21152": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 53661,
+    "dataBytes": 342
+  },
+  "21171": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=9",
+    "formBytes": 134390,
+    "dataBytes": 4032
+  },
+  "21207": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 178909,
+    "dataBytes": 181
+  },
+  "21225": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 128853,
+    "dataBytes": 181
+  },
+  "21248": {
+    "modulo": "Stock",
+    "form": "pendiente: Debe habilitar el parámetro de Stock \"Permite fraccionar artículos desde procesos\".",
+    "data": "ok total=0 filas=100",
+    "formBytes": 192,
+    "dataBytes": 96775
+  },
+  "21262": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=36",
+    "formBytes": 118842,
+    "dataBytes": 4033
+  },
+  "21266": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=13",
+    "formBytes": 114744,
+    "dataBytes": 1819
+  },
+  "21270": {
+    "modulo": "Sueldos",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 83736,
+    "dataBytes": 807
+  },
+  "21434": {
+    "modulo": "Ventas",
+    "form": "ok",
+    "data": "ok total=1 filas=1",
+    "formBytes": 590400,
+    "dataBytes": 2145,
+    "dataNota": "columns explícitas (38, las de la grilla del form); con columns:[] Tango pide columnas que no existen en la base"
+  },
+  "21535": {
+    "modulo": "ProcesosGenerales",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 82196,
+    "dataBytes": 181
+  },
+  "21564": {
+    "modulo": "Tesoreria",
+    "form": "ok",
+    "data": "ok total=0 filas=0",
+    "formBytes": 54913,
+    "dataBytes": 181
+  },
+  "21600": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 92441,
+    "dataBytes": 363
+  },
+  "21885": {
+    "modulo": "Compras",
+    "form": "ok",
+    "data": "ok total=0 filas=1",
+    "formBytes": 54918,
+    "dataBytes": 319
+  }
+}

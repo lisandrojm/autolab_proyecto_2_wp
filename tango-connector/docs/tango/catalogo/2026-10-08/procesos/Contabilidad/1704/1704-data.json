@@ -1,0 +1,71 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_VARIABLE_GRUPO_CN": 1,
+        "variablE_GRUPO": "Ejercicios",
+        "roW_VERSION": "AAAAAADPSJ8="
+      },
+      {
+        "iD_VARIABLE_GRUPO_CN": 2,
+        "variablE_GRUPO": "Períodos",
+        "roW_VERSION": "AAAAAADPSKE="
+      },
+      {
+        "iD_VARIABLE_GRUPO_CN": 3,
+        "variablE_GRUPO": "Cuentas",
+        "roW_VERSION": "AAAAAADPSJ4="
+      },
+      {
+        "iD_VARIABLE_GRUPO_CN": 4,
+        "variablE_GRUPO": "Jerarquías",
+        "roW_VERSION": "AAAAAADPSKA="
+      },
+      {
+        "iD_VARIABLE_GRUPO_CN": 5,
+        "variablE_GRUPO": "Unidades adicionales",
+        "roW_VERSION": "AAAAAADPSKM="
+      },
+      {
+        "iD_VARIABLE_GRUPO_CN": 6,
+        "variablE_GRUPO": "Auxiliares",
+        "roW_VERSION": "AAAAAADPSJ0="
+      },
+      {
+        "iD_VARIABLE_GRUPO_CN": 7,
+        "variablE_GRUPO": "Subauxiliares",
+        "roW_VERSION": "AAAAAADPSKI="
+      },
+      {
+        "iD_VARIABLE_GRUPO_CN": 8,
+        "variablE_GRUPO": "Variables de Cadena",
+        "roW_VERSION": "AAAAAADPSKQ="
+      },
+      {
+        "iD_VARIABLE_GRUPO_CN": 9,
+        "variablE_GRUPO": "Variables de Fecha",
+        "roW_VERSION": "AAAAAADPSKU="
+      },
+      {
+        "iD_VARIABLE_GRUPO_CN": 10,
+        "variablE_GRUPO": "Variables Lógicas",
+        "roW_VERSION": "AAAAAADPSKY="
+      },
+      {
+        "iD_VARIABLE_GRUPO_CN": 11,
+        "variablE_GRUPO": "Variables Matemáticas",
+        "roW_VERSION": "AAAAAADPSKc="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

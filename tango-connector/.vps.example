@@ -1,0 +1,20 @@
+# Conexion SSH al VPS donde corre frps (el tunel a los servidores Tango).
+#
+# Copiar este archivo como `.vps` (ignorado por git) y completarlo.
+# Preferir autenticacion por clave SSH antes que password.
+# Para el relevamiento alcanza con un usuario que pueda leer la config
+# (frps, nginx, PM2) y listar puertos; no hace falta root si sudo -n no esta.
+
+VPS_HOST=
+VPS_PORT=22
+VPS_USER=
+
+# Ruta local a la clave privada (recomendado). Ej: C:/Users/Lumba/.ssh/id_ed25519
+VPS_SSH_KEY_PATH=
+
+# Solo si no hay clave. Evitar si se puede.
+VPS_PASSWORD=
+
+# Opcional: rutas conocidas en el VPS, si se saben
+FRPS_CONFIG_PATH=
+LUMBA_TANGO_PATH=

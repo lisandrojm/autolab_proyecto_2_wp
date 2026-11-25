@@ -1,0 +1,124 @@
+{
+  "title": "Solicitudes de pago electrónico",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "VentasSolicitudesDePagoElectronicoModel": [
+      "FECHA_SOLICITUD",
+      "COD_CLIENTE",
+      "RAZON_SOCIAL",
+      "EMAIL_DESTINATARIO",
+      "IMPORTE",
+      "MONEDA",
+      "REFERENCIA",
+      "LINK_PAGO",
+      "ESTADO",
+      "FECHA_DE_COBRO",
+      "FORMA_DE_COBRO",
+      "NRO_OPERACION",
+      "FECHA_DE_RECIBO",
+      "TIPO_DE_RECIBO",
+      "NRO_DE_RECIBO",
+      "USUARIO",
+      "TERMINAL",
+      "TELEFONO",
+      "TELEFONO_2",
+      "TELEFONO_MOVIL_WA",
+      "MOVIL",
+      "EMAIL",
+      "EMAIL_COMPROBANTES",
+      "EMAILS_ENVIO_COTIZACION",
+      "MOVILES_ENVIO_COTIZACION",
+      "EMAILS_ENVIO_RECIBO",
+      "MOVILES_ENVIO_RECIBO",
+      "EMAILS_ENVIO_PEDIDO",
+      "MOVILES_ENVIO_PEDIDO",
+      "EMAILS_RESPONSABLES_PAGOS",
+      "MOVILES_RESPONSABLES_PAGOS",
+      "ID_GVA14"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

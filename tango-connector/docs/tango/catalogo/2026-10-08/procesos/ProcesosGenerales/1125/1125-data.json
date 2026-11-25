@@ -1,0 +1,916 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_BANCO": 1,
+        "coD_BANCO": "001",
+        "desC_BANCO": "Deutsche Bank Argentina SA",
+        "nrO_BANCO": "001",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "001 - Deutsche Bank Argentina SA",
+        "roW_VERSION": "AAAAAADgD1g="
+      },
+      {
+        "iD_BANCO": 2,
+        "coD_BANCO": "005",
+        "desC_BANCO": "Abn Amro Bank N.V.",
+        "nrO_BANCO": "005",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "005 - Abn Amro Bank N.V.",
+        "roW_VERSION": "AAAAAADgD1k="
+      },
+      {
+        "iD_BANCO": 3,
+        "coD_BANCO": "006",
+        "desC_BANCO": "Banco Sudameris Argentina SA",
+        "nrO_BANCO": "006",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "006 - Banco Sudameris Argentina SA",
+        "roW_VERSION": "AAAAAADgD1o="
+      },
+      {
+        "iD_BANCO": 4,
+        "coD_BANCO": "007",
+        "desC_BANCO": "Banco de Galicia y Buenos Aires SA",
+        "nrO_BANCO": "007",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "007 - Banco de Galicia y Buenos Aires SA",
+        "roW_VERSION": "AAAAAADgD1s="
+      },
+      {
+        "iD_BANCO": 5,
+        "coD_BANCO": "010",
+        "desC_BANCO": "Lloyds Bank (Blsa) Limited",
+        "nrO_BANCO": "010",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "010 - Lloyds Bank (Blsa) Limited",
+        "roW_VERSION": "AAAAAADgD1w="
+      },
+      {
+        "iD_BANCO": 6,
+        "coD_BANCO": "011",
+        "desC_BANCO": "Banco de la Nación Argentina",
+        "nrO_BANCO": "011",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "011 - Banco de la Nación Argentina",
+        "roW_VERSION": "AAAAAADgD10="
+      },
+      {
+        "iD_BANCO": 7,
+        "coD_BANCO": "012",
+        "desC_BANCO": "Banco de Crédito Argentino SA",
+        "nrO_BANCO": "012",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "012 - Banco de Crédito Argentino SA",
+        "roW_VERSION": "AAAAAADgD14="
+      },
+      {
+        "iD_BANCO": 8,
+        "coD_BANCO": "014",
+        "desC_BANCO": "Banco de la Provincia de Buenos Aires",
+        "nrO_BANCO": "014",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "014 - Banco de la Provincia de Buenos Aires",
+        "roW_VERSION": "AAAAAADgD18="
+      },
+      {
+        "iD_BANCO": 9,
+        "coD_BANCO": "015",
+        "desC_BANCO": "ICBC",
+        "nrO_BANCO": "015",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "015 - ICBC",
+        "roW_VERSION": "AAAAAADgD2A="
+      },
+      {
+        "iD_BANCO": 10,
+        "coD_BANCO": "016",
+        "desC_BANCO": "CITIBANK",
+        "nrO_BANCO": "016",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "016 - CITIBANK",
+        "roW_VERSION": "AAAAAADgD2E="
+      },
+      {
+        "iD_BANCO": 11,
+        "coD_BANCO": "017",
+        "desC_BANCO": "BBVA BANCO FRANCES",
+        "nrO_BANCO": "017",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "017 - BBVA BANCO FRANCES",
+        "roW_VERSION": "AAAAAADgD2I="
+      },
+      {
+        "iD_BANCO": 12,
+        "coD_BANCO": "020",
+        "desC_BANCO": "Banco de la Provincia de Córdoba",
+        "nrO_BANCO": "020",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "020 - Banco de la Provincia de Córdoba",
+        "roW_VERSION": "AAAAAADgD2M="
+      },
+      {
+        "iD_BANCO": 13,
+        "coD_BANCO": "027",
+        "desC_BANCO": "Banco Superville Societe Generale SA",
+        "nrO_BANCO": "027",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "027 - Banco Superville Societe Generale SA",
+        "roW_VERSION": "AAAAAADgD2Q="
+      },
+      {
+        "iD_BANCO": 14,
+        "coD_BANCO": "029",
+        "desC_BANCO": "Banco de la Ciudad de Buenos Aires",
+        "nrO_BANCO": "029",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "029 - Banco de la Ciudad de Buenos Aires",
+        "roW_VERSION": "AAAAAADgD2U="
+      },
+      {
+        "iD_BANCO": 15,
+        "coD_BANCO": "034",
+        "desC_BANCO": "BANCO PATAGONIA",
+        "nrO_BANCO": "034",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "034 - BANCO PATAGONIA",
+        "roW_VERSION": "AAAAAADgD2Y="
+      },
+      {
+        "iD_BANCO": 16,
+        "coD_BANCO": "039",
+        "desC_BANCO": "Banco Caja de Ahorro SA",
+        "nrO_BANCO": "039",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "039 - Banco Caja de Ahorro SA",
+        "roW_VERSION": "AAAAAADgD2c="
+      },
+      {
+        "iD_BANCO": 17,
+        "coD_BANCO": "043",
+        "desC_BANCO": "Banco de Quilmes SA",
+        "nrO_BANCO": "043",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "043 - Banco de Quilmes SA",
+        "roW_VERSION": "AAAAAADgD2g="
+      },
+      {
+        "iD_BANCO": 18,
+        "coD_BANCO": "045",
+        "desC_BANCO": "Banco de San Juan SA",
+        "nrO_BANCO": "045",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "045 - Banco de San Juan SA",
+        "roW_VERSION": "AAAAAADgD2k="
+      },
+      {
+        "iD_BANCO": 19,
+        "coD_BANCO": "050",
+        "desC_BANCO": "Banco Tornquist SA",
+        "nrO_BANCO": "050",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "050 - Banco Tornquist SA",
+        "roW_VERSION": "AAAAAADgD2o="
+      },
+      {
+        "iD_BANCO": 20,
+        "coD_BANCO": "054",
+        "desC_BANCO": "Banco Comercial Israelita SA",
+        "nrO_BANCO": "054",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "054 - Banco Comercial Israelita SA",
+        "roW_VERSION": "AAAAAADgD2s="
+      },
+      {
+        "iD_BANCO": 21,
+        "coD_BANCO": "059",
+        "desC_BANCO": "Banco de Entre Ríos SA",
+        "nrO_BANCO": "059",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "059 - Banco de Entre Ríos SA",
+        "roW_VERSION": "AAAAAADgD2w="
+      },
+      {
+        "iD_BANCO": 22,
+        "coD_BANCO": "061",
+        "desC_BANCO": "Banco de Mendoza SA",
+        "nrO_BANCO": "061",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "061 - Banco de Mendoza SA",
+        "roW_VERSION": "AAAAAADgD20="
+      },
+      {
+        "iD_BANCO": 23,
+        "coD_BANCO": "062",
+        "desC_BANCO": "Banco Israelita de Córdoba SA",
+        "nrO_BANCO": "062",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "062 - Banco Israelita de Córdoba SA",
+        "roW_VERSION": "AAAAAADgD24="
+      },
+      {
+        "iD_BANCO": 24,
+        "coD_BANCO": "065",
+        "desC_BANCO": "Banco Municipal de Rosario",
+        "nrO_BANCO": "065",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "065 - Banco Municipal de Rosario",
+        "roW_VERSION": "AAAAAADgD28="
+      },
+      {
+        "iD_BANCO": 25,
+        "coD_BANCO": "067",
+        "desC_BANCO": "Banco Bansud SA",
+        "nrO_BANCO": "067",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "067 - Banco Bansud SA",
+        "roW_VERSION": "AAAAAADgD3A="
+      },
+      {
+        "iD_BANCO": 26,
+        "coD_BANCO": "071",
+        "desC_BANCO": "Banco de Santa Fe",
+        "nrO_BANCO": "071",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "071 - Banco de Santa Fe",
+        "roW_VERSION": "AAAAAADgD3E="
+      },
+      {
+        "iD_BANCO": 27,
+        "coD_BANCO": "072",
+        "desC_BANCO": "Banco Santander Río",
+        "nrO_BANCO": "072",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "072 - Banco Santander Río",
+        "roW_VERSION": "AAAAAADgD3I="
+      },
+      {
+        "iD_BANCO": 28,
+        "coD_BANCO": "075",
+        "desC_BANCO": "Banco de Previsión Social SA",
+        "nrO_BANCO": "075",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "075 - Banco de Previsión Social SA",
+        "roW_VERSION": "AAAAAADgD3M="
+      },
+      {
+        "iD_BANCO": 29,
+        "coD_BANCO": "079",
+        "desC_BANCO": "Banco Regional de Cuyo SA",
+        "nrO_BANCO": "079",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "079 - Banco Regional de Cuyo SA",
+        "roW_VERSION": "AAAAAADgD3Q="
+      },
+      {
+        "iD_BANCO": 30,
+        "coD_BANCO": "083",
+        "desC_BANCO": "Banco de Chubut SA",
+        "nrO_BANCO": "083",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "083 - Banco de Chubut SA",
+        "roW_VERSION": "AAAAAADgD3U="
+      },
+      {
+        "iD_BANCO": 31,
+        "coD_BANCO": "086",
+        "desC_BANCO": "Banco de la Pcia. de Santa Cruz SA",
+        "nrO_BANCO": "086",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "086 - Banco de la Pcia. de Santa Cruz SA",
+        "roW_VERSION": "AAAAAADgD3Y="
+      },
+      {
+        "iD_BANCO": 32,
+        "coD_BANCO": "092",
+        "desC_BANCO": "Banco de Catamarca SA",
+        "nrO_BANCO": "092",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "092 - Banco de Catamarca SA",
+        "roW_VERSION": "AAAAAADgD3c="
+      },
+      {
+        "iD_BANCO": 33,
+        "coD_BANCO": "093",
+        "desC_BANCO": "Banco de la Pampa",
+        "nrO_BANCO": "093",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "093 - Banco de la Pampa",
+        "roW_VERSION": "AAAAAADgD3g="
+      },
+      {
+        "iD_BANCO": 34,
+        "coD_BANCO": "094",
+        "desC_BANCO": "Banco de Corrientes SA",
+        "nrO_BANCO": "094",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "094 - Banco de Corrientes SA",
+        "roW_VERSION": "AAAAAADgD3k="
+      },
+      {
+        "iD_BANCO": 35,
+        "coD_BANCO": "097",
+        "desC_BANCO": "Banco de la Provincia de Neuquén",
+        "nrO_BANCO": "097",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "097 - Banco de la Provincia de Neuquén",
+        "roW_VERSION": "AAAAAADgD3o="
+      },
+      {
+        "iD_BANCO": 36,
+        "coD_BANCO": "107",
+        "desC_BANCO": "Banco Comercial de Tres Arroyos SA",
+        "nrO_BANCO": "107",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "107 - Banco Comercial de Tres Arroyos SA",
+        "roW_VERSION": "AAAAAADgD3s="
+      },
+      {
+        "iD_BANCO": 37,
+        "coD_BANCO": "113",
+        "desC_BANCO": "Banco de la Edificadora de Olavarría SA",
+        "nrO_BANCO": "113",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "113 - Banco de la Edificadora de Olavarría SA",
+        "roW_VERSION": "AAAAAADgD3w="
+      },
+      {
+        "iD_BANCO": 38,
+        "coD_BANCO": "133",
+        "desC_BANCO": "Banco Crédito de Cuyo SA",
+        "nrO_BANCO": "133",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "133 - Banco Crédito de Cuyo SA",
+        "roW_VERSION": "AAAAAADgD30="
+      },
+      {
+        "iD_BANCO": 39,
+        "coD_BANCO": "137",
+        "desC_BANCO": "Banco Empresario de Tucumán Coop. Ltdo.",
+        "nrO_BANCO": "137",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "137 - Banco Empresario de Tucumán Coop. Ltdo.",
+        "roW_VERSION": "AAAAAADgD34="
+      },
+      {
+        "iD_BANCO": 40,
+        "coD_BANCO": "148",
+        "desC_BANCO": "Banco Municipal de la Plata",
+        "nrO_BANCO": "148",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "148 - Banco Municipal de la Plata",
+        "roW_VERSION": "AAAAAADgD38="
+      },
+      {
+        "iD_BANCO": 41,
+        "coD_BANCO": "153",
+        "desC_BANCO": "Banco General de Negocios SA",
+        "nrO_BANCO": "153",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "153 - Banco General de Negocios SA",
+        "roW_VERSION": "AAAAAADgD4A="
+      },
+      {
+        "iD_BANCO": 42,
+        "coD_BANCO": "162",
+        "desC_BANCO": "Banco Mayo Coop. Ltdo.",
+        "nrO_BANCO": "162",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "162 - Banco Mayo Coop. Ltdo.",
+        "roW_VERSION": "AAAAAADgD4E="
+      },
+      {
+        "iD_BANCO": 43,
+        "coD_BANCO": "178",
+        "desC_BANCO": "Banco de Balcarce Coop. Ltdo.",
+        "nrO_BANCO": "178",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "178 - Banco de Balcarce Coop. Ltdo.",
+        "roW_VERSION": "AAAAAADgD4I="
+      },
+      {
+        "iD_BANCO": 44,
+        "coD_BANCO": "179",
+        "desC_BANCO": "Banco Almafuerte Coop. Ltdo.",
+        "nrO_BANCO": "179",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "179 - Banco Almafuerte Coop. Ltdo.",
+        "roW_VERSION": "AAAAAADgD4M="
+      },
+      {
+        "iD_BANCO": 45,
+        "coD_BANCO": "191",
+        "desC_BANCO": "BANCO CREDICOOP",
+        "nrO_BANCO": "191",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "191 - BANCO CREDICOOP",
+        "roW_VERSION": "AAAAAADgD4Q="
+      },
+      {
+        "iD_BANCO": 46,
+        "coD_BANCO": "198",
+        "desC_BANCO": "Banco de Valores SA",
+        "nrO_BANCO": "198",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "198 - Banco de Valores SA",
+        "roW_VERSION": "AAAAAADgD4U="
+      },
+      {
+        "iD_BANCO": 47,
+        "coD_BANCO": "229",
+        "desC_BANCO": "Banco del  Buen Ayre SA",
+        "nrO_BANCO": "229",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "229 - Banco del  Buen Ayre SA",
+        "roW_VERSION": "AAAAAADgD4Y="
+      },
+      {
+        "iD_BANCO": 48,
+        "coD_BANCO": "231",
+        "desC_BANCO": "Banco Río Tercero Coop. Ltdo.",
+        "nrO_BANCO": "231",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "231 - Banco Río Tercero Coop. Ltdo.",
+        "roW_VERSION": "AAAAAADgD4c="
+      },
+      {
+        "iD_BANCO": 49,
+        "coD_BANCO": "236",
+        "desC_BANCO": "Banco do Estado do Sao Pablo SA",
+        "nrO_BANCO": "236",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "236 - Banco do Estado do Sao Pablo SA",
+        "roW_VERSION": "AAAAAADgD4g="
+      },
+      {
+        "iD_BANCO": 50,
+        "coD_BANCO": "249",
+        "desC_BANCO": "Banco Patricios S.A.",
+        "nrO_BANCO": "249",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "249 - Banco Patricios S.A.",
+        "roW_VERSION": "AAAAAADgD4k="
+      },
+      {
+        "iD_BANCO": 51,
+        "coD_BANCO": "255",
+        "desC_BANCO": "BANCO GALICIA",
+        "nrO_BANCO": "255",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "255 - BANCO GALICIA",
+        "roW_VERSION": "AAAAAADgD4o="
+      },
+      {
+        "iD_BANCO": 52,
+        "coD_BANCO": "259",
+        "desC_BANCO": "Banco Itaú Argentina SA",
+        "nrO_BANCO": "259",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "259 - Banco Itaú Argentina SA",
+        "roW_VERSION": "AAAAAADgD4s="
+      },
+      {
+        "iD_BANCO": 53,
+        "coD_BANCO": "265",
+        "desC_BANCO": "Banca Nacionale del  Lavoro SA",
+        "nrO_BANCO": "265",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "265 - Banca Nacionale del  Lavoro SA",
+        "roW_VERSION": "AAAAAADgD4w="
+      },
+      {
+        "iD_BANCO": 54,
+        "coD_BANCO": "266",
+        "desC_BANCO": "Banque Nationale de París",
+        "nrO_BANCO": "266",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "266 - Banque Nationale de París",
+        "roW_VERSION": "AAAAAADgD40="
+      },
+      {
+        "iD_BANCO": 55,
+        "coD_BANCO": "268",
+        "desC_BANCO": "Banco de la Provincia Tierra del  Fuego",
+        "nrO_BANCO": "268",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "268 - Banco de la Provincia Tierra del  Fuego",
+        "roW_VERSION": "AAAAAADgD44="
+      },
+      {
+        "iD_BANCO": 56,
+        "coD_BANCO": "269",
+        "desC_BANCO": "Banco República Oriental del  Uruguay",
+        "nrO_BANCO": "269",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "269 - Banco República Oriental del  Uruguay",
+        "roW_VERSION": "AAAAAADgD48="
+      },
+      {
+        "iD_BANCO": 57,
+        "coD_BANCO": "273",
+        "desC_BANCO": "Banco Los Tilos SA",
+        "nrO_BANCO": "273",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "273 - Banco Los Tilos SA",
+        "roW_VERSION": "AAAAAADgD5A="
+      },
+      {
+        "iD_BANCO": 58,
+        "coD_BANCO": "277",
+        "desC_BANCO": "Banco Saénz SA",
+        "nrO_BANCO": "277",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "277 - Banco Saénz SA",
+        "roW_VERSION": "AAAAAADgD5E="
+      },
+      {
+        "iD_BANCO": 59,
+        "coD_BANCO": "281",
+        "desC_BANCO": "Banco Liniers Sudamericanos SA",
+        "nrO_BANCO": "281",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "281 - Banco Liniers Sudamericanos SA",
+        "roW_VERSION": "AAAAAADgD5I="
+      },
+      {
+        "iD_BANCO": 60,
+        "coD_BANCO": "285",
+        "desC_BANCO": "Banco Macro de Misiones SA",
+        "nrO_BANCO": "285",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "285 - Banco Macro de Misiones SA",
+        "roW_VERSION": "AAAAAADgD5M="
+      },
+      {
+        "iD_BANCO": 61,
+        "coD_BANCO": "293",
+        "desC_BANCO": "Banco Mercurio SA",
+        "nrO_BANCO": "293",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "293 - Banco Mercurio SA",
+        "roW_VERSION": "AAAAAADgD5Q="
+      },
+      {
+        "iD_BANCO": 62,
+        "coD_BANCO": "294",
+        "desC_BANCO": "Ing Bank N.V.",
+        "nrO_BANCO": "294",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "294 - Ing Bank N.V.",
+        "roW_VERSION": "AAAAAADgD5U="
+      },
+      {
+        "iD_BANCO": 63,
+        "coD_BANCO": "295",
+        "desC_BANCO": "American Express Bank Ltd. SA",
+        "nrO_BANCO": "295",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "295 - American Express Bank Ltd. SA",
+        "roW_VERSION": "AAAAAADgD5Y="
+      },
+      {
+        "iD_BANCO": 64,
+        "coD_BANCO": "297",
+        "desC_BANCO": "Exprinter Banco SA",
+        "nrO_BANCO": "297",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "297 - Exprinter Banco SA",
+        "roW_VERSION": "AAAAAADgD5c="
+      },
+      {
+        "iD_BANCO": 65,
+        "coD_BANCO": "301",
+        "desC_BANCO": "Banco Piano SA",
+        "nrO_BANCO": "301",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "301 - Banco Piano SA",
+        "roW_VERSION": "AAAAAADgD5g="
+      },
+      {
+        "iD_BANCO": 66,
+        "coD_BANCO": "305",
+        "desC_BANCO": "Banco Julio S.A.",
+        "nrO_BANCO": "305",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "305 - Banco Julio S.A.",
+        "roW_VERSION": "AAAAAADgD5k="
+      },
+      {
+        "iD_BANCO": 67,
+        "coD_BANCO": "306",
+        "desC_BANCO": "Banco Privado de Inversiones",
+        "nrO_BANCO": "306",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "306 - Banco Privado de Inversiones",
+        "roW_VERSION": "AAAAAADgD5o="
+      },
+      {
+        "iD_BANCO": 68,
+        "coD_BANCO": "309",
+        "desC_BANCO": "Nuevo Banco de la Rioja SA",
+        "nrO_BANCO": "309",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "309 - Nuevo Banco de la Rioja SA",
+        "roW_VERSION": "AAAAAADgD5s="
+      },
+      {
+        "iD_BANCO": 69,
+        "coD_BANCO": "311",
+        "desC_BANCO": "Nuevo Banco del  Chaco SA",
+        "nrO_BANCO": "311",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "311 - Nuevo Banco del  Chaco SA",
+        "roW_VERSION": "AAAAAADgD5w="
+      },
+      {
+        "iD_BANCO": 70,
+        "coD_BANCO": "314",
+        "desC_BANCO": "Banco Bisel SA",
+        "nrO_BANCO": "314",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "314 - Banco Bisel SA",
+        "roW_VERSION": "AAAAAADgD50="
+      },
+      {
+        "iD_BANCO": 71,
+        "coD_BANCO": "315",
+        "desC_BANCO": "Banco de Formosa",
+        "nrO_BANCO": "315",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "315 - Banco de Formosa",
+        "roW_VERSION": "AAAAAADgD54="
+      },
+      {
+        "iD_BANCO": 72,
+        "coD_BANCO": "318",
+        "desC_BANCO": "Banco de Salta SA",
+        "nrO_BANCO": "318",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "318 - Banco de Salta SA",
+        "roW_VERSION": "AAAAAADgD58="
+      },
+      {
+        "iD_BANCO": 73,
+        "coD_BANCO": "320",
+        "desC_BANCO": "Banco de San Luis",
+        "nrO_BANCO": "320",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "320 - Banco de San Luis",
+        "roW_VERSION": "AAAAAADgD6A="
+      },
+      {
+        "iD_BANCO": 74,
+        "coD_BANCO": "321",
+        "desC_BANCO": "Banco de Santiago del  Estero SA",
+        "nrO_BANCO": "321",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "321 - Banco de Santiago del  Estero SA",
+        "roW_VERSION": "AAAAAADgD6E="
+      },
+      {
+        "iD_BANCO": 75,
+        "coD_BANCO": "322",
+        "desC_BANCO": "Nuevo Banco Industrail de Azul SA",
+        "nrO_BANCO": "322",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "322 - Nuevo Banco Industrail de Azul SA",
+        "roW_VERSION": "AAAAAADgD6I="
+      },
+      {
+        "iD_BANCO": 76,
+        "coD_BANCO": "324",
+        "desC_BANCO": "Banco de Jujuy SA",
+        "nrO_BANCO": "324",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "324 - Banco de Jujuy SA",
+        "roW_VERSION": "AAAAAADgD6M="
+      },
+      {
+        "iD_BANCO": 77,
+        "coD_BANCO": "326",
+        "desC_BANCO": "Mercobank",
+        "nrO_BANCO": "326",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "326 - Mercobank",
+        "roW_VERSION": "AAAAAADgD6Q="
+      },
+      {
+        "iD_BANCO": 78,
+        "coD_BANCO": "328",
+        "desC_BANCO": "Banco Mendoza SA",
+        "nrO_BANCO": "328",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "328 - Banco Mendoza SA",
+        "roW_VERSION": "AAAAAADgD6U="
+      },
+      {
+        "iD_BANCO": 79,
+        "coD_BANCO": "330",
+        "desC_BANCO": "Nuevo Banco de Santa Fe SA",
+        "nrO_BANCO": "330",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "330 - Nuevo Banco de Santa Fe SA",
+        "roW_VERSION": "AAAAAADgD6Y="
+      },
+      {
+        "iD_BANCO": 80,
+        "coD_BANCO": "278",
+        "desC_BANCO": "ASFIN S.A.",
+        "nrO_BANCO": "278",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "278 - ASFIN S.A.",
+        "roW_VERSION": "AAAAAADgD6c="
+      },
+      {
+        "iD_BANCO": 81,
+        "coD_BANCO": "151",
+        "desC_BANCO": "ACISO COOP. LTDO.",
+        "nrO_BANCO": "151",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "151 - ACISO COOP. LTDO.",
+        "roW_VERSION": "AAAAAADgD6g="
+      },
+      {
+        "iD_BANCO": 82,
+        "coD_BANCO": "193",
+        "desC_BANCO": "ALIANCOOP COOP.LTDO.",
+        "nrO_BANCO": "193",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "193 - ALIANCOOP COOP.LTDO.",
+        "roW_VERSION": "AAAAAADgD6k="
+      },
+      {
+        "iD_BANCO": 83,
+        "coD_BANCO": "298",
+        "desC_BANCO": "AUSTRAL S.A.",
+        "nrO_BANCO": "298",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "298 - AUSTRAL S.A.",
+        "roW_VERSION": "AAAAAADgD6o="
+      },
+      {
+        "iD_BANCO": 84,
+        "coD_BANCO": "284",
+        "desC_BANCO": "BAIRES S.A.",
+        "nrO_BANCO": "284",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "284 - BAIRES S.A.",
+        "roW_VERSION": "AAAAAADgD6s="
+      },
+      {
+        "iD_BANCO": 85,
+        "coD_BANCO": "030",
+        "desC_BANCO": "BANCO CENTRAL R.A.",
+        "nrO_BANCO": "030",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "030 - BANCO CENTRAL R.A.",
+        "roW_VERSION": "AAAAAADgD6w="
+      },
+      {
+        "iD_BANCO": 86,
+        "coD_BANCO": "296",
+        "desC_BANCO": "BASEL S.A.",
+        "nrO_BANCO": "296",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "296 - BASEL S.A.",
+        "roW_VERSION": "AAAAAADgD60="
+      },
+      {
+        "iD_BANCO": 87,
+        "coD_BANCO": "156",
+        "desC_BANCO": "BICA COOP.LTDO.",
+        "nrO_BANCO": "156",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "156 - BICA COOP.LTDO.",
+        "roW_VERSION": "AAAAAADgD64="
+      },
+      {
+        "iD_BANCO": 88,
+        "coD_BANCO": "207",
+        "desC_BANCO": "C.E.S. COOP.LTDO.",
+        "nrO_BANCO": "207",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "207 - C.E.S. COOP.LTDO.",
+        "roW_VERSION": "AAAAAADgD68="
+      },
+      {
+        "iD_BANCO": 89,
+        "coD_BANCO": "220",
+        "desC_BANCO": "C.PELLEGRINI COOP.LT",
+        "nrO_BANCO": "220",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "220 - C.PELLEGRINI COOP.LT",
+        "roW_VERSION": "AAAAAADgD7A="
+      },
+      {
+        "iD_BANCO": 90,
+        "coD_BANCO": "290",
+        "desC_BANCO": "CAUDAL S.A.",
+        "nrO_BANCO": "290",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "290 - CAUDAL S.A.",
+        "roW_VERSION": "AAAAAADgD7E="
+      },
+      {
+        "iD_BANCO": 91,
+        "coD_BANCO": "256",
+        "desC_BANCO": "CITICORP DE INV.S.A.",
+        "nrO_BANCO": "256",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "256 - CITICORP DE INV.S.A.",
+        "roW_VERSION": "AAAAAADgD7I="
+      },
+      {
+        "iD_BANCO": 92,
+        "coD_BANCO": "149",
+        "desC_BANCO": "COFIRENE DE INV.S.A.",
+        "nrO_BANCO": "149",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "149 - COFIRENE DE INV.S.A.",
+        "roW_VERSION": "AAAAAADgD7M="
+      },
+      {
+        "iD_BANCO": 93,
+        "coD_BANCO": "176",
+        "desC_BANCO": "COINAG COOP.LTDO.",
+        "nrO_BANCO": "176",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "176 - COINAG COOP.LTDO.",
+        "roW_VERSION": "AAAAAADgD7Q="
+      },
+      {
+        "iD_BANCO": 94,
+        "coD_BANCO": "299",
+        "desC_BANCO": "COMAFI S.A.",
+        "nrO_BANCO": "299",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "299 - COMAFI S.A.",
+        "roW_VERSION": "AAAAAADgD7U="
+      },
+      {
+        "iD_BANCO": 95,
+        "coD_BANCO": "246",
+        "desC_BANCO": "COMAGRO COOP.LTDO.",
+        "nrO_BANCO": "246",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "246 - COMAGRO COOP.LTDO.",
+        "roW_VERSION": "AAAAAADgD7Y="
+      },
+      {
+        "iD_BANCO": 96,
+        "coD_BANCO": "105",
+        "desC_BANCO": "COM.DE TANDIL S.A.",
+        "nrO_BANCO": "105",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "105 - COM.DE TANDIL S.A.",
+        "roW_VERSION": "AAAAAADgD7c="
+      },
+      {
+        "iD_BANCO": 97,
+        "coD_BANCO": "262",
+        "desC_BANCO": "BANK OF AMERICA ILLI",
+        "nrO_BANCO": "262",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "262 - BANK OF AMERICA ILLI",
+        "roW_VERSION": "AAAAAADgD7g="
+      },
+      {
+        "iD_BANCO": 98,
+        "coD_BANCO": "040",
+        "desC_BANCO": "COOP. DE CASEROS LTD",
+        "nrO_BANCO": "040",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "040 - COOP. DE CASEROS LTD",
+        "roW_VERSION": "AAAAAADgD7k="
+      },
+      {
+        "iD_BANCO": 99,
+        "coD_BANCO": "055",
+        "desC_BANCO": "COOP. DE LA PLATA",
+        "nrO_BANCO": "055",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "055 - COOP. DE LA PLATA",
+        "roW_VERSION": "AAAAAADgD7o="
+      },
+      {
+        "iD_BANCO": 100,
+        "coD_BANCO": "108",
+        "desC_BANCO": "COOP. DEL ESTE ARG.",
+        "nrO_BANCO": "108",
+        "habilitado": "S",
+        "coD_DESCRIP_BANCO": "108 - COOP. DEL ESTE ARG.",
+        "roW_VERSION": "AAAAAADgD7s="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

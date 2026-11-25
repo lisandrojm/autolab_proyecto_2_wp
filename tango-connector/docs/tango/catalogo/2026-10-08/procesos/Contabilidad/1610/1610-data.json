@@ -1,0 +1,23 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_TIPO_VALORIZACION": 4,
+        "coD_TIPO_VALORIZACION": "LMB",
+        "iD_MONEDA": 2,
+        "coD_DESCRIP": "LMB",
+        "roW_VERSION": "AAAAAADf0kI="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

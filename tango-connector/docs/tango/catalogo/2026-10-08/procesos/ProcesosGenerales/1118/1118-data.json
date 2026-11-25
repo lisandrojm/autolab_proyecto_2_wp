@@ -1,0 +1,30 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_MOTIVO_EGRESO": 2,
+        "coD_MOTIVO_EGRESO": "LMB",
+        "desC_MOTIVO_EGRESO": "DEdedede",
+        "afectA_INDICE_ROTACION": "S",
+        "roW_VERSION": "AAAAAADf3YM="
+      },
+      {
+        "iD_MOTIVO_EGRESO": 3,
+        "coD_MOTIVO_EGRESO": "LMBX",
+        "desC_MOTIVO_EGRESO": "Vo sabe",
+        "afectA_INDICE_ROTACION": "S",
+        "roW_VERSION": "AAAAAADf3YQ="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

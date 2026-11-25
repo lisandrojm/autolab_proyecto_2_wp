@@ -1,0 +1,441 @@
+{
+  "title": "Cuentas de Tesorería",
+  "moduleId": 10005,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"SBA01\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_CTA\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_CTA\": {\r\n      \"type\": \"number\",\r\n      \"format\": \"double\"\r\n    },\r\n    \"DESCRIPCIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"FONDO\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"CONCILIABLE\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"EXPORTA\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"REGISTRA_F\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"MONEDA_EX\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"ID_MONEDA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA42\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"MED_PAGO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"ID_SBA11\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_CTA_TRANSFERENCIA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"FECHA_SALD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"SALDO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"SALDO_UNI\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"SALDO_MONE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"PORC_REC\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"PORC_BON\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"ID_FORMA_COBRO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CC_CA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_CTA_ASOCIA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_BANCO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"SUCURSAL_CUENTA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 4,\r\n      \"minLength\": 0\r\n    },\r\n    \"NRO_CTA_BANCARIA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 15,\r\n      \"minLength\": 0\r\n    },\r\n    \"DIGITO_CUENTA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"CBU\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 22,\r\n      \"minLength\": 0\r\n    },\r\n    \"CUPO_CREDI\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"ID_SBA22\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"HABIL_VENT\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"HABIL_COMP\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"HABIL_FOND\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"ID_SBA03\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_BANKING\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"VINCULADA_BANKING\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"TIPO_BANCO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8000,\r\n      \"minLength\": 0\r\n    },\r\n    \"SALDO_A_MO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"SALDO_A_UN\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"SALDO_ACT\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"IMPUTACION\": {\r\n      \"type\": \"number\",\r\n      \"format\": \"double\"\r\n    },\r\n    \"FORMA_COBRO1\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"CTA_ASOCIA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"AGRUP\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"ID_BILLETERA_VIRTUAL\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_SHOP_NOT_MAPPED\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 2,\r\n      \"minLength\": 0\r\n    },\r\n    \"TARJ_SHOP_NOT_MAPPED\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 2,\r\n      \"minLength\": 0\r\n    },\r\n    \"CTA_CUENTA_TESORERIA_POR_SUCURSAL\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CTA_CUENTA_TESORERIA_POR_SUCURSAL\"\r\n      }\r\n    },\r\n    \"CUENTA_TARJETA_PLAN\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CUENTA_TARJETA_PLAN\"\r\n      }\r\n    },\r\n    \"SBA01ITC\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/SBA01ITC\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"CTA_CUENTA_TESORERIA_POR_SUCURSAL\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"FILLER\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 100,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_SUCURSAL\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"PORC_MONTO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"MONTO_CTA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"PORC_CTA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"COD_SHOPPING\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 2,\r\n          \"minLength\": 0\r\n        },\r\n        \"TARJETA_SHOPPING\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 2,\r\n          \"minLength\": 0\r\n        },\r\n        \"EXPORTA\": {\r\n          \"type\": [\r\n            \"boolean\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"NRO_PAGO_CF\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        }\r\n      }\r\n    },\r\n    \"CUENTA_TARJETA_PLAN\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_PLAN_TARJETA\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_PLAN_TARJETA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA22\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA21\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"SBA01ITC\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"CODE\",\r\n        \"IDFOLDER\"\r\n      ],\r\n      \"properties\": {\r\n        \"CODE\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 15,\r\n          \"minLength\": 0\r\n        },\r\n        \"IDFOLDER\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        },\r\n        \"CODEA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_PARENT\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CTA_CUENTA_TESORERIA_POR_SUCURSAL\n    {\n        [Newtonsoft.Json.JsonProperty(\"FILLER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string FILLER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SUCURSAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SUCURSAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_MONTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string PORC_MONTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MONTO_CTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? MONTO_CTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_CTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORC_CTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_SHOPPING\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string COD_SHOPPING { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJETA_SHOPPING\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string TARJETA_SHOPPING { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EXPORTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? EXPORTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_PAGO_CF\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? NRO_PAGO_CF { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CUENTA_TARJETA_PLAN\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_PLAN_TARJETA\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_PLAN_TARJETA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA22\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA21\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA21 { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class SBA01ITC\n    {\n        [Newtonsoft.Json.JsonProperty(\"CODE\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string CODE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IDFOLDER\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string IDFOLDER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CODEA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string CODEA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PARENT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_PARENT { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class SBA01\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_CTA\", Required = Newtonsoft.Json.Required.Always)]\n        public double COD_CTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESCRIPCIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESCRIPCIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FONDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? FONDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CONCILIABLE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? CONCILIABLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EXPORTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? EXPORTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"REGISTRA_F\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? REGISTRA_F { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MONEDA_EX\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? MONEDA_EX { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA42\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA42 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MED_PAGO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? MED_PAGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA11\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA11 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_CTA_TRANSFERENCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_CTA_TRANSFERENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_SALD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_SALD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SALDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SALDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SALDO_UNI\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SALDO_UNI { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SALDO_MONE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SALDO_MONE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_REC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORC_REC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_BON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORC_BON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_FORMA_COBRO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_FORMA_COBRO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CC_CA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string CC_CA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CTA_ASOCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CTA_ASOCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_BANCO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SUCURSAL_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(4)]\n        public string SUCURSAL_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_CTA_BANCARIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string NRO_CTA_BANCARIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIGITO_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? DIGITO_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CBU\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(22)]\n        public string CBU { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CUPO_CREDI\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CUPO_CREDI { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA22\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABIL_VENT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? HABIL_VENT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABIL_COMP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? HABIL_COMP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABIL_FOND\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? HABIL_FOND { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA03\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA03 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_BANKING\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_BANKING { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VINCULADA_BANKING\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool VINCULADA_BANKING { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_BANCO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SALDO_A_MO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SALDO_A_MO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SALDO_A_UN\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SALDO_A_UN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SALDO_ACT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SALDO_ACT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPUTACION\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double IMPUTACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FORMA_COBRO1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string FORMA_COBRO1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_ASOCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? CTA_ASOCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AGRUP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? AGRUP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_BILLETERA_VIRTUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_BILLETERA_VIRTUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_SHOP_NOT_MAPPED\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string COD_SHOP_NOT_MAPPED { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJ_SHOP_NOT_MAPPED\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string TARJ_SHOP_NOT_MAPPED { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_CUENTA_TESORERIA_POR_SUCURSAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CTA_CUENTA_TESORERIA_POR_SUCURSAL> CTA_CUENTA_TESORERIA_POR_SUCURSAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CUENTA_TARJETA_PLAN\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CUENTA_TARJETA_PLAN> CUENTA_TARJETA_PLAN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SBA01ITC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<SBA01ITC> SBA01ITC { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface CTA_CUENTA_TESORERIA_POR_SUCURSAL {\n    FILLER: string | undefined;\n    ID_SUCURSAL: number | undefined;\n    PORC_MONTO: string | undefined;\n    MONTO_CTA: number | undefined;\n    PORC_CTA: number | undefined;\n    COD_SHOPPING: string | undefined;\n    TARJETA_SHOPPING: string | undefined;\n    EXPORTA: boolean | undefined;\n    NRO_PAGO_CF: number | undefined;\n}\n\nexport interface CUENTA_TARJETA_PLAN {\n    ID_PLAN_TARJETA: number;\n    ID_SBA22: number;\n    ID_SBA21: number | undefined;\n}\n\nexport interface SBA01ITC {\n    CODE: string;\n    IDFOLDER: string;\n    CODEA: string | undefined;\n    ID_PARENT: number | undefined;\n}\n\nexport interface SBA01 {\n    COD_CTA: number;\n    DESCRIPCIO: string | undefined;\n    TIPO: string | undefined;\n    FONDO: boolean | undefined;\n    CONCILIABLE: boolean | undefined;\n    EXPORTA: boolean | undefined;\n    REGISTRA_F: boolean | undefined;\n    MONEDA_EX: boolean | undefined;\n    ID_MONEDA: number | undefined;\n    ID_SBA42: number | undefined;\n    MED_PAGO: number | undefined;\n    ID_SBA11: number | undefined;\n    ID_SBA01_CTA_TRANSFERENCIA: number | undefined;\n    FECHA_SALD: Date | undefined;\n    SALDO: number | undefined;\n    SALDO_UNI: number | undefined;\n    SALDO_MONE: number | undefined;\n    PORC_REC: number | undefined;\n    PORC_BON: number | undefined;\n    ID_FORMA_COBRO: number | undefined;\n    CC_CA: string | undefined;\n    ID_CTA_ASOCIA: number | undefined;\n    ID_BANCO: number | undefined;\n    SUCURSAL_CUENTA: string | undefined;\n    NRO_CTA_BANCARIA: string | undefined;\n    DIGITO_CUENTA: number | undefined;\n    CBU: string | undefined;\n    CUPO_CREDI: number | undefined;\n    ID_SBA22: number | undefined;\n    HABIL_VENT: boolean | undefined;\n    HABIL_COMP: boolean | undefined;\n    HABIL_FOND: boolean | undefined;\n    ID_SBA03: number | undefined;\n    ID_CUENTA_BANKING: number | undefined;\n    VINCULADA_BANKING: boolean;\n    TIPO_BANCO: string | undefined;\n    OBSERVACIONES: string | undefined;\n    SALDO_A_MO: number | undefined;\n    SALDO_A_UN: number | undefined;\n    SALDO_ACT: number | undefined;\n    IMPUTACION: number;\n    FORMA_COBRO1: string | undefined;\n    CTA_ASOCIA: number | undefined;\n    AGRUP: number | undefined;\n    ID_BILLETERA_VIRTUAL: number | undefined;\n    COD_SHOP_NOT_MAPPED: string | undefined;\n    TARJ_SHOP_NOT_MAPPED: string | undefined;\n    CTA_CUENTA_TESORERIA_POR_SUCURSAL: CTA_CUENTA_TESORERIA_POR_SUCURSAL[] | undefined;\n    CUENTA_TARJETA_PLAN: CUENTA_TARJETA_PLAN[] | undefined;\n    SBA01ITC: SBA01ITC[] | undefined;\n}",
+          "example": {
+            "COD_CTA": 0,
+            "DESCRIPCIO": null,
+            "TIPO": "B",
+            "FONDO": true,
+            "CONCILIABLE": false,
+            "EXPORTA": false,
+            "REGISTRA_F": false,
+            "MONEDA_EX": false,
+            "ID_MONEDA": 1,
+            "ID_SBA42": 0,
+            "MED_PAGO": 0,
+            "ID_SBA11": 0,
+            "ID_SBA01_CTA_TRANSFERENCIA": 0,
+            "FECHA_SALD": "0001-01-01T00:00:00",
+            "SALDO": 0,
+            "SALDO_UNI": 0,
+            "SALDO_MONE": 0,
+            "PORC_REC": 0,
+            "PORC_BON": 0,
+            "ID_FORMA_COBRO": 0,
+            "COD_SHOP_NOT_MAPPED": null,
+            "TARJ_SHOP_NOT_MAPPED": null,
+            "CC_CA": "A",
+            "ID_CTA_ASOCIA": 0,
+            "ID_BANCO": 0,
+            "SUCURSAL_CUENTA": null,
+            "NRO_CTA_BANCARIA": null,
+            "DIGITO_CUENTA": 0,
+            "CBU": null,
+            "CUPO_CREDI": 0,
+            "ID_SBA22": 0,
+            "HABIL_VENT": true,
+            "HABIL_COMP": true,
+            "HABIL_FOND": true,
+            "ID_SBA03": 0,
+            "ID_CUENTA_BANKING": 0,
+            "VINCULADA_BANKING": false,
+            "TIPO_BANCO": null,
+            "OBSERVACIONES": null,
+            "SALDO_A_MO": 0,
+            "SALDO_A_UN": 0,
+            "SALDO_ACT": 0,
+            "IMPUTACION": 0,
+            "FORMA_COBRO1": null,
+            "CTA_ASOCIA": 0,
+            "AGRUP": 0,
+            "ID_BILLETERA_VIRTUAL": 0,
+            "CTA_CUENTA_TESORERIA_POR_SUCURSAL": [
+              {
+                "FILLER": null,
+                "ID_SUCURSAL": 0,
+                "PORC_MONTO": null,
+                "MONTO_CTA": 0,
+                "PORC_CTA": 0,
+                "COD_SHOPPING": null,
+                "TARJETA_SHOPPING": null,
+                "EXPORTA": false,
+                "NRO_PAGO_CF": 0
+              }
+            ],
+            "CUENTA_TARJETA_PLAN": [
+              {
+                "ID_PLAN_TARJETA": 0,
+                "ID_SBA22": 0,
+                "ID_SBA21": 0
+              }
+            ],
+            "SBA01ITC": [
+              {
+                "CODE": null,
+                "IDFOLDER": null,
+                "CODEA": null,
+                "ID_PARENT": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"SBA01\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_CTA\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_CTA\": {\r\n      \"type\": \"number\",\r\n      \"format\": \"double\"\r\n    },\r\n    \"DESCRIPCIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"FONDO\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"CONCILIABLE\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"EXPORTA\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"REGISTRA_F\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"MONEDA_EX\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"ID_MONEDA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA42\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"MED_PAGO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"ID_SBA11\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_CTA_TRANSFERENCIA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"FECHA_SALD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"SALDO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"SALDO_UNI\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"SALDO_MONE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"PORC_REC\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"PORC_BON\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"ID_FORMA_COBRO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CC_CA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_CTA_ASOCIA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_BANCO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"SUCURSAL_CUENTA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 4,\r\n      \"minLength\": 0\r\n    },\r\n    \"NRO_CTA_BANCARIA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 15,\r\n      \"minLength\": 0\r\n    },\r\n    \"DIGITO_CUENTA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"CBU\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 22,\r\n      \"minLength\": 0\r\n    },\r\n    \"CUPO_CREDI\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"ID_SBA22\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"HABIL_VENT\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"HABIL_COMP\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"HABIL_FOND\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"ID_SBA03\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_BANKING\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"VINCULADA_BANKING\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"TIPO_BANCO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8000,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_SBA01\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"SALDO_A_MO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"SALDO_A_UN\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"SALDO_ACT\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"IMPUTACION\": {\r\n      \"type\": \"number\",\r\n      \"format\": \"double\"\r\n    },\r\n    \"FORMA_COBRO1\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"CTA_ASOCIA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"AGRUP\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"ID_BILLETERA_VIRTUAL\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_SHOP_NOT_MAPPED\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 2,\r\n      \"minLength\": 0\r\n    },\r\n    \"TARJ_SHOP_NOT_MAPPED\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 2,\r\n      \"minLength\": 0\r\n    },\r\n    \"CTA_CUENTA_TESORERIA_POR_SUCURSAL\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CTA_CUENTA_TESORERIA_POR_SUCURSAL\"\r\n      }\r\n    },\r\n    \"CUENTA_TARJETA_PLAN\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CUENTA_TARJETA_PLAN\"\r\n      }\r\n    },\r\n    \"SBA01ITC\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/SBA01ITC\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"CTA_CUENTA_TESORERIA_POR_SUCURSAL\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_CTA_CUENTA_TESORERIA_POR_SUCURSAL\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"FILLER\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 100,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_SUCURSAL\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA01\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"PORC_MONTO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"MONTO_CTA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"PORC_CTA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"COD_SHOPPING\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 2,\r\n          \"minLength\": 0\r\n        },\r\n        \"TARJETA_SHOPPING\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 2,\r\n          \"minLength\": 0\r\n        },\r\n        \"EXPORTA\": {\r\n          \"type\": [\r\n            \"boolean\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"NRO_PAGO_CF\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        }\r\n      }\r\n    },\r\n    \"CUENTA_TARJETA_PLAN\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_PLAN_TARJETA\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_CUENTA_TARJETA_PLAN\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_PLAN_TARJETA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA01\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA22\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA21\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"SBA01ITC\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"CODE\",\r\n        \"IDFOLDER\"\r\n      ],\r\n      \"properties\": {\r\n        \"CODE\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 15,\r\n          \"minLength\": 0\r\n        },\r\n        \"IDFOLDER\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        },\r\n        \"CODEA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_PARENT\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA01ITC\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA01\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CTA_CUENTA_TESORERIA_POR_SUCURSAL\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CTA_CUENTA_TESORERIA_POR_SUCURSAL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CTA_CUENTA_TESORERIA_POR_SUCURSAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FILLER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string FILLER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SUCURSAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SUCURSAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA01 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_MONTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string PORC_MONTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MONTO_CTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? MONTO_CTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_CTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORC_CTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_SHOPPING\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string COD_SHOPPING { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJETA_SHOPPING\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string TARJETA_SHOPPING { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EXPORTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? EXPORTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_PAGO_CF\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? NRO_PAGO_CF { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CUENTA_TARJETA_PLAN\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_TARJETA_PLAN\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CUENTA_TARJETA_PLAN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PLAN_TARJETA\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_PLAN_TARJETA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA01 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA22\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA21\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA21 { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class SBA01ITC\n    {\n        [Newtonsoft.Json.JsonProperty(\"CODE\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string CODE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IDFOLDER\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string IDFOLDER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CODEA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string CODEA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PARENT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_PARENT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01ITC\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA01ITC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA01 { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class SBA01\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_CTA\", Required = Newtonsoft.Json.Required.Always)]\n        public double COD_CTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESCRIPCIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESCRIPCIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FONDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? FONDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CONCILIABLE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? CONCILIABLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EXPORTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? EXPORTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"REGISTRA_F\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? REGISTRA_F { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MONEDA_EX\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? MONEDA_EX { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA42\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA42 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MED_PAGO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? MED_PAGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA11\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA11 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_CTA_TRANSFERENCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_CTA_TRANSFERENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_SALD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_SALD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SALDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SALDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SALDO_UNI\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SALDO_UNI { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SALDO_MONE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SALDO_MONE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_REC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORC_REC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_BON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORC_BON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_FORMA_COBRO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_FORMA_COBRO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CC_CA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string CC_CA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CTA_ASOCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CTA_ASOCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_BANCO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SUCURSAL_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(4)]\n        public string SUCURSAL_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_CTA_BANCARIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string NRO_CTA_BANCARIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIGITO_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? DIGITO_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CBU\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(22)]\n        public string CBU { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CUPO_CREDI\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CUPO_CREDI { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA22\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABIL_VENT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? HABIL_VENT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABIL_COMP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? HABIL_COMP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABIL_FOND\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? HABIL_FOND { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA03\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA03 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_BANKING\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_BANKING { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VINCULADA_BANKING\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool VINCULADA_BANKING { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_BANCO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA01 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SALDO_A_MO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SALDO_A_MO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SALDO_A_UN\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SALDO_A_UN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SALDO_ACT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SALDO_ACT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPUTACION\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double IMPUTACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FORMA_COBRO1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string FORMA_COBRO1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_ASOCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? CTA_ASOCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AGRUP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? AGRUP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_BILLETERA_VIRTUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_BILLETERA_VIRTUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_SHOP_NOT_MAPPED\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string COD_SHOP_NOT_MAPPED { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJ_SHOP_NOT_MAPPED\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string TARJ_SHOP_NOT_MAPPED { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_CUENTA_TESORERIA_POR_SUCURSAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CTA_CUENTA_TESORERIA_POR_SUCURSAL> CTA_CUENTA_TESORERIA_POR_SUCURSAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CUENTA_TARJETA_PLAN\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CUENTA_TARJETA_PLAN> CUENTA_TARJETA_PLAN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SBA01ITC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<SBA01ITC> SBA01ITC { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface CTA_CUENTA_TESORERIA_POR_SUCURSAL {\n    ID_CTA_CUENTA_TESORERIA_POR_SUCURSAL: number;\n    FILLER: string | undefined;\n    ID_SUCURSAL: number | undefined;\n    ID_SBA01: number;\n    PORC_MONTO: string | undefined;\n    MONTO_CTA: number | undefined;\n    PORC_CTA: number | undefined;\n    COD_SHOPPING: string | undefined;\n    TARJETA_SHOPPING: string | undefined;\n    EXPORTA: boolean | undefined;\n    NRO_PAGO_CF: number | undefined;\n}\n\nexport interface CUENTA_TARJETA_PLAN {\n    ID_CUENTA_TARJETA_PLAN: number;\n    ID_PLAN_TARJETA: number;\n    ID_SBA01: number;\n    ID_SBA22: number;\n    ID_SBA21: number | undefined;\n}\n\nexport interface SBA01ITC {\n    CODE: string;\n    IDFOLDER: string;\n    CODEA: string | undefined;\n    ID_PARENT: number | undefined;\n    ID_SBA01ITC: number;\n    ID_SBA01: number;\n}\n\nexport interface SBA01 {\n    COD_CTA: number;\n    DESCRIPCIO: string | undefined;\n    TIPO: string | undefined;\n    FONDO: boolean | undefined;\n    CONCILIABLE: boolean | undefined;\n    EXPORTA: boolean | undefined;\n    REGISTRA_F: boolean | undefined;\n    MONEDA_EX: boolean | undefined;\n    ID_MONEDA: number | undefined;\n    ID_SBA42: number | undefined;\n    MED_PAGO: number | undefined;\n    ID_SBA11: number | undefined;\n    ID_SBA01_CTA_TRANSFERENCIA: number | undefined;\n    FECHA_SALD: Date | undefined;\n    SALDO: number | undefined;\n    SALDO_UNI: number | undefined;\n    SALDO_MONE: number | undefined;\n    PORC_REC: number | undefined;\n    PORC_BON: number | undefined;\n    ID_FORMA_COBRO: number | undefined;\n    CC_CA: string | undefined;\n    ID_CTA_ASOCIA: number | undefined;\n    ID_BANCO: number | undefined;\n    SUCURSAL_CUENTA: string | undefined;\n    NRO_CTA_BANCARIA: string | undefined;\n    DIGITO_CUENTA: number | undefined;\n    CBU: string | undefined;\n    CUPO_CREDI: number | undefined;\n    ID_SBA22: number | undefined;\n    HABIL_VENT: boolean | undefined;\n    HABIL_COMP: boolean | undefined;\n    HABIL_FOND: boolean | undefined;\n    ID_SBA03: number | undefined;\n    ID_CUENTA_BANKING: number | undefined;\n    VINCULADA_BANKING: boolean;\n    TIPO_BANCO: string | undefined;\n    OBSERVACIONES: string | undefined;\n    ID_SBA01: number;\n    SALDO_A_MO: number | undefined;\n    SALDO_A_UN: number | undefined;\n    SALDO_ACT: number | undefined;\n    IMPUTACION: number;\n    FORMA_COBRO1: string | undefined;\n    CTA_ASOCIA: number | undefined;\n    AGRUP: number | undefined;\n    ID_BILLETERA_VIRTUAL: number | undefined;\n    COD_SHOP_NOT_MAPPED: string | undefined;\n    TARJ_SHOP_NOT_MAPPED: string | undefined;\n    CTA_CUENTA_TESORERIA_POR_SUCURSAL: CTA_CUENTA_TESORERIA_POR_SUCURSAL[] | undefined;\n    CUENTA_TARJETA_PLAN: CUENTA_TARJETA_PLAN[] | undefined;\n    SBA01ITC: SBA01ITC[] | undefined;\n}",
+          "example": {
+            "COD_CTA": 0,
+            "DESCRIPCIO": null,
+            "TIPO": "B",
+            "FONDO": true,
+            "CONCILIABLE": false,
+            "EXPORTA": false,
+            "REGISTRA_F": false,
+            "MONEDA_EX": false,
+            "ID_MONEDA": 1,
+            "ID_SBA42": 0,
+            "MED_PAGO": 0,
+            "ID_SBA11": 0,
+            "ID_SBA01_CTA_TRANSFERENCIA": 0,
+            "FECHA_SALD": "0001-01-01T00:00:00",
+            "SALDO": 0,
+            "SALDO_UNI": 0,
+            "SALDO_MONE": 0,
+            "PORC_REC": 0,
+            "PORC_BON": 0,
+            "ID_FORMA_COBRO": 0,
+            "COD_SHOP_NOT_MAPPED": null,
+            "TARJ_SHOP_NOT_MAPPED": null,
+            "CC_CA": "A",
+            "ID_CTA_ASOCIA": 0,
+            "ID_BANCO": 0,
+            "SUCURSAL_CUENTA": null,
+            "NRO_CTA_BANCARIA": null,
+            "DIGITO_CUENTA": 0,
+            "CBU": null,
+            "CUPO_CREDI": 0,
+            "ID_SBA22": 0,
+            "HABIL_VENT": true,
+            "HABIL_COMP": true,
+            "HABIL_FOND": true,
+            "ID_SBA03": 0,
+            "ID_CUENTA_BANKING": 0,
+            "VINCULADA_BANKING": false,
+            "TIPO_BANCO": null,
+            "OBSERVACIONES": null,
+            "ID_SBA01": 0,
+            "SALDO_A_MO": 0,
+            "SALDO_A_UN": 0,
+            "SALDO_ACT": 0,
+            "IMPUTACION": 0,
+            "FORMA_COBRO1": null,
+            "CTA_ASOCIA": 0,
+            "AGRUP": 0,
+            "ID_BILLETERA_VIRTUAL": 0,
+            "CTA_CUENTA_TESORERIA_POR_SUCURSAL": [
+              {
+                "ID_CTA_CUENTA_TESORERIA_POR_SUCURSAL": 0,
+                "FILLER": null,
+                "ID_SUCURSAL": 0,
+                "ID_SBA01": 0,
+                "PORC_MONTO": null,
+                "MONTO_CTA": 0,
+                "PORC_CTA": 0,
+                "COD_SHOPPING": null,
+                "TARJETA_SHOPPING": null,
+                "EXPORTA": false,
+                "NRO_PAGO_CF": 0
+              }
+            ],
+            "CUENTA_TARJETA_PLAN": [
+              {
+                "ID_CUENTA_TARJETA_PLAN": 0,
+                "ID_PLAN_TARJETA": 0,
+                "ID_SBA01": 0,
+                "ID_SBA22": 0,
+                "ID_SBA21": 0
+              }
+            ],
+            "SBA01ITC": [
+              {
+                "CODE": null,
+                "IDFOLDER": null,
+                "CODEA": null,
+                "ID_SBA01ITC": 0,
+                "ID_SBA01": 0,
+                "ID_PARENT": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "AXV_CUENTA_TESORERIA": [
+      "COD_CTA",
+      "DESCRIPCIO",
+      "TIPO",
+      "FONDO",
+      "CONCILIABLE",
+      "EXPORTA",
+      "REGISTRA_F",
+      "MONEDA_EX",
+      "FECHA_SALD",
+      "SALDO",
+      "SALDO_UNI",
+      "SALDO_MONE",
+      "PORC_REC",
+      "PORC_BON",
+      "CC_CA",
+      "SUCURSAL_CUENTA",
+      "NRO_CTA_BANCARIA",
+      "DIGITO_CUENTA",
+      "CBU",
+      "CUPO_CREDI",
+      "HABIL_VENT",
+      "HABIL_COMP",
+      "HABIL_FOND",
+      "OBSERVACIONES",
+      "COD_CTA_SHOP",
+      "COD_TARJ_SHOP",
+      "COD_MONEDA",
+      "DESC_MONEDA",
+      "MED_PAGO",
+      "DESCRIPCIO_MED_PAGO",
+      "COD_OPERAC",
+      "LEYENDA",
+      "SBA01_COD_CTA_TRANSFERENCIA",
+      "SBA01_DESCRIPCIO_TRANSFERENCIA",
+      "SBA01_COD_CTA_ASOCIA",
+      "SBA01_DESCRIPCIO_CTA_ASOCIA",
+      "COD_BANCO",
+      "DESC_BANCO",
+      "COD_SBA22",
+      "DESC_TARJE",
+      "SUB_COD",
+      "NOMBRE",
+      "COD_FORMA_COBRO",
+      "DESC_FORMA_COBRO",
+      "COD_CUENTA_BANKING",
+      "TIPO_BANCO",
+      "CLASIFICACION"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

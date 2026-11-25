@@ -1,0 +1,579 @@
+{
+  "title": "Tarjetas",
+  "moduleId": 10005,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"SBA22\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_SBA22\",\r\n    \"COD_TARJET\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_SBA22\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_TARJE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO_TARJETA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"HORA_CIE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"CUPON_MODO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"PROX_CUPON\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"ARANCEL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"DIA_GASTO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"ID_SBA02_DEP\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_CTA_DEP\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA02_ACRE\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_CTA_CF\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_CTA_ACRE\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_CTA_PROMO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_CTA_ARAN\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_CTA_RECH\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_CTA_IMP\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8000,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_TARJET\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_HOST\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CTA_PROMO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"CTA_RECH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"CTA_ARAN\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"CTA_CF\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"CTA_IMP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"CTA_ACRE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"CTA_DEP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"TIPO_OPERACION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"HABILITADO_NOT_MAPPED\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"USA_POS_NOT_MAPPED\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"ID_TIPO_TARJETA_REGALO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_STA11\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_NOT_MAPPED\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"TARJETA_VIGENCIA_COEFICIENTE\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TARJETA_VIGENCIA_COEFICIENTE\"\r\n      }\r\n    },\r\n    \"SBA21\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/SBA21\"\r\n      }\r\n    },\r\n    \"TARJETA_REGALO_CONFIGURACION\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TARJETA_REGALO_CONFIGURACION\"\r\n      }\r\n    },\r\n    \"TARJETA_CONCEPTO_DESCUENTO_TARJETA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TARJETA_CONCEPTO_DESCUENTO_TARJETA\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"TARJETA_VIGENCIA_COEFICIENTE\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"FECHA_VIGENCIA\": {\r\n          \"type\": \"string\",\r\n          \"format\": \"date-time\"\r\n        },\r\n        \"TARJETA_COEFICIENTE_CUOTA\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/TARJETA_COEFICIENTE_CUOTA\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"TARJETA_COEFICIENTE_CUOTA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"CUOTA\"\r\n      ],\r\n      \"properties\": {\r\n        \"CUOTA\": {\r\n          \"type\": \"integer\"\r\n        },\r\n        \"COEFICIENTE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"FILLER\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        }\r\n      }\r\n    },\r\n    \"SBA21\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_PLAN_TARJETA\",\r\n        \"HABILITADO_NEXO_PEDIDOS\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_PLAN_TARJETA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"HABILITADO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"CANT_CUOTA_MIN\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"CANT_CUOTA\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"REDON_CUOT\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"PORC_DESC\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"AGRE_CUOT\": {\r\n          \"type\": [\r\n            \"boolean\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"ID_SBA51\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"TIPO_ACRE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"TIEMPO_ACRE\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"COMISION\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"DIAS_CUOTA\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"OBSERVACIONES\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 8000,\r\n          \"minLength\": 0\r\n        },\r\n        \"PLAN\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 40,\r\n          \"minLength\": 0\r\n        },\r\n        \"PROX_CUPON\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"double\"\r\n        },\r\n        \"PLAN_HAB\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 2,\r\n          \"minLength\": 0\r\n        },\r\n        \"TARJ_POS\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 4,\r\n          \"minLength\": 0\r\n        },\r\n        \"HABITUAL\": {\r\n          \"type\": [\r\n            \"boolean\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"PLAN_EDI\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"HABILITADO_NEXO_PEDIDOS\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"TIEMPO_ACRE_NOT_MAPPED\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"TARJETA_ABREVIATURA\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/TARJETA_ABREVIATURA\"\r\n          }\r\n        },\r\n        \"TARJETA_PLAN_COEFICIENTE\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/TARJETA_PLAN_COEFICIENTE\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"TARJETA_ABREVIATURA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"CUOTA\",\r\n        \"ABREVIATURA\"\r\n      ],\r\n      \"properties\": {\r\n        \"CUOTA\": {\r\n          \"type\": \"integer\"\r\n        },\r\n        \"ABREVIATURA\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 7,\r\n          \"minLength\": 0\r\n        },\r\n        \"FILLER\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 100,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"TARJETA_PLAN_COEFICIENTE\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"CUOTA\": {\r\n          \"type\": \"integer\"\r\n        },\r\n        \"COEFICIENTE_VENTA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"COEFICIENTE_ACREDITACION\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"FILLER\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 100,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_FECHA_VIGENCIA_NOT_MAPPED\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"TARJETA_REGALO_CONFIGURACION\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_TIPO_TARJETA_REGALO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"TELEFONO_ASISTENCIA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 15,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_STA11\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA01\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"CONECTA_PAGO_WEB_SERVICE\": {\r\n          \"type\": \"boolean\"\r\n        },\r\n        \"GENERA_NOTA_CREDITO_AUTOMATICA\": {\r\n          \"type\": \"boolean\"\r\n        },\r\n        \"ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_STA11\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 17,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"TARJETA_CONCEPTO_DESCUENTO_TARJETA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_CONCEPTO_DESCUENTO_TARJETA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"HABILITADO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TARJETA_VIGENCIA_COEFICIENTE\n    {\n        [Newtonsoft.Json.JsonProperty(\"FECHA_VIGENCIA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset FECHA_VIGENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJETA_COEFICIENTE_CUOTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TARJETA_COEFICIENTE_CUOTA> TARJETA_COEFICIENTE_CUOTA { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TARJETA_COEFICIENTE_CUOTA\n    {\n        [Newtonsoft.Json.JsonProperty(\"CUOTA\", Required = Newtonsoft.Json.Required.Always)]\n        public int CUOTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COEFICIENTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? COEFICIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FILLER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string FILLER { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class SBA21\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_PLAN_TARJETA\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_PLAN_TARJETA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_CUOTA_MIN\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? CANT_CUOTA_MIN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_CUOTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? CANT_CUOTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"REDON_CUOT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string REDON_CUOT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_DESC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORC_DESC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AGRE_CUOT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? AGRE_CUOT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA51\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA51 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_ACRE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_ACRE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIEMPO_ACRE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? TIEMPO_ACRE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COMISION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? COMISION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIAS_CUOTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? DIAS_CUOTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PLAN\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string PLAN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROX_CUPON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? PROX_CUPON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PLAN_HAB\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string PLAN_HAB { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJ_POS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(4)]\n        public string TARJ_POS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABITUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? HABITUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PLAN_EDI\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string PLAN_EDI { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO_NEXO_PEDIDOS\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABILITADO_NEXO_PEDIDOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIEMPO_ACRE_NOT_MAPPED\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? TIEMPO_ACRE_NOT_MAPPED { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJETA_ABREVIATURA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TARJETA_ABREVIATURA> TARJETA_ABREVIATURA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJETA_PLAN_COEFICIENTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TARJETA_PLAN_COEFICIENTE> TARJETA_PLAN_COEFICIENTE { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TARJETA_ABREVIATURA\n    {\n        [Newtonsoft.Json.JsonProperty(\"CUOTA\", Required = Newtonsoft.Json.Required.Always)]\n        public int CUOTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ABREVIATURA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(7)]\n        public string ABREVIATURA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FILLER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string FILLER { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TARJETA_PLAN_COEFICIENTE\n    {\n        [Newtonsoft.Json.JsonProperty(\"CUOTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int CUOTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COEFICIENTE_VENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? COEFICIENTE_VENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COEFICIENTE_ACREDITACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? COEFICIENTE_ACREDITACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FILLER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string FILLER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_FECHA_VIGENCIA_NOT_MAPPED\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_FECHA_VIGENCIA_NOT_MAPPED { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TARJETA_REGALO_CONFIGURACION\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_TARJETA_REGALO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TIPO_TARJETA_REGALO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TELEFONO_ASISTENCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string TELEFONO_ASISTENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA11\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA11 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CONECTA_PAGO_WEB_SERVICE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool CONECTA_PAGO_WEB_SERVICE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GENERA_NOTA_CREDITO_AUTOMATICA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool GENERA_NOTA_CREDITO_AUTOMATICA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_STA11\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(17)]\n        public string COD_STA11 { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TARJETA_CONCEPTO_DESCUENTO_TARJETA\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CONCEPTO_DESCUENTO_TARJETA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CONCEPTO_DESCUENTO_TARJETA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABILITADO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class SBA22\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_SBA22\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_SBA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_TARJE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_TARJE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_TARJETA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_TARJETA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HORA_CIE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? HORA_CIE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CUPON_MODO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string CUPON_MODO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROX_CUPON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? PROX_CUPON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ARANCEL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? ARANCEL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIA_GASTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? DIA_GASTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA02_DEP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA02_DEP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_CTA_DEP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_CTA_DEP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA02_ACRE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA02_ACRE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_CTA_CF\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_CTA_CF { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_CTA_ACRE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_CTA_ACRE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_CTA_PROMO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_CTA_PROMO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_CTA_ARAN\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_CTA_ARAN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_CTA_RECH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_CTA_RECH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_CTA_IMP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_CTA_IMP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_TARJET\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_TARJET { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_HOST\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_HOST { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_PROMO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? CTA_PROMO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_RECH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? CTA_RECH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_ARAN\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? CTA_ARAN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_CF\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? CTA_CF { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_IMP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? CTA_IMP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_ACRE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? CTA_ACRE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_DEP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? CTA_DEP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_OPERACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_OPERACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO_NOT_MAPPED\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? HABILITADO_NOT_MAPPED { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_POS_NOT_MAPPED\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? USA_POS_NOT_MAPPED { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_TARJETA_REGALO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_TARJETA_REGALO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA11\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA11 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_NOT_MAPPED\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_NOT_MAPPED { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJETA_VIGENCIA_COEFICIENTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TARJETA_VIGENCIA_COEFICIENTE> TARJETA_VIGENCIA_COEFICIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SBA21\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<SBA21> SBA21 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJETA_REGALO_CONFIGURACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TARJETA_REGALO_CONFIGURACION> TARJETA_REGALO_CONFIGURACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJETA_CONCEPTO_DESCUENTO_TARJETA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TARJETA_CONCEPTO_DESCUENTO_TARJETA> TARJETA_CONCEPTO_DESCUENTO_TARJETA { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface TARJETA_VIGENCIA_COEFICIENTE {\n    FECHA_VIGENCIA: Date;\n    TARJETA_COEFICIENTE_CUOTA: TARJETA_COEFICIENTE_CUOTA[] | undefined;\n}\n\nexport interface TARJETA_COEFICIENTE_CUOTA {\n    CUOTA: number;\n    COEFICIENTE: number | undefined;\n    FILLER: string | undefined;\n}\n\nexport interface SBA21 {\n    ID_PLAN_TARJETA: number;\n    HABILITADO: string | undefined;\n    CANT_CUOTA_MIN: number | undefined;\n    CANT_CUOTA: number | undefined;\n    REDON_CUOT: string | undefined;\n    PORC_DESC: number | undefined;\n    AGRE_CUOT: boolean | undefined;\n    ID_SBA51: number | undefined;\n    TIPO_ACRE: string | undefined;\n    TIEMPO_ACRE: number | undefined;\n    COMISION: number | undefined;\n    DIAS_CUOTA: number | undefined;\n    OBSERVACIONES: string | undefined;\n    PLAN: string | undefined;\n    PROX_CUPON: number | undefined;\n    PLAN_HAB: string | undefined;\n    TARJ_POS: string | undefined;\n    HABITUAL: boolean | undefined;\n    PLAN_EDI: string | undefined;\n    HABILITADO_NEXO_PEDIDOS: string;\n    TIEMPO_ACRE_NOT_MAPPED: number | undefined;\n    TARJETA_ABREVIATURA: TARJETA_ABREVIATURA[] | undefined;\n    TARJETA_PLAN_COEFICIENTE: TARJETA_PLAN_COEFICIENTE[] | undefined;\n}\n\nexport interface TARJETA_ABREVIATURA {\n    CUOTA: number;\n    ABREVIATURA: string;\n    FILLER: string | undefined;\n}\n\nexport interface TARJETA_PLAN_COEFICIENTE {\n    CUOTA: number;\n    COEFICIENTE_VENTA: number | undefined;\n    COEFICIENTE_ACREDITACION: number | undefined;\n    FILLER: string | undefined;\n    ID_FECHA_VIGENCIA_NOT_MAPPED: number;\n}\n\nexport interface TARJETA_REGALO_CONFIGURACION {\n    ID_TIPO_TARJETA_REGALO: number;\n    TELEFONO_ASISTENCIA: string | undefined;\n    ID_STA11: number | undefined;\n    ID_SBA01: number | undefined;\n    CONECTA_PAGO_WEB_SERVICE: boolean;\n    GENERA_NOTA_CREDITO_AUTOMATICA: boolean;\n    ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO: number | undefined;\n    ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO: number | undefined;\n    ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO: number | undefined;\n    COD_STA11: string | undefined;\n}\n\nexport interface TARJETA_CONCEPTO_DESCUENTO_TARJETA {\n    ID_CONCEPTO_DESCUENTO_TARJETA: number;\n    HABILITADO: string | undefined;\n}\n\nexport interface SBA22 {\n    COD_SBA22: string;\n    DESC_TARJE: string | undefined;\n    TIPO_TARJETA: string | undefined;\n    HORA_CIE: Date | undefined;\n    CUPON_MODO: string | undefined;\n    PROX_CUPON: number | undefined;\n    ARANCEL: number | undefined;\n    DIA_GASTO: number | undefined;\n    ID_SBA02_DEP: number | undefined;\n    ID_SBA01_CTA_DEP: number | undefined;\n    ID_SBA02_ACRE: number | undefined;\n    ID_SBA01_CTA_CF: number | undefined;\n    ID_SBA01_CTA_ACRE: number | undefined;\n    ID_SBA01_CTA_PROMO: number | undefined;\n    ID_SBA01_CTA_ARAN: number | undefined;\n    ID_SBA01_CTA_RECH: number | undefined;\n    ID_SBA01_CTA_IMP: number | undefined;\n    OBSERVACIONES: string | undefined;\n    COD_TARJET: string;\n    ID_HOST: number | undefined;\n    CTA_PROMO: number | undefined;\n    CTA_RECH: number | undefined;\n    CTA_ARAN: number | undefined;\n    CTA_CF: number | undefined;\n    CTA_IMP: number | undefined;\n    CTA_ACRE: number | undefined;\n    CTA_DEP: number | undefined;\n    TIPO_OPERACION: string | undefined;\n    HABILITADO_NOT_MAPPED: boolean | undefined;\n    USA_POS_NOT_MAPPED: boolean | undefined;\n    ID_TIPO_TARJETA_REGALO: number | undefined;\n    ID_STA11: number | undefined;\n    ID_SBA01_NOT_MAPPED: number | undefined;\n    ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO: number | undefined;\n    ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO: number | undefined;\n    ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO: number | undefined;\n    TARJETA_VIGENCIA_COEFICIENTE: TARJETA_VIGENCIA_COEFICIENTE[] | undefined;\n    SBA21: SBA21[] | undefined;\n    TARJETA_REGALO_CONFIGURACION: TARJETA_REGALO_CONFIGURACION[] | undefined;\n    TARJETA_CONCEPTO_DESCUENTO_TARJETA: TARJETA_CONCEPTO_DESCUENTO_TARJETA[] | undefined;\n}",
+          "example": {
+            "COD_SBA22": null,
+            "DESC_TARJE": null,
+            "HABILITADO_NOT_MAPPED": false,
+            "TIPO_TARJETA": "C",
+            "USA_POS_NOT_MAPPED": false,
+            "HORA_CIE": "0001-01-01T00:00:00",
+            "CUPON_MODO": "A",
+            "PROX_CUPON": 0,
+            "ARANCEL": 0,
+            "DIA_GASTO": 0,
+            "ID_TIPO_TARJETA_REGALO": 0,
+            "ID_STA11": 0,
+            "ID_SBA01_NOT_MAPPED": 0,
+            "ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO": 0,
+            "ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO": 0,
+            "ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO": 0,
+            "ID_SBA02_DEP": 0,
+            "ID_SBA01_CTA_DEP": 0,
+            "ID_SBA02_ACRE": 0,
+            "ID_SBA01_CTA_CF": 0,
+            "ID_SBA01_CTA_ACRE": 0,
+            "ID_SBA01_CTA_PROMO": 0,
+            "ID_SBA01_CTA_ARAN": 0,
+            "ID_SBA01_CTA_RECH": 0,
+            "ID_SBA01_CTA_IMP": 0,
+            "OBSERVACIONES": null,
+            "COD_TARJET": null,
+            "ID_HOST": 0,
+            "CTA_PROMO": 0,
+            "CTA_RECH": 0,
+            "CTA_ARAN": 0,
+            "CTA_CF": 0,
+            "CTA_IMP": 0,
+            "CTA_ACRE": 0,
+            "CTA_DEP": 0,
+            "TIPO_OPERACION": null,
+            "TARJETA_VIGENCIA_COEFICIENTE": [
+              {
+                "FECHA_VIGENCIA": "0001-01-01T00:00:00",
+                "TARJETA_COEFICIENTE_CUOTA": [
+                  {
+                    "CUOTA": 0,
+                    "COEFICIENTE": 0,
+                    "FILLER": null
+                  }
+                ]
+              }
+            ],
+            "SBA21": [
+              {
+                "ID_PLAN_TARJETA": 0,
+                "HABILITADO": null,
+                "CANT_CUOTA_MIN": 0,
+                "CANT_CUOTA": 0,
+                "REDON_CUOT": null,
+                "PORC_DESC": 0,
+                "AGRE_CUOT": false,
+                "ID_SBA51": 0,
+                "TIPO_ACRE": null,
+                "TIEMPO_ACRE": 0,
+                "COMISION": 0,
+                "DIAS_CUOTA": 0,
+                "OBSERVACIONES": null,
+                "PLAN": null,
+                "PROX_CUPON": 0,
+                "PLAN_HAB": null,
+                "TARJ_POS": null,
+                "HABITUAL": false,
+                "PLAN_EDI": null,
+                "HABILITADO_NEXO_PEDIDOS": null,
+                "TIEMPO_ACRE_NOT_MAPPED": 0,
+                "TARJETA_ABREVIATURA": [
+                  {
+                    "CUOTA": 0,
+                    "ABREVIATURA": null,
+                    "FILLER": null
+                  }
+                ],
+                "TARJETA_PLAN_COEFICIENTE": [
+                  {
+                    "CUOTA": 0,
+                    "COEFICIENTE_VENTA": 0,
+                    "COEFICIENTE_ACREDITACION": 0,
+                    "FILLER": null,
+                    "ID_FECHA_VIGENCIA_NOT_MAPPED": 0
+                  }
+                ]
+              }
+            ],
+            "TARJETA_REGALO_CONFIGURACION": [
+              {
+                "ID_TIPO_TARJETA_REGALO": 0,
+                "TELEFONO_ASISTENCIA": null,
+                "ID_STA11": 0,
+                "ID_SBA01": 0,
+                "CONECTA_PAGO_WEB_SERVICE": false,
+                "GENERA_NOTA_CREDITO_AUTOMATICA": false,
+                "ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO": 0,
+                "ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO": 0,
+                "ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO": 0,
+                "COD_STA11": null
+              }
+            ],
+            "TARJETA_CONCEPTO_DESCUENTO_TARJETA": [
+              {
+                "ID_CONCEPTO_DESCUENTO_TARJETA": 0,
+                "HABILITADO": null
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"SBA22\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_SBA22\",\r\n    \"COD_TARJET\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_SBA22\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_TARJE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO_TARJETA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"HORA_CIE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"CUPON_MODO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"PROX_CUPON\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"ARANCEL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"DIA_GASTO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"ID_SBA02_DEP\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_CTA_DEP\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA02_ACRE\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_CTA_CF\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_CTA_ACRE\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_CTA_PROMO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_CTA_ARAN\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_CTA_RECH\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_CTA_IMP\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8000,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_SBA22\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_TARJET\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_HOST\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CTA_PROMO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"CTA_RECH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"CTA_ARAN\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"CTA_CF\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"CTA_IMP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"CTA_ACRE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"CTA_DEP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"double\"\r\n    },\r\n    \"TIPO_OPERACION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"HABILITADO_NOT_MAPPED\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"USA_POS_NOT_MAPPED\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"ID_TIPO_TARJETA_REGALO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_STA11\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01_NOT_MAPPED\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"TARJETA_VIGENCIA_COEFICIENTE\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TARJETA_VIGENCIA_COEFICIENTE\"\r\n      }\r\n    },\r\n    \"SBA21\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/SBA21\"\r\n      }\r\n    },\r\n    \"TARJETA_REGALO_CONFIGURACION\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TARJETA_REGALO_CONFIGURACION\"\r\n      }\r\n    },\r\n    \"TARJETA_CONCEPTO_DESCUENTO_TARJETA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TARJETA_CONCEPTO_DESCUENTO_TARJETA\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"TARJETA_VIGENCIA_COEFICIENTE\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_TARJETA_VIGENCIA_COEFICIENTE\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA22\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"FECHA_VIGENCIA\": {\r\n          \"type\": \"string\",\r\n          \"format\": \"date-time\"\r\n        },\r\n        \"TARJETA_COEFICIENTE_CUOTA\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/TARJETA_COEFICIENTE_CUOTA\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"TARJETA_COEFICIENTE_CUOTA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"CUOTA\"\r\n      ],\r\n      \"properties\": {\r\n        \"CUOTA\": {\r\n          \"type\": \"integer\"\r\n        },\r\n        \"COEFICIENTE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"ID_TARJETA_COEFICIENTE_CUOTA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_TARJETA_VIGENCIA_COEFICIENTE\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"FILLER\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        }\r\n      }\r\n    },\r\n    \"SBA21\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_PLAN_TARJETA\",\r\n        \"HABILITADO_NEXO_PEDIDOS\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_PLAN_TARJETA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"HABILITADO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"CANT_CUOTA_MIN\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"CANT_CUOTA\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"REDON_CUOT\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"PORC_DESC\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"AGRE_CUOT\": {\r\n          \"type\": [\r\n            \"boolean\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"ID_SBA51\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"TIPO_ACRE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"TIEMPO_ACRE\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"COMISION\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"DIAS_CUOTA\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"OBSERVACIONES\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 8000,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_SBA21\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA22\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"PLAN\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 40,\r\n          \"minLength\": 0\r\n        },\r\n        \"PROX_CUPON\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"double\"\r\n        },\r\n        \"PLAN_HAB\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 2,\r\n          \"minLength\": 0\r\n        },\r\n        \"TARJ_POS\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 4,\r\n          \"minLength\": 0\r\n        },\r\n        \"HABITUAL\": {\r\n          \"type\": [\r\n            \"boolean\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"PLAN_EDI\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"HABILITADO_NEXO_PEDIDOS\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"TIEMPO_ACRE_NOT_MAPPED\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"TARJETA_ABREVIATURA\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/TARJETA_ABREVIATURA\"\r\n          }\r\n        },\r\n        \"TARJETA_PLAN_COEFICIENTE\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/TARJETA_PLAN_COEFICIENTE\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"TARJETA_ABREVIATURA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"CUOTA\",\r\n        \"ABREVIATURA\"\r\n      ],\r\n      \"properties\": {\r\n        \"CUOTA\": {\r\n          \"type\": \"integer\"\r\n        },\r\n        \"ABREVIATURA\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 7,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_TARJETA_ABREVIATURA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA21\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"FILLER\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 100,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"TARJETA_PLAN_COEFICIENTE\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"CUOTA\": {\r\n          \"type\": \"integer\"\r\n        },\r\n        \"COEFICIENTE_VENTA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"COEFICIENTE_ACREDITACION\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"ID_TARJETA_PLAN_COEFICIENTE\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA21\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"FILLER\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 100,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_FECHA_VIGENCIA_NOT_MAPPED\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"TARJETA_REGALO_CONFIGURACION\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_TIPO_TARJETA_REGALO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"TELEFONO_ASISTENCIA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 15,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_STA11\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA01\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"CONECTA_PAGO_WEB_SERVICE\": {\r\n          \"type\": \"boolean\"\r\n        },\r\n        \"GENERA_NOTA_CREDITO_AUTOMATICA\": {\r\n          \"type\": \"boolean\"\r\n        },\r\n        \"ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_TARJETA_REGALO_CONFIGURACION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA22\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_STA11\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 17,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"TARJETA_CONCEPTO_DESCUENTO_TARJETA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_CONCEPTO_DESCUENTO_TARJETA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"HABILITADO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_TARJETA_CONCEPTO_DESCUENTO_TARJETA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA22\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TARJETA_VIGENCIA_COEFICIENTE\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TARJETA_VIGENCIA_COEFICIENTE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TARJETA_VIGENCIA_COEFICIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA22\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_VIGENCIA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset FECHA_VIGENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJETA_COEFICIENTE_CUOTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TARJETA_COEFICIENTE_CUOTA> TARJETA_COEFICIENTE_CUOTA { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TARJETA_COEFICIENTE_CUOTA\n    {\n        [Newtonsoft.Json.JsonProperty(\"CUOTA\", Required = Newtonsoft.Json.Required.Always)]\n        public int CUOTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COEFICIENTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? COEFICIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TARJETA_COEFICIENTE_CUOTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TARJETA_COEFICIENTE_CUOTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TARJETA_VIGENCIA_COEFICIENTE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TARJETA_VIGENCIA_COEFICIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FILLER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string FILLER { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class SBA21\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_PLAN_TARJETA\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_PLAN_TARJETA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_CUOTA_MIN\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? CANT_CUOTA_MIN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_CUOTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? CANT_CUOTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"REDON_CUOT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string REDON_CUOT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_DESC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORC_DESC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AGRE_CUOT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? AGRE_CUOT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA51\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA51 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_ACRE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_ACRE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIEMPO_ACRE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? TIEMPO_ACRE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COMISION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? COMISION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIAS_CUOTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? DIAS_CUOTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA21\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA21 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA22\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PLAN\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string PLAN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROX_CUPON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? PROX_CUPON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PLAN_HAB\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string PLAN_HAB { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJ_POS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(4)]\n        public string TARJ_POS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABITUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? HABITUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PLAN_EDI\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string PLAN_EDI { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO_NEXO_PEDIDOS\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABILITADO_NEXO_PEDIDOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIEMPO_ACRE_NOT_MAPPED\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? TIEMPO_ACRE_NOT_MAPPED { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJETA_ABREVIATURA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TARJETA_ABREVIATURA> TARJETA_ABREVIATURA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJETA_PLAN_COEFICIENTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TARJETA_PLAN_COEFICIENTE> TARJETA_PLAN_COEFICIENTE { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TARJETA_ABREVIATURA\n    {\n        [Newtonsoft.Json.JsonProperty(\"CUOTA\", Required = Newtonsoft.Json.Required.Always)]\n        public int CUOTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ABREVIATURA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(7)]\n        public string ABREVIATURA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TARJETA_ABREVIATURA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TARJETA_ABREVIATURA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA21\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA21 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FILLER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string FILLER { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TARJETA_PLAN_COEFICIENTE\n    {\n        [Newtonsoft.Json.JsonProperty(\"CUOTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int CUOTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COEFICIENTE_VENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? COEFICIENTE_VENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COEFICIENTE_ACREDITACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? COEFICIENTE_ACREDITACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TARJETA_PLAN_COEFICIENTE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TARJETA_PLAN_COEFICIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA21\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA21 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FILLER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string FILLER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_FECHA_VIGENCIA_NOT_MAPPED\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_FECHA_VIGENCIA_NOT_MAPPED { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TARJETA_REGALO_CONFIGURACION\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_TARJETA_REGALO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TIPO_TARJETA_REGALO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TELEFONO_ASISTENCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string TELEFONO_ASISTENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA11\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA11 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CONECTA_PAGO_WEB_SERVICE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool CONECTA_PAGO_WEB_SERVICE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GENERA_NOTA_CREDITO_AUTOMATICA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool GENERA_NOTA_CREDITO_AUTOMATICA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TARJETA_REGALO_CONFIGURACION\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TARJETA_REGALO_CONFIGURACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA22\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_STA11\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(17)]\n        public string COD_STA11 { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TARJETA_CONCEPTO_DESCUENTO_TARJETA\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CONCEPTO_DESCUENTO_TARJETA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CONCEPTO_DESCUENTO_TARJETA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TARJETA_CONCEPTO_DESCUENTO_TARJETA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TARJETA_CONCEPTO_DESCUENTO_TARJETA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA22\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA22 { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class SBA22\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_SBA22\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_SBA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_TARJE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_TARJE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_TARJETA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_TARJETA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HORA_CIE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? HORA_CIE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CUPON_MODO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string CUPON_MODO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROX_CUPON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? PROX_CUPON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ARANCEL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? ARANCEL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIA_GASTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? DIA_GASTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA02_DEP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA02_DEP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_CTA_DEP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_CTA_DEP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA02_ACRE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA02_ACRE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_CTA_CF\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_CTA_CF { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_CTA_ACRE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_CTA_ACRE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_CTA_PROMO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_CTA_PROMO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_CTA_ARAN\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_CTA_ARAN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_CTA_RECH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_CTA_RECH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_CTA_IMP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_CTA_IMP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA22\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_TARJET\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_TARJET { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_HOST\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_HOST { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_PROMO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? CTA_PROMO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_RECH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? CTA_RECH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_ARAN\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? CTA_ARAN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_CF\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? CTA_CF { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_IMP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? CTA_IMP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_ACRE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? CTA_ACRE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CTA_DEP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? CTA_DEP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_OPERACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_OPERACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO_NOT_MAPPED\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? HABILITADO_NOT_MAPPED { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_POS_NOT_MAPPED\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? USA_POS_NOT_MAPPED { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_TARJETA_REGALO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_TARJETA_REGALO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA11\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA11 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01_NOT_MAPPED\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01_NOT_MAPPED { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJETA_VIGENCIA_COEFICIENTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TARJETA_VIGENCIA_COEFICIENTE> TARJETA_VIGENCIA_COEFICIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SBA21\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<SBA21> SBA21 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJETA_REGALO_CONFIGURACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TARJETA_REGALO_CONFIGURACION> TARJETA_REGALO_CONFIGURACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJETA_CONCEPTO_DESCUENTO_TARJETA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TARJETA_CONCEPTO_DESCUENTO_TARJETA> TARJETA_CONCEPTO_DESCUENTO_TARJETA { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface TARJETA_VIGENCIA_COEFICIENTE {\n    ID_TARJETA_VIGENCIA_COEFICIENTE: number;\n    ID_SBA22: number;\n    FECHA_VIGENCIA: Date;\n    TARJETA_COEFICIENTE_CUOTA: TARJETA_COEFICIENTE_CUOTA[] | undefined;\n}\n\nexport interface TARJETA_COEFICIENTE_CUOTA {\n    CUOTA: number;\n    COEFICIENTE: number | undefined;\n    ID_TARJETA_COEFICIENTE_CUOTA: number;\n    ID_TARJETA_VIGENCIA_COEFICIENTE: number;\n    FILLER: string | undefined;\n}\n\nexport interface SBA21 {\n    ID_PLAN_TARJETA: number;\n    HABILITADO: string | undefined;\n    CANT_CUOTA_MIN: number | undefined;\n    CANT_CUOTA: number | undefined;\n    REDON_CUOT: string | undefined;\n    PORC_DESC: number | undefined;\n    AGRE_CUOT: boolean | undefined;\n    ID_SBA51: number | undefined;\n    TIPO_ACRE: string | undefined;\n    TIEMPO_ACRE: number | undefined;\n    COMISION: number | undefined;\n    DIAS_CUOTA: number | undefined;\n    OBSERVACIONES: string | undefined;\n    ID_SBA21: number;\n    ID_SBA22: number;\n    PLAN: string | undefined;\n    PROX_CUPON: number | undefined;\n    PLAN_HAB: string | undefined;\n    TARJ_POS: string | undefined;\n    HABITUAL: boolean | undefined;\n    PLAN_EDI: string | undefined;\n    HABILITADO_NEXO_PEDIDOS: string;\n    TIEMPO_ACRE_NOT_MAPPED: number | undefined;\n    TARJETA_ABREVIATURA: TARJETA_ABREVIATURA[] | undefined;\n    TARJETA_PLAN_COEFICIENTE: TARJETA_PLAN_COEFICIENTE[] | undefined;\n}\n\nexport interface TARJETA_ABREVIATURA {\n    CUOTA: number;\n    ABREVIATURA: string;\n    ID_TARJETA_ABREVIATURA: number;\n    ID_SBA21: number;\n    FILLER: string | undefined;\n}\n\nexport interface TARJETA_PLAN_COEFICIENTE {\n    CUOTA: number;\n    COEFICIENTE_VENTA: number | undefined;\n    COEFICIENTE_ACREDITACION: number | undefined;\n    ID_TARJETA_PLAN_COEFICIENTE: number;\n    ID_SBA21: number;\n    FILLER: string | undefined;\n    ID_FECHA_VIGENCIA_NOT_MAPPED: number;\n}\n\nexport interface TARJETA_REGALO_CONFIGURACION {\n    ID_TIPO_TARJETA_REGALO: number;\n    TELEFONO_ASISTENCIA: string | undefined;\n    ID_STA11: number | undefined;\n    ID_SBA01: number | undefined;\n    CONECTA_PAGO_WEB_SERVICE: boolean;\n    GENERA_NOTA_CREDITO_AUTOMATICA: boolean;\n    ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO: number | undefined;\n    ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO: number | undefined;\n    ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO: number | undefined;\n    ID_TARJETA_REGALO_CONFIGURACION: number;\n    ID_SBA22: number;\n    COD_STA11: string | undefined;\n}\n\nexport interface TARJETA_CONCEPTO_DESCUENTO_TARJETA {\n    ID_CONCEPTO_DESCUENTO_TARJETA: number;\n    HABILITADO: string | undefined;\n    ID_TARJETA_CONCEPTO_DESCUENTO_TARJETA: number;\n    ID_SBA22: number;\n}\n\nexport interface SBA22 {\n    COD_SBA22: string;\n    DESC_TARJE: string | undefined;\n    TIPO_TARJETA: string | undefined;\n    HORA_CIE: Date | undefined;\n    CUPON_MODO: string | undefined;\n    PROX_CUPON: number | undefined;\n    ARANCEL: number | undefined;\n    DIA_GASTO: number | undefined;\n    ID_SBA02_DEP: number | undefined;\n    ID_SBA01_CTA_DEP: number | undefined;\n    ID_SBA02_ACRE: number | undefined;\n    ID_SBA01_CTA_CF: number | undefined;\n    ID_SBA01_CTA_ACRE: number | undefined;\n    ID_SBA01_CTA_PROMO: number | undefined;\n    ID_SBA01_CTA_ARAN: number | undefined;\n    ID_SBA01_CTA_RECH: number | undefined;\n    ID_SBA01_CTA_IMP: number | undefined;\n    OBSERVACIONES: string | undefined;\n    ID_SBA22: number;\n    COD_TARJET: string;\n    ID_HOST: number | undefined;\n    CTA_PROMO: number | undefined;\n    CTA_RECH: number | undefined;\n    CTA_ARAN: number | undefined;\n    CTA_CF: number | undefined;\n    CTA_IMP: number | undefined;\n    CTA_ACRE: number | undefined;\n    CTA_DEP: number | undefined;\n    TIPO_OPERACION: string | undefined;\n    HABILITADO_NOT_MAPPED: boolean | undefined;\n    USA_POS_NOT_MAPPED: boolean | undefined;\n    ID_TIPO_TARJETA_REGALO: number | undefined;\n    ID_STA11: number | undefined;\n    ID_SBA01_NOT_MAPPED: number | undefined;\n    ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO: number | undefined;\n    ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO: number | undefined;\n    ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO: number | undefined;\n    TARJETA_VIGENCIA_COEFICIENTE: TARJETA_VIGENCIA_COEFICIENTE[] | undefined;\n    SBA21: SBA21[] | undefined;\n    TARJETA_REGALO_CONFIGURACION: TARJETA_REGALO_CONFIGURACION[] | undefined;\n    TARJETA_CONCEPTO_DESCUENTO_TARJETA: TARJETA_CONCEPTO_DESCUENTO_TARJETA[] | undefined;\n}",
+          "example": {
+            "COD_SBA22": null,
+            "DESC_TARJE": null,
+            "HABILITADO_NOT_MAPPED": false,
+            "TIPO_TARJETA": "C",
+            "USA_POS_NOT_MAPPED": false,
+            "HORA_CIE": "0001-01-01T00:00:00",
+            "CUPON_MODO": "A",
+            "PROX_CUPON": 0,
+            "ARANCEL": 0,
+            "DIA_GASTO": 0,
+            "ID_TIPO_TARJETA_REGALO": 0,
+            "ID_STA11": 0,
+            "ID_SBA01_NOT_MAPPED": 0,
+            "ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO": 0,
+            "ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO": 0,
+            "ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO": 0,
+            "ID_SBA02_DEP": 0,
+            "ID_SBA01_CTA_DEP": 0,
+            "ID_SBA02_ACRE": 0,
+            "ID_SBA01_CTA_CF": 0,
+            "ID_SBA01_CTA_ACRE": 0,
+            "ID_SBA01_CTA_PROMO": 0,
+            "ID_SBA01_CTA_ARAN": 0,
+            "ID_SBA01_CTA_RECH": 0,
+            "ID_SBA01_CTA_IMP": 0,
+            "OBSERVACIONES": null,
+            "ID_SBA22": 0,
+            "COD_TARJET": null,
+            "ID_HOST": 0,
+            "CTA_PROMO": 0,
+            "CTA_RECH": 0,
+            "CTA_ARAN": 0,
+            "CTA_CF": 0,
+            "CTA_IMP": 0,
+            "CTA_ACRE": 0,
+            "CTA_DEP": 0,
+            "TIPO_OPERACION": null,
+            "TARJETA_VIGENCIA_COEFICIENTE": [
+              {
+                "ID_TARJETA_VIGENCIA_COEFICIENTE": 0,
+                "ID_SBA22": 0,
+                "FECHA_VIGENCIA": "0001-01-01T00:00:00",
+                "TARJETA_COEFICIENTE_CUOTA": [
+                  {
+                    "CUOTA": 0,
+                    "COEFICIENTE": 0,
+                    "ID_TARJETA_COEFICIENTE_CUOTA": 0,
+                    "ID_TARJETA_VIGENCIA_COEFICIENTE": 0,
+                    "FILLER": null
+                  }
+                ]
+              }
+            ],
+            "SBA21": [
+              {
+                "ID_PLAN_TARJETA": 0,
+                "HABILITADO": null,
+                "CANT_CUOTA_MIN": 0,
+                "CANT_CUOTA": 0,
+                "REDON_CUOT": null,
+                "PORC_DESC": 0,
+                "AGRE_CUOT": false,
+                "ID_SBA51": 0,
+                "TIPO_ACRE": null,
+                "TIEMPO_ACRE": 0,
+                "COMISION": 0,
+                "DIAS_CUOTA": 0,
+                "OBSERVACIONES": null,
+                "ID_SBA21": 0,
+                "ID_SBA22": 0,
+                "PLAN": null,
+                "PROX_CUPON": 0,
+                "PLAN_HAB": null,
+                "TARJ_POS": null,
+                "HABITUAL": false,
+                "PLAN_EDI": null,
+                "HABILITADO_NEXO_PEDIDOS": null,
+                "TIEMPO_ACRE_NOT_MAPPED": 0,
+                "TARJETA_ABREVIATURA": [
+                  {
+                    "CUOTA": 0,
+                    "ABREVIATURA": null,
+                    "ID_TARJETA_ABREVIATURA": 0,
+                    "ID_SBA21": 0,
+                    "FILLER": null
+                  }
+                ],
+                "TARJETA_PLAN_COEFICIENTE": [
+                  {
+                    "CUOTA": 0,
+                    "COEFICIENTE_VENTA": 0,
+                    "COEFICIENTE_ACREDITACION": 0,
+                    "ID_TARJETA_PLAN_COEFICIENTE": 0,
+                    "ID_SBA21": 0,
+                    "FILLER": null,
+                    "ID_FECHA_VIGENCIA_NOT_MAPPED": 0
+                  }
+                ]
+              }
+            ],
+            "TARJETA_REGALO_CONFIGURACION": [
+              {
+                "ID_TIPO_TARJETA_REGALO": 0,
+                "TELEFONO_ASISTENCIA": null,
+                "ID_STA11": 0,
+                "ID_SBA01": 0,
+                "CONECTA_PAGO_WEB_SERVICE": false,
+                "GENERA_NOTA_CREDITO_AUTOMATICA": false,
+                "ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO": 0,
+                "ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO": 0,
+                "ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO": 0,
+                "ID_TARJETA_REGALO_CONFIGURACION": 0,
+                "ID_SBA22": 0,
+                "COD_STA11": null
+              }
+            ],
+            "TARJETA_CONCEPTO_DESCUENTO_TARJETA": [
+              {
+                "ID_CONCEPTO_DESCUENTO_TARJETA": 0,
+                "HABILITADO": null,
+                "ID_TARJETA_CONCEPTO_DESCUENTO_TARJETA": 0,
+                "ID_SBA22": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "SBA22": [
+      "TARJETA_VIGENCIA_COEFICIENTE",
+      "SBA21",
+      "TARJETA_REGALO_CONFIGURACION",
+      "ID_TIPO_TARJETA_REGALO",
+      "ID_STA11",
+      "ID_SBA01_NOT_MAPPED",
+      "ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO",
+      "ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO",
+      "ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO",
+      "TARJETA_CONCEPTO_DESCUENTO_TARJETA",
+      "HABILITADO_NOT_MAPPED",
+      "USA_POS_NOT_MAPPED",
+      "COD_SBA22",
+      "DESC_TARJE",
+      "TIPO_TARJETA",
+      "HORA_CIE",
+      "CUPON_MODO",
+      "PROX_CUPON",
+      "ARANCEL",
+      "DIA_GASTO",
+      "COD_TARJET",
+      "ID_HOST",
+      "ID_SBA02_DEP",
+      "ID_SBA02_ACRE",
+      "CTA_PROMO",
+      "ID_SBA01_CTA_PROMO",
+      "CTA_RECH",
+      "ID_SBA01_CTA_RECH",
+      "CTA_ARAN",
+      "ID_SBA01_CTA_ARAN",
+      "CTA_CF",
+      "ID_SBA01_CTA_CF",
+      "CTA_IMP",
+      "ID_SBA01_CTA_IMP",
+      "CTA_ACRE",
+      "ID_SBA01_CTA_ACRE",
+      "CTA_DEP",
+      "ID_SBA01_CTA_DEP",
+      "OBSERVACIONES",
+      "TIPO_OPERACION"
+    ],
+    "TARJETA_VIGENCIA_COEFICIENTE": [
+      "TARJETA_COEFICIENTE_CUOTA",
+      "ID_SBA22",
+      "FECHA_VIGENCIA"
+    ],
+    "TARJETA_COEFICIENTE_CUOTA": [
+      "ID_TARJETA_VIGENCIA_COEFICIENTE",
+      "CUOTA",
+      "COEFICIENTE",
+      "FILLER"
+    ],
+    "SBA21": [
+      "TARJETA_ABREVIATURA",
+      "TARJETA_PLAN_COEFICIENTE",
+      "TIEMPO_ACRE_NOT_MAPPED",
+      "ID_PLAN_TARJETA",
+      "ID_SBA22",
+      "HABILITADO",
+      "CANT_CUOTA_MIN",
+      "CANT_CUOTA",
+      "COMISION",
+      "REDON_CUOT",
+      "PORC_DESC",
+      "OBSERVACIONES",
+      "AGRE_CUOT",
+      "TIPO_ACRE",
+      "TIEMPO_ACRE",
+      "DIAS_CUOTA",
+      "PLAN",
+      "PROX_CUPON",
+      "PLAN_HAB",
+      "ID_SBA51",
+      "TARJ_POS",
+      "HABITUAL",
+      "PLAN_EDI",
+      "HABILITADO_NEXO_PEDIDOS"
+    ],
+    "TARJETA_ABREVIATURA": [
+      "ID_SBA21",
+      "CUOTA",
+      "ABREVIATURA",
+      "FILLER"
+    ],
+    "TARJETA_PLAN_COEFICIENTE": [
+      "ID_FECHA_VIGENCIA_NOT_MAPPED",
+      "ID_SBA21",
+      "CUOTA",
+      "COEFICIENTE_VENTA",
+      "COEFICIENTE_ACREDITACION",
+      "FILLER"
+    ],
+    "TARJETA_REGALO_CONFIGURACION": [
+      "ID_SBA22",
+      "ID_TIPO_TARJETA_REGALO",
+      "COD_STA11",
+      "ID_STA11",
+      "TELEFONO_ASISTENCIA",
+      "ID_SBA01",
+      "ID_TIPO_COMPROBANTE_CREDITO_TARJETA_REGALO",
+      "ID_ASIENTO_COMPROBANTE_CREDITO_TARJETA_REGALO",
+      "ID_MOTIVO_COMPROBANTE_CREDITO_TARJETA_REGALO",
+      "GENERA_NOTA_CREDITO_AUTOMATICA",
+      "CONECTA_PAGO_WEB_SERVICE"
+    ],
+    "TARJETA_CONCEPTO_DESCUENTO_TARJETA": [
+      "ID_CONCEPTO_DESCUENTO_TARJETA",
+      "ID_SBA22",
+      "HABILITADO"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

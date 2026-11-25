@@ -1,0 +1,85 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "aperturA_SUBAUXILIARES": "No",
+        "permitE_CAMBIAR_CODIGOS_ABM_REGLAS": false,
+        "iD_REGLA_APROPIACION": 3,
+        "coD_REGLA_APROPIACION": "99",
+        "desC_REGLA_APROPIACION": "99 - PRODUCTORA",
+        "iD_TIPO_AUXILIAR": 1,
+        "coD_DESCRIP": "99 - 99 - PRODUCTORA",
+        "roW_VERSION": "AAAAAADQWxI="
+      },
+      {
+        "aperturA_SUBAUXILIARES": "No",
+        "permitE_CAMBIAR_CODIGOS_ABM_REGLAS": false,
+        "iD_REGLA_APROPIACION": 6,
+        "coD_REGLA_APROPIACION": "204",
+        "desC_REGLA_APROPIACION": "204 - PRODUCCIONES",
+        "iD_TIPO_AUXILIAR": 1,
+        "coD_DESCRIP": "204 - 204 - PRODUCCIONES",
+        "roW_VERSION": "AAAAAADQWxA="
+      },
+      {
+        "aperturA_SUBAUXILIARES": "No",
+        "permitE_CAMBIAR_CODIGOS_ABM_REGLAS": false,
+        "iD_REGLA_APROPIACION": 8,
+        "coD_REGLA_APROPIACION": "196",
+        "desC_REGLA_APROPIACION": "196 - Producciones Internacionales ",
+        "iD_TIPO_AUXILIAR": 1,
+        "coD_DESCRIP": "196 - 196 - Producciones Internacionales ",
+        "roW_VERSION": "AAAAAADQWw8="
+      },
+      {
+        "aperturA_SUBAUXILIARES": "No",
+        "permitE_CAMBIAR_CODIGOS_ABM_REGLAS": false,
+        "iD_REGLA_APROPIACION": 9,
+        "coD_REGLA_APROPIACION": "195",
+        "desC_REGLA_APROPIACION": "195 - Producciones Nacionales",
+        "iD_TIPO_AUXILIAR": 1,
+        "coD_DESCRIP": "195 - 195 - Producciones Nacionales",
+        "roW_VERSION": "AAAAAADQWw4="
+      },
+      {
+        "aperturA_SUBAUXILIARES": "No",
+        "permitE_CAMBIAR_CODIGOS_ABM_REGLAS": false,
+        "iD_REGLA_APROPIACION": 11,
+        "coD_REGLA_APROPIACION": "347",
+        "desC_REGLA_APROPIACION": "347 - RQSTV 2015",
+        "iD_TIPO_AUXILIAR": 1,
+        "coD_DESCRIP": "347 - 347 - RQSTV 2015",
+        "roW_VERSION": "AAAAAADQWxE="
+      },
+      {
+        "aperturA_SUBAUXILIARES": "No",
+        "permitE_CAMBIAR_CODIGOS_ABM_REGLAS": false,
+        "iD_REGLA_APROPIACION": 12,
+        "coD_REGLA_APROPIACION": "99GF",
+        "desC_REGLA_APROPIACION": "PRODUCTORA GASTO FIJO",
+        "iD_TIPO_AUXILIAR": 1,
+        "coD_DESCRIP": "99GF - PRODUCTORA GASTO FIJO",
+        "roW_VERSION": "AAAAAADQWxM="
+      },
+      {
+        "aperturA_SUBAUXILIARES": "Si",
+        "permitE_CAMBIAR_CODIGOS_ABM_REGLAS": false,
+        "iD_REGLA_APROPIACION": 14,
+        "coD_REGLA_APROPIACION": "LMB",
+        "iD_TIPO_AUXILIAR": 31,
+        "coD_DESCRIP": "LMB",
+        "roW_VERSION": "AAAAAADf48M="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

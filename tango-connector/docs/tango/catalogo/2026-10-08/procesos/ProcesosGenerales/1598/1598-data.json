@@ -1,0 +1,30 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_LEYENDA_MOVIMIENTO": 3,
+        "coD_LEYENDA_MOVIMIENTO": "LMB1",
+        "desC_LEYENDA_MOVIMIENTO": "Probando",
+        "d_H": "D",
+        "roW_VERSION": "AAAAAADfv0M="
+      },
+      {
+        "iD_LEYENDA_MOVIMIENTO": 4,
+        "coD_LEYENDA_MOVIMIENTO": "LMB2",
+        "desC_LEYENDA_MOVIMIENTO": "Sigue probando",
+        "d_H": "H",
+        "roW_VERSION": "AAAAAADfv0Q="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

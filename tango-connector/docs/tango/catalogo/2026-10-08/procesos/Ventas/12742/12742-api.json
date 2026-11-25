@@ -1,0 +1,112 @@
+{
+  "title": "Precios vigentes a una fecha",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "VentasPreciosPreciosVigentesAUnaFechaModel": [
+      "COD_ARTICULO",
+      "DESCRIPCION",
+      "DESC_ADICIONAL",
+      "USA_ESCALAS",
+      "ES_KIT",
+      "NRO_LISTA_DE_PRECIOS",
+      "DESC_LISTA_DE_PRECIOS",
+      "INCLUYE_IMPUESTOS_INTERNOS",
+      "INCLUYE_IVA",
+      "CANT_DE_DECIMALES",
+      "PRECIO",
+      "MONEDA",
+      "COD_CLIENTE",
+      "RAZON_SOCIAL",
+      "FECHA_MODIFICACION",
+      "USUARIO",
+      "TERMINAL",
+      "ORIGEN",
+      "ID_STA11",
+      "ID_GVA14"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

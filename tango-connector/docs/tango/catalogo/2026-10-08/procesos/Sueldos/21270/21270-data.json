@@ -1,0 +1,42 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_TOPE_BASE_IMPONIBLE": 1,
+        "periodO_DESDE": "2024-12-01T00:00:00",
+        "eS_TOPE_VIGENTE": "S",
+        "topE_MAX1": 10119,
+        "topE_MAX4": 10119,
+        "topE_MAX5": 10119,
+        "topE_MES": 240,
+        "topE_SAC": 120,
+        "importE_A_DETRAER": 2400,
+        "topE_MES_OS": 480,
+        "topE_SAC_OS": 240,
+        "topE_SAC_DIARIO": 4,
+        "topE_VAC_DIARIO": 8,
+        "multiplicadoR_MOPRE_MAX": 20,
+        "moprE_MAX1": 126.4875,
+        "moprE_MAX4": 126.4875,
+        "moprE_MAX5": 126.4875,
+        "moprE_MES": 3,
+        "moprE_MES_OS": 6,
+        "moprE_SAC": 1.5,
+        "moprE_SAC_DIARIO": 0.05,
+        "moprE_SAC_OS": 3,
+        "moprE_VAC_DIARIO": 0.1,
+        "roW_VERSION": "AAAAAADcCmU="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

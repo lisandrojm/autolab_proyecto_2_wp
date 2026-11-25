@@ -1,0 +1,241 @@
+{
+  "data": {
+    "iD_CPA01": 4935,
+    "iD_CPA20": null,
+    "iD_SUCURSAL": 1,
+    "iD_SUCURSAL_DESTINO": null,
+    "proveedoR_RAZON_SOCI": "005560 - SENCINET LATAM ARGENTINA SA",
+    "t_COMP": "N/D",
+    "n_COMP": "A0000900002923",
+    "razoN_SOCI": "SENCINET LATAM ARGENTINA SA",
+    "proveedor": "005560",
+    "proveedoR_OCASIONAL": "000000 - ",
+    "sucursal": "1 - FZERO",
+    "sucursaL_EXPLOSION": "1 - FZERO",
+    "fecha": "2025-10-22T00:00:00",
+    "fechA_CONTABLE": "2025-10-22T00:00:00",
+    "condicioN_COMPRA": "2 - CUENTA CORRIENTE 30D",
+    "moneda": "CTE (Cotización: 1370.0000000)",
+    "concepto": " - ",
+    "sucursaL_DESTINO": " - ",
+    "sucursaL_DESTINO_EXPLOSION": " - ",
+    "exportado": false,
+    "diferencia": "N",
+    "sector": " - ",
+    "porcentajE_BONIFICACION": 0,
+    "observaciones": "",
+    "clasificacion": " - ",
+    "nrO_INTERNO": 32592,
+    "tipO_OPERACION": "Operación Gravada",
+    "clasificacioN_CITI": "Bienes y Servicios",
+    "incluyE_IVA_COMPRAS": "S",
+    "situacioN_IVA": "",
+    "codigO_NO_RECUPERABLE": "",
+    "estadO_CTE": "CTA",
+    "estadO_EXT": "CTA",
+    "tipO_OPERACION_RG_3685_4597": "0 - Operaciones gravadas",
+    "comprobantE_AFIP": "002 - Notas de débito A",
+    "datoS_CONTABLES": "Asiento exportado",
+    "asiento": "01 - FACTURAS Y NOTAS DE DEBITO",
+    "nrO_ASIENTO": 2495,
+    "tipO_TRANSACCION_VENTA": "",
+    "tipO_TRANSACCION_COMPRA": "",
+    "caI_CAE": "",
+    "fechA_VENCIMIENTO": null,
+    "creditO_FISCAL": "",
+    "fechA_INGRESO": "23/10/25 - 12:00",
+    "usuariO_INGRESO": "ESTHEFANY",
+    "terminaL_INGRESO": "SRVRDP",
+    "fechA_ULTIMA_MODIFICACION": "",
+    "usuA_ULTIMA_MODIFICACION": "",
+    "terM_ULTIMA_MODIFICACION": "",
+    "subtotaL_VALUE": 15000,
+    "otroS_IMPUESTOS": 1950,
+    "ivA_VALUE": 3150,
+    "bonificacioN_VALUE": 0,
+    "fletE_VALUE": 0,
+    "intereseS_VALUE": 0,
+    "anticipo": 0,
+    "netO_GRAVADO": 15000,
+    "netO_NO_GRAVADO": 0,
+    "totaL_CTE_VALUE": 20100,
+    "totaL_EXT_VALUE": 14.67,
+    "totaL_VALUE": 20100,
+    "totaL_VALUE_HEADER": 20100,
+    "datoS_ADJUNTOS_FAC_COMPRAS": [],
+    "articulos": [
+      {
+        "iD_RENGLONES": 0,
+        "iD_CPA04": 57977,
+        "iD_STA11": 17,
+        "iD_STA22": 1,
+        "coD_ARTICULO": "010060101",
+        "descripcion": "INTERNET",
+        "deposito": "01",
+        "descripcioN_DEPOSITO": "DEPOSITOS",
+        "uM_RENGLON": "***",
+        "cantidaD_RENGLON": 1,
+        "precio": 15000,
+        "porcentajE_DESCUENTO": 0,
+        "importE_FLETE": 0,
+        "importe": 15000,
+        "uM_STOCK": "***",
+        "cantidad": 1,
+        "uM_STOCK_2": null,
+        "cantidaD_2": 0,
+        "clasificacion": ""
+      }
+    ],
+    "conceptos": [],
+    "vencimientos": [],
+    "imputacioN_CONTABLE": [
+      {
+        "iD_IMPUTACION_CONTABLE": 0,
+        "iD_CPA04": 0,
+        "iD_ASIENTO": 97484,
+        "coD_CUENTA": "2010010101",
+        "desC_CUENTA": "PROVEEDORES",
+        "debe": null,
+        "haber": 20100,
+        "tcomP_IN_C": "DP",
+        "ncomP_IN_C": 32592,
+        "auxiliares": "Ver detalle"
+      },
+      {
+        "iD_IMPUTACION_CONTABLE": 0,
+        "iD_CPA04": 0,
+        "iD_ASIENTO": 97485,
+        "coD_CUENTA": "1010020309",
+        "desC_CUENTA": "CREDITO FISCAL IVA",
+        "debe": 3150,
+        "haber": null,
+        "tcomP_IN_C": "DP",
+        "ncomP_IN_C": 32592,
+        "auxiliares": "Ver detalle"
+      },
+      {
+        "iD_IMPUTACION_CONTABLE": 0,
+        "iD_CPA04": 0,
+        "iD_ASIENTO": 97486,
+        "coD_CUENTA": "1010020319",
+        "desC_CUENTA": "PERCEP IIBB CABA",
+        "debe": 750,
+        "haber": null,
+        "tcomP_IN_C": "DP",
+        "ncomP_IN_C": 32592,
+        "auxiliares": "Ver detalle"
+      },
+      {
+        "iD_IMPUTACION_CONTABLE": 0,
+        "iD_CPA04": 0,
+        "iD_ASIENTO": 97487,
+        "coD_CUENTA": "5010060101",
+        "desC_CUENTA": "INTERNET",
+        "debe": 15000,
+        "haber": null,
+        "tcomP_IN_C": "DP",
+        "ncomP_IN_C": 32592,
+        "auxiliares": "Ver detalle"
+      },
+      {
+        "iD_IMPUTACION_CONTABLE": 0,
+        "iD_CPA04": 0,
+        "iD_ASIENTO": 97488,
+        "coD_CUENTA": "1010020323",
+        "desC_CUENTA": "PERCEP. IIBB BUENOS AIRES",
+        "debe": 1200,
+        "haber": null,
+        "tcomP_IN_C": "DP",
+        "ncomP_IN_C": 32592,
+        "auxiliares": "Ver detalle"
+      }
+    ],
+    "valores": [],
+    "clasificacioN_AFIP": [
+      {
+        "iD_CLASIFICACION_AFIP": 0,
+        "iD_CPA04": 0,
+        "alicuota": 21,
+        "clasificacion": "C1",
+        "descripcion": "C1",
+        "importe": 3150
+      }
+    ],
+    "diferencias": [],
+    "comprobanteS_RELACIONADOS": [],
+    "totales": [
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Subtotal",
+        "importe": 15000,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Bonificación",
+        "importe": 0,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Flete",
+        "importe": 0,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Intereses",
+        "importe": 0,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "IVA",
+        "importe": 3150,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Otros impuestos",
+        "importe": 1950,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Anticipo",
+        "importe": 0,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Neto gravado",
+        "importe": 15000,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Neto no gravado",
+        "importe": 0,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Total",
+        "importe": 20100,
+        "importE_EXT": 14.67
+      }
+    ],
+    "triggerToExecuteGetData": true
+  },
+  "succeeded": true
+}

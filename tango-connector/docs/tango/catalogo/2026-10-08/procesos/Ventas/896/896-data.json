@@ -1,0 +1,25 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_GVA150": 5,
+        "clA_IMP_CL": "1",
+        "coD_GVA150": "1",
+        "descripcio": "LMB",
+        "coD_DESCRIP": "1 - LMB",
+        "codigo": "1",
+        "roW_VERSION": "AAAAAADf5NM="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

@@ -1,0 +1,30 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "geN_MOV_AU_NOTMAPPED": false,
+        "iD_CONCEPTO_DESCUENTO_TARJETA": 6,
+        "nrO_CONCEPTO_DESCUENTO_TARJETA": 1,
+        "desC_CONCEPTO_DESCUENTO_TARJETA": "LMBGasto",
+        "habilitado": "S",
+        "tipO_DESCUENTO": "P",
+        "porC_DESCUENTO": 5,
+        "basE_CALCULO": 5,
+        "aplicA_SOBRE": "T",
+        "cuentA_PARA_LIQUIDACION": 10470101,
+        "iD_SBA01": 328,
+        "roW_VERSION": "AAAAAADf7ac="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

@@ -1,0 +1,125 @@
+{
+  "title": "Resumen semanal de ventas",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "VentasResumenSemanalDeVentasModel": [
+      "SEMANA",
+      "COD_TIPO_COMPROBANTE",
+      "DESC_TIPO_COMPROBANTE",
+      "NRO_COMPROBANTE",
+      "TOTAL_SIN_PROMOCIONES",
+      "TOTAL_CON_PROMOCIONES",
+      "COD_CLIENTE",
+      "RAZON_SOCIAL",
+      "COD_VENDEDOR",
+      "NOMBRE_VENDEDOR",
+      "FECHA_DE_EMISION",
+      "TIPO_APLICACION",
+      "PORC_DESCUENTO",
+      "NETO_TOT",
+      "PORC_DESC",
+      "IMPORTE_GR",
+      "TELEFONO",
+      "TELEFONO_2",
+      "TELEFONO_MOVIL_WA",
+      "MOVIL",
+      "EMAIL",
+      "EMAIL_COMPROBANTES",
+      "EMAILS_ENVIO_COTIZACION",
+      "MOVILES_ENVIO_COTIZACION",
+      "EMAILS_ENVIO_RECIBO",
+      "MOVILES_ENVIO_RECIBO",
+      "EMAILS_ENVIO_PEDIDO",
+      "MOVILES_ENVIO_PEDIDO",
+      "EMAILS_RESPONSABLES_PAGOS",
+      "MOVILES_RESPONSABLES_PAGOS",
+      "ID_GVA12",
+      "ID_GVA23",
+      "ID_GVA14"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

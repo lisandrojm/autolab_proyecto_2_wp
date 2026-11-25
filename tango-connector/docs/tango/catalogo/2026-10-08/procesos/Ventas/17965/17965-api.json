@@ -1,0 +1,127 @@
+{
+  "title": "Consulta",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "VentasRemitosConsultaModel": [
+      "ID_SUCURSAL",
+      "TIPO_COMPROBANTE",
+      "NRO_COMPROBANTE",
+      "TIPO_INTERNO",
+      "COMPROBANTE",
+      "NRO_INTERNO",
+      "FECHA",
+      "COD_CLIENTE",
+      "RAZON_SOCIAL",
+      "ESTADO",
+      "COD_TALONARIO",
+      "DESC_TALONARIO",
+      "REMITO_RELACIONADO",
+      "COD_DIRECCION_DE_ENTREGA",
+      "MOTIVO",
+      "ID_GVA14",
+      "ID_STA14",
+      "ID_GVA38",
+      "EXPORTADO",
+      "NRO_SUCURSAL_DESTINO_REMITO",
+      "DESC_SUCURSAL",
+      "TELEFONO",
+      "TELEFONO_2",
+      "TELEFONO_MOVIL_WA",
+      "MOVIL",
+      "EMAIL",
+      "EMAIL_COMPROBANTES",
+      "EMAILS_ENVIO_COTIZACION",
+      "MOVILES_ENVIO_COTIZACION",
+      "EMAILS_ENVIO_RECIBO",
+      "MOVILES_ENVIO_RECIBO",
+      "EMAILS_ENVIO_PEDIDO",
+      "MOVILES_ENVIO_PEDIDO",
+      "EMAILS_RESPONSABLES_PAGOS",
+      "MOVILES_RESPONSABLES_PAGOS"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

@@ -1,0 +1,32 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_SBA11": 1,
+        "coD_OPERAC": "99",
+        "tipO_CUENT": "G",
+        "leyenda": "99-PRODUCTORA",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPQ70="
+      },
+      {
+        "iD_SBA11": 2,
+        "coD_OPERAC": "47",
+        "tipO_CUENT": "G",
+        "leyenda": "470 - INCAA-CUENTOS_WOLF",
+        "observaciones": "",
+        "roW_VERSION": "AAAAAADPQ7w="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

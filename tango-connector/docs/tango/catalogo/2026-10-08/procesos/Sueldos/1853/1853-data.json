@@ -1,0 +1,22 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_PARAMETRIZACION": 1,
+        "iD_ENTIDAD": 12,
+        "peR_APROPIACION": "2026-02-01T00:00:00",
+        "roW_VERSION": "AAAAAADfruE="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

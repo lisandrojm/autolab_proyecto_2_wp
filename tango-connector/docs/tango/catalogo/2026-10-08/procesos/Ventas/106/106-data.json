@@ -1,0 +1,39 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_ASIENTO_MODELO_GV": 1,
+        "coD_ASIENTO_MODELO": "01",
+        "desC_ASIENTO_MODELO": "FACTURAS Y NOTAS DE DEBITO",
+        "iD_TIPO_ASIENTO": 24,
+        "desC_LEYENDA_ENCABEZADO": "",
+        "factura": "S",
+        "credito": "N",
+        "debito": "S",
+        "coD_DESCRIP": "01 - FACTURAS Y NOTAS DE DEBITO",
+        "roW_VERSION": "AAAAAADP+Hg="
+      },
+      {
+        "iD_ASIENTO_MODELO_GV": 2,
+        "coD_ASIENTO_MODELO": "02",
+        "desC_ASIENTO_MODELO": "NOTAS DE CREDITO",
+        "iD_TIPO_ASIENTO": 24,
+        "factura": "N",
+        "credito": "S",
+        "debito": "N",
+        "coD_DESCRIP": "02 - NOTAS DE CREDITO",
+        "roW_VERSION": "AAAAAADf7QY="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

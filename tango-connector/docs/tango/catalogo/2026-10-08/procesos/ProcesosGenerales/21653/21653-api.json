@@ -1,0 +1,113 @@
+{
+  "title": "Operaciones que generan Débito fiscal",
+  "moduleId": 11,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "CentralIvaSimpleGestionOperacionesDebitoFiscalBaseModel": [
+      "ACTIVIDAD",
+      "TIPO_OPERACION_CL_SIAP_GV",
+      "TIPO_OPERACION",
+      "TIPO_SUJETO_OPERADOR",
+      "CODIGO_ALICUOTA",
+      "FECHA_EMISION",
+      "FECHA_COMP",
+      "COD_TIPO_COMPROBANTE",
+      "DESC_TIPO_COMPROBANTE",
+      "NUMERO_COMPROBANTE",
+      "ID_CTA02",
+      "COD_ARTICULO",
+      "TALONARIO",
+      "PUNTO_VENTA",
+      "MONTO_NETO_GRAVADO",
+      "DEBITO_FISCAL_FACTURADO",
+      "DEBITO_FISCAL_OPERACION_DACION_EN_PAGO",
+      "MONTO_NETO_EXENTO_NO_GRAVADO",
+      "NRO_SUCURSAL",
+      "FECHA_COMERCIAL",
+      "CL_SIAP_GV"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

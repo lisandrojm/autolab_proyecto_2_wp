@@ -1,0 +1,117 @@
+{
+  "title": "Notas de crédito por promoción de tarjetas en resumen",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "VentasNotasDeCreditoPorPromocionDeTarjetasEnResumenModel": [
+      "FECHA_DE_EMISION",
+      "TIPO_NC",
+      "NRO_NC",
+      "IMPORTE",
+      "OBSERVACIONES_NOTA_DE_CREDITO",
+      "FECHA_COMPROBANTE_ORIGEN",
+      "COD_TIPO_COMPROBANTE",
+      "DESC_TIPO_COMPROBANTE",
+      "NRO_COMPROBANTE",
+      "COD_VENDEDOR",
+      "NOMBRE_VENDEDOR",
+      "CODIGO",
+      "TARJETA",
+      "NRO_CUPON",
+      "IMPORTE_CUPON",
+      "NRO_TERMINAL",
+      "NRO_LOTE",
+      "CUPON_PROCESADO",
+      "SITUACION_DE_LA_NOTA_DE_CREDITO",
+      "COD_PROMOCION_TARJETA",
+      "DESC_PROMOCION_TARJETA",
+      "ID_GVA23",
+      "ID_GVA12_FAC",
+      "ID_GVA12",
+      "ID_SBA20"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

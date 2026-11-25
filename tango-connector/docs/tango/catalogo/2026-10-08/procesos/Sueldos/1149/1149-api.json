@@ -1,0 +1,372 @@
+{
+  "title": "Historial laboral",
+  "moduleId": 8,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"HISTORIAL\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"ID_LEGAJO\",\r\n    \"PER_HISTORIAL\",\r\n    \"CONDICION\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_LEGAJO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"PER_HISTORIAL\": {\r\n      \"type\": \"string\",\r\n      \"format\": \"date-time\",\r\n      \"minLength\": 1\r\n    },\r\n    \"SUELDO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"UNIDAD_SUELDO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"CONDICION\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"HORAS_POR_MES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"COD_TIPO_CONTRATO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_TIPO_CONTRATO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 100,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_GRUPO_JERARQUICO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_GRUPO_JERARQUICO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_CONVENIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_CONVENIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_CATEGORIA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_CATEGORIA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_DEPARTAMENTO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_DEPARTAMENTO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_SITUACION_REVISTA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_SITUACION_REVISTA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_LUGAR_TRABAJO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_LUGAR_TRABAJO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"TAREA_HABITUAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 30,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_PUESTO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_PUESTO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_OBRA_SOCIAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_OBRA_SOCIAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_PLAN_OS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_PLAN_OS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_AFJP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_AFJP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"CARACTER_SERVICIOS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 30,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_SINDICATO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_SINDICATO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_LUGAR_PAGO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_LUGAR_PAGO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"FUERA_CONVENIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"HISTORIAL_ITEM_SUELDO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/HISTORIAL_ITEM_SUELDO\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"HISTORIAL_ITEM_SUELDO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_ITEM_SUELDO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_ITEM_SUELDO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"IMP_ITEM_SUELDO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"CANT_ITEM_SUELDO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"AFECTA_ITEM_SUELDO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class HISTORIAL_ITEM_SUELDO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_ITEM_SUELDO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_ITEM_SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMP_ITEM_SUELDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMP_ITEM_SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_ITEM_SUELDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CANT_ITEM_SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_ITEM_SUELDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_ITEM_SUELDO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class HISTORIAL\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_LEGAJO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_LEGAJO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PER_HISTORIAL\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public System.DateTimeOffset PER_HISTORIAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SUELDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"UNIDAD_SUELDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string UNIDAD_SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CONDICION\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string CONDICION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HORAS_POR_MES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? HORAS_POR_MES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_TIPO_CONTRATO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_TIPO_CONTRATO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_TIPO_CONTRATO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string DESC_TIPO_CONTRATO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_GRUPO_JERARQUICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_GRUPO_JERARQUICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_GRUPO_JERARQUICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_GRUPO_JERARQUICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CONVENIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_CONVENIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CATEGORIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_CATEGORIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_CATEGORIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_CATEGORIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_DEPARTAMENTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_DEPARTAMENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_DEPARTAMENTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_DEPARTAMENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_SITUACION_REVISTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_SITUACION_REVISTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_SITUACION_REVISTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_SITUACION_REVISTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_LUGAR_TRABAJO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_LUGAR_TRABAJO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_LUGAR_TRABAJO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_LUGAR_TRABAJO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TAREA_HABITUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string TAREA_HABITUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_PUESTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_PUESTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_PUESTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_PUESTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_OBRA_SOCIAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_OBRA_SOCIAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_OBRA_SOCIAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_OBRA_SOCIAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_PLAN_OS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_PLAN_OS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_PLAN_OS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_PLAN_OS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_AFJP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_AFJP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_AFJP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_AFJP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CARACTER_SERVICIOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string CARACTER_SERVICIOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_SINDICATO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_SINDICATO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_SINDICATO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_SINDICATO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_LUGAR_PAGO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_LUGAR_PAGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_LUGAR_PAGO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_LUGAR_PAGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FUERA_CONVENIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string FUERA_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HISTORIAL_ITEM_SUELDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<HISTORIAL_ITEM_SUELDO> HISTORIAL_ITEM_SUELDO { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface HISTORIAL_ITEM_SUELDO {\n    ID_ITEM_SUELDO: number;\n    IMP_ITEM_SUELDO: number | undefined;\n    CANT_ITEM_SUELDO: number | undefined;\n    AFECTA_ITEM_SUELDO: string | undefined;\n}\n\nexport interface HISTORIAL {\n    ID_LEGAJO: number;\n    PER_HISTORIAL: Date;\n    SUELDO: number | undefined;\n    UNIDAD_SUELDO: string | undefined;\n    CONDICION: string;\n    HORAS_POR_MES: number | undefined;\n    COD_TIPO_CONTRATO: string | undefined;\n    DESC_TIPO_CONTRATO: string | undefined;\n    COD_GRUPO_JERARQUICO: string | undefined;\n    DESC_GRUPO_JERARQUICO: string | undefined;\n    COD_CONVENIO: string | undefined;\n    DESC_CONVENIO: string | undefined;\n    COD_CATEGORIA: string | undefined;\n    DESC_CATEGORIA: string | undefined;\n    COD_DEPARTAMENTO: string | undefined;\n    DESC_DEPARTAMENTO: string | undefined;\n    COD_SITUACION_REVISTA: string | undefined;\n    DESC_SITUACION_REVISTA: string | undefined;\n    COD_LUGAR_TRABAJO: string | undefined;\n    DESC_LUGAR_TRABAJO: string | undefined;\n    TAREA_HABITUAL: string | undefined;\n    COD_PUESTO: string | undefined;\n    DESC_PUESTO: string | undefined;\n    COD_OBRA_SOCIAL: string | undefined;\n    DESC_OBRA_SOCIAL: string | undefined;\n    COD_PLAN_OS: string | undefined;\n    DESC_PLAN_OS: string | undefined;\n    COD_AFJP: string | undefined;\n    DESC_AFJP: string | undefined;\n    CARACTER_SERVICIOS: string | undefined;\n    COD_SINDICATO: string | undefined;\n    DESC_SINDICATO: string | undefined;\n    COD_LUGAR_PAGO: string | undefined;\n    DESC_LUGAR_PAGO: string | undefined;\n    OBSERVACIONES: string | undefined;\n    FUERA_CONVENIO: string | undefined;\n    HISTORIAL_ITEM_SUELDO: HISTORIAL_ITEM_SUELDO[] | undefined;\n}",
+          "example": {
+            "ID_LEGAJO": 0,
+            "PER_HISTORIAL": "2026-10-01T00:00:00",
+            "SUELDO": 0,
+            "UNIDAD_SUELDO": "Valor mensual",
+            "CONDICION": "Mensualizado",
+            "HORAS_POR_MES": 0,
+            "COD_TIPO_CONTRATO": null,
+            "DESC_TIPO_CONTRATO": null,
+            "COD_GRUPO_JERARQUICO": null,
+            "DESC_GRUPO_JERARQUICO": null,
+            "COD_CONVENIO": null,
+            "DESC_CONVENIO": null,
+            "COD_CATEGORIA": null,
+            "DESC_CATEGORIA": null,
+            "COD_DEPARTAMENTO": null,
+            "DESC_DEPARTAMENTO": null,
+            "COD_SITUACION_REVISTA": null,
+            "DESC_SITUACION_REVISTA": null,
+            "COD_LUGAR_TRABAJO": null,
+            "DESC_LUGAR_TRABAJO": null,
+            "TAREA_HABITUAL": null,
+            "COD_PUESTO": null,
+            "DESC_PUESTO": null,
+            "COD_OBRA_SOCIAL": null,
+            "DESC_OBRA_SOCIAL": null,
+            "COD_PLAN_OS": null,
+            "DESC_PLAN_OS": null,
+            "COD_AFJP": null,
+            "DESC_AFJP": null,
+            "CARACTER_SERVICIOS": null,
+            "COD_SINDICATO": null,
+            "DESC_SINDICATO": null,
+            "COD_LUGAR_PAGO": null,
+            "DESC_LUGAR_PAGO": null,
+            "OBSERVACIONES": null,
+            "FUERA_CONVENIO": "N",
+            "HISTORIAL_ITEM_SUELDO": [
+              {
+                "ID_ITEM_SUELDO": 0,
+                "IMP_ITEM_SUELDO": 0,
+                "CANT_ITEM_SUELDO": 0,
+                "AFECTA_ITEM_SUELDO": null
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"HISTORIAL\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"ID_LEGAJO\",\r\n    \"PER_HISTORIAL\",\r\n    \"CONDICION\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_HISTORIAL\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_LEGAJO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"PER_HISTORIAL\": {\r\n      \"type\": \"string\",\r\n      \"format\": \"date-time\",\r\n      \"minLength\": 1\r\n    },\r\n    \"SUELDO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"UNIDAD_SUELDO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"CONDICION\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"HORAS_POR_MES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"COD_TIPO_CONTRATO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_TIPO_CONTRATO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 100,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_GRUPO_JERARQUICO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_GRUPO_JERARQUICO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_CONVENIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_CONVENIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_CATEGORIA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_CATEGORIA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_DEPARTAMENTO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_DEPARTAMENTO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_SITUACION_REVISTA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_SITUACION_REVISTA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_LUGAR_TRABAJO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_LUGAR_TRABAJO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"TAREA_HABITUAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 30,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_PUESTO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_PUESTO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_OBRA_SOCIAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_OBRA_SOCIAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_PLAN_OS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_PLAN_OS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_AFJP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_AFJP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"CARACTER_SERVICIOS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 30,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_SINDICATO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_SINDICATO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_LUGAR_PAGO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_LUGAR_PAGO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"FUERA_CONVENIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"HISTORIAL_ITEM_SUELDO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/HISTORIAL_ITEM_SUELDO\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"HISTORIAL_ITEM_SUELDO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_ITEM_SUELDO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_HISTORIAL_ITEM_SUELDO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_HISTORIAL\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_ITEM_SUELDO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"IMP_ITEM_SUELDO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"CANT_ITEM_SUELDO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"AFECTA_ITEM_SUELDO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class HISTORIAL_ITEM_SUELDO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_HISTORIAL_ITEM_SUELDO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_HISTORIAL_ITEM_SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_HISTORIAL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_HISTORIAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ITEM_SUELDO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_ITEM_SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMP_ITEM_SUELDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMP_ITEM_SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_ITEM_SUELDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CANT_ITEM_SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AFECTA_ITEM_SUELDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AFECTA_ITEM_SUELDO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class HISTORIAL\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_HISTORIAL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_HISTORIAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_LEGAJO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_LEGAJO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PER_HISTORIAL\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public System.DateTimeOffset PER_HISTORIAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SUELDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"UNIDAD_SUELDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string UNIDAD_SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CONDICION\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string CONDICION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HORAS_POR_MES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? HORAS_POR_MES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_TIPO_CONTRATO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_TIPO_CONTRATO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_TIPO_CONTRATO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string DESC_TIPO_CONTRATO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_GRUPO_JERARQUICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_GRUPO_JERARQUICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_GRUPO_JERARQUICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_GRUPO_JERARQUICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CONVENIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_CONVENIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CATEGORIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_CATEGORIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_CATEGORIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_CATEGORIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_DEPARTAMENTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_DEPARTAMENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_DEPARTAMENTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_DEPARTAMENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_SITUACION_REVISTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_SITUACION_REVISTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_SITUACION_REVISTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_SITUACION_REVISTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_LUGAR_TRABAJO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_LUGAR_TRABAJO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_LUGAR_TRABAJO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_LUGAR_TRABAJO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TAREA_HABITUAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string TAREA_HABITUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_PUESTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_PUESTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_PUESTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_PUESTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_OBRA_SOCIAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_OBRA_SOCIAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_OBRA_SOCIAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_OBRA_SOCIAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_PLAN_OS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_PLAN_OS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_PLAN_OS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_PLAN_OS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_AFJP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_AFJP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_AFJP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_AFJP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CARACTER_SERVICIOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string CARACTER_SERVICIOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_SINDICATO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_SINDICATO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_SINDICATO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_SINDICATO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_LUGAR_PAGO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_LUGAR_PAGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_LUGAR_PAGO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_LUGAR_PAGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FUERA_CONVENIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string FUERA_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HISTORIAL_ITEM_SUELDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<HISTORIAL_ITEM_SUELDO> HISTORIAL_ITEM_SUELDO { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface HISTORIAL_ITEM_SUELDO {\n    ID_HISTORIAL_ITEM_SUELDO: number;\n    ID_HISTORIAL: number;\n    ID_ITEM_SUELDO: number;\n    IMP_ITEM_SUELDO: number | undefined;\n    CANT_ITEM_SUELDO: number | undefined;\n    AFECTA_ITEM_SUELDO: string | undefined;\n}\n\nexport interface HISTORIAL {\n    ID_HISTORIAL: number;\n    ID_LEGAJO: number;\n    PER_HISTORIAL: Date;\n    SUELDO: number | undefined;\n    UNIDAD_SUELDO: string | undefined;\n    CONDICION: string;\n    HORAS_POR_MES: number | undefined;\n    COD_TIPO_CONTRATO: string | undefined;\n    DESC_TIPO_CONTRATO: string | undefined;\n    COD_GRUPO_JERARQUICO: string | undefined;\n    DESC_GRUPO_JERARQUICO: string | undefined;\n    COD_CONVENIO: string | undefined;\n    DESC_CONVENIO: string | undefined;\n    COD_CATEGORIA: string | undefined;\n    DESC_CATEGORIA: string | undefined;\n    COD_DEPARTAMENTO: string | undefined;\n    DESC_DEPARTAMENTO: string | undefined;\n    COD_SITUACION_REVISTA: string | undefined;\n    DESC_SITUACION_REVISTA: string | undefined;\n    COD_LUGAR_TRABAJO: string | undefined;\n    DESC_LUGAR_TRABAJO: string | undefined;\n    TAREA_HABITUAL: string | undefined;\n    COD_PUESTO: string | undefined;\n    DESC_PUESTO: string | undefined;\n    COD_OBRA_SOCIAL: string | undefined;\n    DESC_OBRA_SOCIAL: string | undefined;\n    COD_PLAN_OS: string | undefined;\n    DESC_PLAN_OS: string | undefined;\n    COD_AFJP: string | undefined;\n    DESC_AFJP: string | undefined;\n    CARACTER_SERVICIOS: string | undefined;\n    COD_SINDICATO: string | undefined;\n    DESC_SINDICATO: string | undefined;\n    COD_LUGAR_PAGO: string | undefined;\n    DESC_LUGAR_PAGO: string | undefined;\n    OBSERVACIONES: string | undefined;\n    FUERA_CONVENIO: string | undefined;\n    HISTORIAL_ITEM_SUELDO: HISTORIAL_ITEM_SUELDO[] | undefined;\n}",
+          "example": {
+            "ID_HISTORIAL": 0,
+            "ID_LEGAJO": 0,
+            "PER_HISTORIAL": "2026-10-01T00:00:00",
+            "SUELDO": 0,
+            "UNIDAD_SUELDO": "Valor mensual",
+            "CONDICION": "Mensualizado",
+            "HORAS_POR_MES": 0,
+            "COD_TIPO_CONTRATO": null,
+            "DESC_TIPO_CONTRATO": null,
+            "COD_GRUPO_JERARQUICO": null,
+            "DESC_GRUPO_JERARQUICO": null,
+            "COD_CONVENIO": null,
+            "DESC_CONVENIO": null,
+            "COD_CATEGORIA": null,
+            "DESC_CATEGORIA": null,
+            "COD_DEPARTAMENTO": null,
+            "DESC_DEPARTAMENTO": null,
+            "COD_SITUACION_REVISTA": null,
+            "DESC_SITUACION_REVISTA": null,
+            "COD_LUGAR_TRABAJO": null,
+            "DESC_LUGAR_TRABAJO": null,
+            "TAREA_HABITUAL": null,
+            "COD_PUESTO": null,
+            "DESC_PUESTO": null,
+            "COD_OBRA_SOCIAL": null,
+            "DESC_OBRA_SOCIAL": null,
+            "COD_PLAN_OS": null,
+            "DESC_PLAN_OS": null,
+            "COD_AFJP": null,
+            "DESC_AFJP": null,
+            "CARACTER_SERVICIOS": null,
+            "COD_SINDICATO": null,
+            "DESC_SINDICATO": null,
+            "COD_LUGAR_PAGO": null,
+            "DESC_LUGAR_PAGO": null,
+            "OBSERVACIONES": null,
+            "FUERA_CONVENIO": "N",
+            "HISTORIAL_ITEM_SUELDO": [
+              {
+                "ID_HISTORIAL_ITEM_SUELDO": 0,
+                "ID_HISTORIAL": 0,
+                "ID_ITEM_SUELDO": 0,
+                "IMP_ITEM_SUELDO": 0,
+                "CANT_ITEM_SUELDO": 0,
+                "AFECTA_ITEM_SUELDO": null
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "HISTORIAL": [
+      "FUERA_CONVENIO",
+      "HISTORIAL_ITEM_SUELDO",
+      "ID_LEGAJO",
+      "PER_HISTORIAL",
+      "SUELDO",
+      "UNIDAD_SUELDO",
+      "CONDICION",
+      "HORAS_POR_MES",
+      "COD_TIPO_CONTRATO",
+      "DESC_TIPO_CONTRATO",
+      "COD_GRUPO_JERARQUICO",
+      "DESC_GRUPO_JERARQUICO",
+      "COD_CONVENIO",
+      "DESC_CONVENIO",
+      "COD_CATEGORIA",
+      "DESC_CATEGORIA",
+      "COD_DEPARTAMENTO",
+      "DESC_DEPARTAMENTO",
+      "COD_SITUACION_REVISTA",
+      "DESC_SITUACION_REVISTA",
+      "COD_LUGAR_TRABAJO",
+      "DESC_LUGAR_TRABAJO",
+      "TAREA_HABITUAL",
+      "COD_PUESTO",
+      "DESC_PUESTO",
+      "COD_OBRA_SOCIAL",
+      "DESC_OBRA_SOCIAL",
+      "COD_PLAN_OS",
+      "DESC_PLAN_OS",
+      "COD_AFJP",
+      "DESC_AFJP",
+      "CARACTER_SERVICIOS",
+      "COD_SINDICATO",
+      "DESC_SINDICATO",
+      "COD_LUGAR_PAGO",
+      "DESC_LUGAR_PAGO",
+      "OBSERVACIONES"
+    ],
+    "HISTORIAL_ITEM_SUELDO": [
+      "ID_HISTORIAL",
+      "ID_ITEM_SUELDO",
+      "IMP_ITEM_SUELDO",
+      "CANT_ITEM_SUELDO",
+      "AFECTA_ITEM_SUELDO"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

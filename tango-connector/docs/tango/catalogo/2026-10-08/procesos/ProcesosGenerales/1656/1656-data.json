@@ -1,0 +1,85 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "permitE_MOD_AUXILIARES_CONTABLES_NOTMAPPED": false,
+        "tienE_SUBDETALLE_SUBAUXILIAR_NOTMAPPED": false,
+        "borraR_SUBDETALLE_SUBAUXILIAR_NOTMAPPED": false,
+        "iD_TIPO_AUXILIAR": 1,
+        "coD_TIPO_AUXILIAR": "CC",
+        "desC_TIPO_AUXILIAR": "CENTROS DE COSTO",
+        "tipO_AUXILIAR1": "Manual",
+        "usA_SUBAUXILIARES_CONTABLES": "N",
+        "coD_DESCRIP": "CC - CENTROS DE COSTO",
+        "roW_VERSION": "AAAAAADQW0o="
+      },
+      {
+        "permitE_MOD_AUXILIARES_CONTABLES_NOTMAPPED": false,
+        "tienE_SUBDETALLE_SUBAUXILIAR_NOTMAPPED": false,
+        "borraR_SUBDETALLE_SUBAUXILIAR_NOTMAPPED": false,
+        "iD_TIPO_AUXILIAR": 18,
+        "coD_TIPO_AUXILIAR": "LMB-AUTO",
+        "tipO_AUXILIAR1": "Automático",
+        "iD_TIPO_AUXILIAR_AUTOMATICO": 4,
+        "usA_SUBAUXILIARES_CONTABLES": "N",
+        "coD_DESCRIP": "LMB-AUTO",
+        "roW_VERSION": "AAAAAADf4xI="
+      },
+      {
+        "permitE_MOD_AUXILIARES_CONTABLES_NOTMAPPED": false,
+        "tienE_SUBDETALLE_SUBAUXILIAR_NOTMAPPED": false,
+        "borraR_SUBDETALLE_SUBAUXILIAR_NOTMAPPED": false,
+        "iD_TIPO_AUXILIAR": 28,
+        "coD_TIPO_AUXILIAR": "LMB-MAN",
+        "desC_TIPO_AUXILIAR": "Pongo desde Tango",
+        "tipO_AUXILIAR1": "Manual",
+        "usA_SUBAUXILIARES_CONTABLES": "N",
+        "coD_DESCRIP": "LMB-MAN - Pongo desde Tango",
+        "roW_VERSION": "AAAAAADf4yQ="
+      },
+      {
+        "permitE_MOD_AUXILIARES_CONTABLES_NOTMAPPED": false,
+        "tienE_SUBDETALLE_SUBAUXILIAR_NOTMAPPED": false,
+        "borraR_SUBDETALLE_SUBAUXILIAR_NOTMAPPED": false,
+        "iD_TIPO_AUXILIAR": 29,
+        "coD_TIPO_AUXILIAR": "0800",
+        "tipO_AUXILIAR1": "Manual",
+        "usA_SUBAUXILIARES_CONTABLES": "N",
+        "coD_DESCRIP": "0800",
+        "roW_VERSION": "AAAAAADf4yU="
+      },
+      {
+        "permitE_MOD_AUXILIARES_CONTABLES_NOTMAPPED": false,
+        "tienE_SUBDETALLE_SUBAUXILIAR_NOTMAPPED": false,
+        "borraR_SUBDETALLE_SUBAUXILIAR_NOTMAPPED": false,
+        "iD_TIPO_AUXILIAR": 31,
+        "coD_TIPO_AUXILIAR": "MAN-2",
+        "tipO_AUXILIAR1": "Manual",
+        "usA_SUBAUXILIARES_CONTABLES": "S",
+        "coD_DESCRIP": "MAN-2",
+        "roW_VERSION": "AAAAAADf46s="
+      },
+      {
+        "permitE_MOD_AUXILIARES_CONTABLES_NOTMAPPED": false,
+        "tienE_SUBDETALLE_SUBAUXILIAR_NOTMAPPED": false,
+        "borraR_SUBDETALLE_SUBAUXILIAR_NOTMAPPED": false,
+        "iD_TIPO_AUXILIAR": 32,
+        "coD_TIPO_AUXILIAR": "TEST",
+        "tipO_AUXILIAR1": "Manual",
+        "usA_SUBAUXILIARES_CONTABLES": "S",
+        "coD_DESCRIP": "TEST",
+        "roW_VERSION": "AAAAAADf47E="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

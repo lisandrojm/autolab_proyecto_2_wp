@@ -1,0 +1,199 @@
+{
+  "title": "Generación masiva de asientos",
+  "moduleId": 6,
+  "paths": [
+    {
+      "title": "Process",
+      "name": "Api/Process",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"GeneracionMasivaAsientosApiParams\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"properties\": {\r\n    \"PasoPorParametros\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_EJERCICIO_DESDE\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_EJERCICIO_HASTA\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_PERIODO_DESDE\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_PERIODO_HASTA\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"FECHA_DESDE\": {\r\n      \"type\": \"string\",\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_HASTA\": {\r\n      \"type\": \"string\",\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"ASIENTO_CONTABLE\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ASIENTO_EXTRACONTABLE\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ModelosAGenerar\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/ModeloAGenerarGrid\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"ModeloAGenerarGrid\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"IdModeloAsiento\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ModeloAsiento\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"TipoAsiento\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"IdTipoAsiento\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"IdAgrupacion\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"Agrupacion\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"FechaUltimoAsiento\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"format\": \"date-time\"\r\n        },\r\n        \"Contable\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"Extracontable\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"ID_MONEDA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"Moneda\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"Clase\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"FechaGeneracion\": {\r\n          \"type\": \"string\",\r\n          \"format\": \"date-time\"\r\n        },\r\n        \"Asiento\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"ContraAsiento\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"Concepto\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"Cotizaciones\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/ASIENTO_COTIZACION_ANALITICO_CN\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"ASIENTO_COTIZACION_ANALITICO_CN\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"COTIZACION_ALTERNATIVA\",\r\n        \"ID_ASIENTO_ANALITICO_CN\",\r\n        \"ID_MONEDA\",\r\n        \"ID_TIPO_COTIZACION\"\r\n      ],\r\n      \"properties\": {\r\n        \"COTIZACION_ALTERNATIVA\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"ID_ASIENTO_COTIZACION_ANALITICO_CN\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_ASIENTO_ANALITICO_CN\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_MONEDA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_TIPO_COTIZACION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class ModeloAGenerarGrid\n    {\n        [Newtonsoft.Json.JsonProperty(\"IdModeloAsiento\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int IdModeloAsiento { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ModeloAsiento\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ModeloAsiento { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TipoAsiento\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string TipoAsiento { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IdTipoAsiento\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int IdTipoAsiento { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IdAgrupacion\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? IdAgrupacion { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Agrupacion\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Agrupacion { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FechaUltimoAsiento\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FechaUltimoAsiento { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Contable\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Contable { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Extracontable\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Extracontable { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Moneda\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Moneda { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Clase\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Clase { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FechaGeneracion\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset FechaGeneracion { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Asiento\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Asiento { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ContraAsiento\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ContraAsiento { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Concepto\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Concepto { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Cotizaciones\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<ASIENTO_COTIZACION_ANALITICO_CN> Cotizaciones { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class ASIENTO_COTIZACION_ANALITICO_CN\n    {\n        [Newtonsoft.Json.JsonProperty(\"COTIZACION_ALTERNATIVA\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal COTIZACION_ALTERNATIVA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_COTIZACION_ANALITICO_CN\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_ASIENTO_COTIZACION_ANALITICO_CN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_ANALITICO_CN\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_ASIENTO_ANALITICO_CN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_COTIZACION\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_TIPO_COTIZACION { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GeneracionMasivaAsientosApiParams\n    {\n        [Newtonsoft.Json.JsonProperty(\"PasoPorParametros\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PasoPorParametros { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_EJERCICIO_DESDE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_EJERCICIO_DESDE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_EJERCICIO_HASTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_EJERCICIO_HASTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERIODO_DESDE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERIODO_DESDE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERIODO_HASTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERIODO_HASTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_DESDE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset FECHA_DESDE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_HASTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset FECHA_HASTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ASIENTO_CONTABLE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ASIENTO_CONTABLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ASIENTO_EXTRACONTABLE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ASIENTO_EXTRACONTABLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ModelosAGenerar\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<ModeloAGenerarGrid> ModelosAGenerar { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface ModeloAGenerarGrid {\n    IdModeloAsiento: number;\n    ModeloAsiento: string | undefined;\n    TipoAsiento: string | undefined;\n    IdTipoAsiento: number;\n    IdAgrupacion: number | undefined;\n    Agrupacion: string | undefined;\n    FechaUltimoAsiento: Date | undefined;\n    Contable: string | undefined;\n    Extracontable: string | undefined;\n    ID_MONEDA: number;\n    Moneda: string | undefined;\n    Clase: string | undefined;\n    FechaGeneracion: Date;\n    Asiento: string | undefined;\n    ContraAsiento: string | undefined;\n    Concepto: string | undefined;\n    Cotizaciones: ASIENTO_COTIZACION_ANALITICO_CN[] | undefined;\n}\n\nexport interface ASIENTO_COTIZACION_ANALITICO_CN {\n    COTIZACION_ALTERNATIVA: number;\n    ID_ASIENTO_COTIZACION_ANALITICO_CN: number;\n    ID_ASIENTO_ANALITICO_CN: number;\n    ID_MONEDA: number;\n    ID_TIPO_COTIZACION: number;\n}\n\nexport interface GeneracionMasivaAsientosApiParams {\n    PasoPorParametros: boolean;\n    ID_EJERCICIO_DESDE: number;\n    ID_EJERCICIO_HASTA: number;\n    ID_PERIODO_DESDE: number;\n    ID_PERIODO_HASTA: number;\n    FECHA_DESDE: Date;\n    FECHA_HASTA: Date;\n    ASIENTO_CONTABLE: boolean;\n    ASIENTO_EXTRACONTABLE: boolean;\n    ModelosAGenerar: ModeloAGenerarGrid[] | undefined;\n}",
+          "example": {
+            "PasoPorParametros": false,
+            "ID_EJERCICIO_DESDE": 0,
+            "ID_EJERCICIO_HASTA": 0,
+            "ID_PERIODO_DESDE": 0,
+            "ID_PERIODO_HASTA": 0,
+            "FECHA_DESDE": "0001-01-01T00:00:00",
+            "FECHA_HASTA": "0001-01-01T00:00:00",
+            "ASIENTO_CONTABLE": false,
+            "ASIENTO_EXTRACONTABLE": false,
+            "ModelosAGenerar": [
+              {
+                "IdModeloAsiento": 0,
+                "ModeloAsiento": null,
+                "TipoAsiento": null,
+                "IdTipoAsiento": 0,
+                "IdAgrupacion": 0,
+                "Agrupacion": null,
+                "FechaUltimoAsiento": "0001-01-01T00:00:00",
+                "Contable": null,
+                "Extracontable": null,
+                "ID_MONEDA": 0,
+                "Moneda": null,
+                "Clase": null,
+                "FechaGeneracion": "0001-01-01T00:00:00",
+                "Asiento": null,
+                "ContraAsiento": null,
+                "Concepto": null,
+                "Cotizaciones": [
+                  {
+                    "COTIZACION_ALTERNATIVA": 0,
+                    "ID_ASIENTO_COTIZACION_ANALITICO_CN": 0,
+                    "ID_ASIENTO_ANALITICO_CN": 0,
+                    "ID_MONEDA": 0,
+                    "ID_TIPO_COTIZACION": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Custom",
+      "name": "Api/Custom",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "method",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"GeneracionMasivaAsientosApiParams\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"properties\": {\r\n    \"PasoPorParametros\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_EJERCICIO_DESDE\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_EJERCICIO_HASTA\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_PERIODO_DESDE\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_PERIODO_HASTA\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"FECHA_DESDE\": {\r\n      \"type\": \"string\",\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_HASTA\": {\r\n      \"type\": \"string\",\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"ASIENTO_CONTABLE\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ASIENTO_EXTRACONTABLE\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ModelosAGenerar\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/ModeloAGenerarGrid\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"ModeloAGenerarGrid\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"IdModeloAsiento\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ModeloAsiento\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"TipoAsiento\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"IdTipoAsiento\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"IdAgrupacion\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"Agrupacion\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"FechaUltimoAsiento\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"format\": \"date-time\"\r\n        },\r\n        \"Contable\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"Extracontable\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"ID_MONEDA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"Moneda\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"Clase\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"FechaGeneracion\": {\r\n          \"type\": \"string\",\r\n          \"format\": \"date-time\"\r\n        },\r\n        \"Asiento\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"ContraAsiento\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"Concepto\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"Cotizaciones\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/ASIENTO_COTIZACION_ANALITICO_CN\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"ASIENTO_COTIZACION_ANALITICO_CN\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"COTIZACION_ALTERNATIVA\",\r\n        \"ID_ASIENTO_ANALITICO_CN\",\r\n        \"ID_MONEDA\",\r\n        \"ID_TIPO_COTIZACION\"\r\n      ],\r\n      \"properties\": {\r\n        \"COTIZACION_ALTERNATIVA\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"ID_ASIENTO_COTIZACION_ANALITICO_CN\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_ASIENTO_ANALITICO_CN\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_MONEDA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_TIPO_COTIZACION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class ModeloAGenerarGrid\n    {\n        [Newtonsoft.Json.JsonProperty(\"IdModeloAsiento\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int IdModeloAsiento { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ModeloAsiento\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ModeloAsiento { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TipoAsiento\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string TipoAsiento { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IdTipoAsiento\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int IdTipoAsiento { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IdAgrupacion\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? IdAgrupacion { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Agrupacion\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Agrupacion { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FechaUltimoAsiento\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FechaUltimoAsiento { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Contable\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Contable { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Extracontable\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Extracontable { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Moneda\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Moneda { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Clase\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Clase { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FechaGeneracion\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset FechaGeneracion { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Asiento\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Asiento { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ContraAsiento\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ContraAsiento { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Concepto\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Concepto { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Cotizaciones\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<ASIENTO_COTIZACION_ANALITICO_CN> Cotizaciones { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class ASIENTO_COTIZACION_ANALITICO_CN\n    {\n        [Newtonsoft.Json.JsonProperty(\"COTIZACION_ALTERNATIVA\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal COTIZACION_ALTERNATIVA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_COTIZACION_ANALITICO_CN\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_ASIENTO_COTIZACION_ANALITICO_CN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_ANALITICO_CN\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_ASIENTO_ANALITICO_CN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_COTIZACION\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_TIPO_COTIZACION { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GeneracionMasivaAsientosApiParams\n    {\n        [Newtonsoft.Json.JsonProperty(\"PasoPorParametros\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PasoPorParametros { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_EJERCICIO_DESDE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_EJERCICIO_DESDE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_EJERCICIO_HASTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_EJERCICIO_HASTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERIODO_DESDE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERIODO_DESDE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERIODO_HASTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERIODO_HASTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_DESDE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset FECHA_DESDE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_HASTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset FECHA_HASTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ASIENTO_CONTABLE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ASIENTO_CONTABLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ASIENTO_EXTRACONTABLE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ASIENTO_EXTRACONTABLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ModelosAGenerar\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<ModeloAGenerarGrid> ModelosAGenerar { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface ModeloAGenerarGrid {\n    IdModeloAsiento: number;\n    ModeloAsiento: string | undefined;\n    TipoAsiento: string | undefined;\n    IdTipoAsiento: number;\n    IdAgrupacion: number | undefined;\n    Agrupacion: string | undefined;\n    FechaUltimoAsiento: Date | undefined;\n    Contable: string | undefined;\n    Extracontable: string | undefined;\n    ID_MONEDA: number;\n    Moneda: string | undefined;\n    Clase: string | undefined;\n    FechaGeneracion: Date;\n    Asiento: string | undefined;\n    ContraAsiento: string | undefined;\n    Concepto: string | undefined;\n    Cotizaciones: ASIENTO_COTIZACION_ANALITICO_CN[] | undefined;\n}\n\nexport interface ASIENTO_COTIZACION_ANALITICO_CN {\n    COTIZACION_ALTERNATIVA: number;\n    ID_ASIENTO_COTIZACION_ANALITICO_CN: number;\n    ID_ASIENTO_ANALITICO_CN: number;\n    ID_MONEDA: number;\n    ID_TIPO_COTIZACION: number;\n}\n\nexport interface GeneracionMasivaAsientosApiParams {\n    PasoPorParametros: boolean;\n    ID_EJERCICIO_DESDE: number;\n    ID_EJERCICIO_HASTA: number;\n    ID_PERIODO_DESDE: number;\n    ID_PERIODO_HASTA: number;\n    FECHA_DESDE: Date;\n    FECHA_HASTA: Date;\n    ASIENTO_CONTABLE: boolean;\n    ASIENTO_EXTRACONTABLE: boolean;\n    ModelosAGenerar: ModeloAGenerarGrid[] | undefined;\n}",
+          "example": {
+            "PasoPorParametros": false,
+            "ID_EJERCICIO_DESDE": 0,
+            "ID_EJERCICIO_HASTA": 0,
+            "ID_PERIODO_DESDE": 0,
+            "ID_PERIODO_HASTA": 0,
+            "FECHA_DESDE": "0001-01-01T00:00:00",
+            "FECHA_HASTA": "0001-01-01T00:00:00",
+            "ASIENTO_CONTABLE": false,
+            "ASIENTO_EXTRACONTABLE": false,
+            "ModelosAGenerar": [
+              {
+                "IdModeloAsiento": 0,
+                "ModeloAsiento": null,
+                "TipoAsiento": null,
+                "IdTipoAsiento": 0,
+                "IdAgrupacion": 0,
+                "Agrupacion": null,
+                "FechaUltimoAsiento": "0001-01-01T00:00:00",
+                "Contable": null,
+                "Extracontable": null,
+                "ID_MONEDA": 0,
+                "Moneda": null,
+                "Clase": null,
+                "FechaGeneracion": "0001-01-01T00:00:00",
+                "Asiento": null,
+                "ContraAsiento": null,
+                "Concepto": null,
+                "Cotizaciones": [
+                  {
+                    "COTIZACION_ALTERNATIVA": 0,
+                    "ID_ASIENTO_COTIZACION_ANALITICO_CN": 0,
+                    "ID_ASIENTO_ANALITICO_CN": 0,
+                    "ID_MONEDA": 0,
+                    "ID_TIPO_COTIZACION": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "GeneracionMasivaAsientosApiParams": [
+      "ModelosAGenerar",
+      "PasoPorParametros",
+      "ID_EJERCICIO_DESDE",
+      "ID_EJERCICIO_HASTA",
+      "ID_PERIODO_DESDE",
+      "ID_PERIODO_HASTA",
+      "FECHA_DESDE",
+      "FECHA_HASTA",
+      "ASIENTO_CONTABLE",
+      "ASIENTO_EXTRACONTABLE"
+    ],
+    "ModeloAGenerarGrid": [
+      "ModeloAsiento",
+      "TipoAsiento",
+      "IdTipoAsiento",
+      "IdAgrupacion",
+      "Agrupacion",
+      "FechaUltimoAsiento",
+      "Contable",
+      "Extracontable",
+      "ID_MONEDA",
+      "Moneda",
+      "Clase",
+      "FechaGeneracion",
+      "Asiento",
+      "ContraAsiento",
+      "Concepto",
+      "Cotizaciones"
+    ],
+    "ASIENTO_COTIZACION_ANALITICO_CN": [
+      "ID_ASIENTO_ANALITICO_CN",
+      "ID_MONEDA",
+      "ID_TIPO_COTIZACION",
+      "COTIZACION_ALTERNATIVA"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

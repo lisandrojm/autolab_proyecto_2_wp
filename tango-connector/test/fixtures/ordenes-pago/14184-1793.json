@@ -1,0 +1,104 @@
+{
+ "data": {
+  "iD_CPA01": 4516,
+  "iD_SUCURSAL": 1,
+  "t_COMP": "O/P",
+  "n_COMP": " 0000100000798",
+  "t_COMP_IN_C": "OP",
+  "n_COMP_IN_C": 798,
+  "sucursal": "1 - 2030 SRL",
+  "sucursaL_ORIGEN": "1 - 2030 SRL",
+  "fecha": "2026-10-15T00:00:00",
+  "fechA_CONTABLE": "2026-10-15T00:00:00",
+  "moneda": "CTE (Cotización: 1505.0000000)",
+  "contabilizado": false,
+  "estadO_CTE": "IMP",
+  "estadO_EXT": "IMP",
+  "clasificacion": " - ",
+  "totaL_VALUE_HEADER": 2000000,
+  "totaL_CTE": 2000000,
+  "totaL_EXT": 1328.9,
+  "leyendA_1": "",
+  "leyendA_2": "",
+  "leyendA_3": "",
+  "leyendA_4": "",
+  "leyendA_5": "",
+  "observacioneS_COMERCIALES": "",
+  "otraS_OBSERVACIONES": "",
+  "valores": [
+   {
+    "iD_VALORES": 0,
+    "iD_CPA04": 0,
+    "cuenta": 2010010101,
+    "descripcion": "PROVEEDORES",
+    "operacion": " - ",
+    "debE_CTE": 2000000,
+    "habeR_CTE": 0,
+    "debE_EXT": 1328.9,
+    "habeR_EXT": 0
+   },
+   {
+    "iD_VALORES": 0,
+    "iD_CPA04": 0,
+    "cuenta": 1010010201,
+    "descripcion": "BANCO GALICIA",
+    "operacion": " - ",
+    "debE_CTE": 0,
+    "habeR_CTE": 2000000,
+    "debE_EXT": 0,
+    "habeR_EXT": 1328.9
+   }
+  ],
+  "retenciones": [],
+  "documentos": [],
+  "imputaciones": [
+   {
+    "iD_IMPUTACIONES": 0,
+    "iD_CPA04_FACCREDEB": 1792,
+    "iD_SUCURSAL": 1,
+    "tipO_COMPROBANTE": "FAC",
+    "nrO_COMPROBANTE": "C0000200000018",
+    "sucursal": "1 - 2030 SRL",
+    "fechA_VENCIMIENTO": "2026-10-19T00:00:00",
+    "estado": "CAN",
+    "moneda": "CTE",
+    "totaL_CANCELADO_CTE": 2000000,
+    "totaL_CANCELADO_EXT": 1328.9036544850499
+   }
+  ],
+  "proveedoR_RAZON_SOCI": "005239 - PELLEGRINI HERNAN MARCELO",
+  "fechA_INGRESO": "16/10/26 - 14:34",
+  "usuariO_INGRESO": "MARTIN",
+  "terminaL_INGRESO": "#ASTORCLI#SRVRDP{RDP-TCP#1}",
+  "comprobanteS_RELACIONADOS": [
+   {
+    "tipo": "Factura",
+    "fecha": "2026-10-14T00:00:00",
+    "numero": "FAC - C0000200000018",
+    "sucursal": "1 - 2030 SRL",
+    "iD_SUCURSAL": 1,
+    "iD_CPA35": null,
+    "iD_CPA110": null,
+    "iD_STA14": null,
+    "iD_CPA04_FACCREDEB": 1792
+   }
+  ],
+  "totales": [
+   {
+    "iD_TOTALES": 0,
+    "iD_CPA04": 0,
+    "concepto": "Total",
+    "importe": 2000000,
+    "importE_EXT": 1328.9
+   }
+  ],
+  "triggerToExecuteGetData": true
+ },
+ "markAsDirty": true,
+ "selfAssignment": false,
+ "showMessage": false,
+ "kind": 2,
+ "message": null,
+ "exceptionInfo": null,
+ "succeeded": true
+}

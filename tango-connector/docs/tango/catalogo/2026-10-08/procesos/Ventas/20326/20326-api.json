@@ -1,0 +1,129 @@
+{
+  "title": "Historial de generación de pedidos",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "VentasPedidosGeneracionDePedidosModel": [
+      "FECHA_GENERACION",
+      "COD_MODELO_DE_PEDIDO",
+      "DESC_MODELO_DE_PEDIDO",
+      "MODELO_PEDIDO",
+      "PEDIDO_GENERADO",
+      "UTILIZA_FRECUENCIA",
+      "FRECUENCIA",
+      "FECHA_PEDIDO",
+      "TALONARIO_PEDIDO",
+      "NRO_PEDIDO",
+      "CLIENTE",
+      "COD_CLIENTE",
+      "RAZON_SOCIAL",
+      "NOMBRE_COMERCIAL",
+      "COD_DIRECCION_ENTREGA",
+      "DIRECCION_DE_ENTREGA",
+      "PERIODO",
+      "USUARIO_GENERACION",
+      "TERMINAL_GENERACION",
+      "OBSERVACIONES",
+      "TELEFONO",
+      "TELEFONO_2",
+      "TELEFONO_MOVIL_WA",
+      "MOVIL",
+      "EMAIL",
+      "EMAIL_COMPROBANTES",
+      "EMAILS_ENVIO_COTIZACION",
+      "MOVILES_ENVIO_COTIZACION",
+      "EMAILS_ENVIO_RECIBO",
+      "MOVILES_ENVIO_RECIBO",
+      "EMAILS_ENVIO_PEDIDO",
+      "MOVILES_ENVIO_PEDIDO",
+      "EMAILS_RESPONSABLES_PAGOS",
+      "MOVILES_RESPONSABLES_PAGOS",
+      "ID_GVA14",
+      "ID_GVA21",
+      "ID_MODELO_PEDIDO"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

@@ -1,0 +1,366 @@
+{
+  "title": "Definición de formato de archivo ASCII",
+  "moduleId": 8,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"PARAMETRO_ASCII_BANCO\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"ID_BANCO\",\r\n    \"COD_PARAMETRO_ASCII_BANCO\",\r\n    \"DESC_PARAMETRO_ASCII_BANCO\",\r\n    \"COD_CAJA_AHORRO\",\r\n    \"COD_CTA_CTE\",\r\n    \"CANT_DECIMAL\",\r\n    \"MASCARA_NUMERO\",\r\n    \"MASCARA_FECHA\",\r\n    \"GENERA_ASCII_SEGUN\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_BANCO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_PARAMETRO_ASCII_BANCO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_PARAMETRO_ASCII_BANCO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"HABILITADO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ES_BANCO_SELECCIONADO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ES_OTROS_BANCOS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AGRUPA_SECCION_DETALLE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"COD_BANCO_EMP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_CAJA_AHORRO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_CTA_CTE\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"CANT_DECIMAL\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"byte\"\r\n    },\r\n    \"SEPARA_DECIMAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"SEPARA_MIL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"SEPARA_FECHA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"SIMBOLO_DECIMAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SIMBOLO_MIL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SIMBOLO_FECHA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"MASCARA_NUMERO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"MASCARA_FECHA\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"ARCHIVO_BANCO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 255,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_DB\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_CH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_VV_MESON\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_VV_CORREO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_VV_EMPRESA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"GENERA_ASCII_SEGUN\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"SECCION_ASCII_BANCO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/SECCION_ASCII_BANCO\"\r\n      }\r\n    },\r\n    \"DOCUMENTO_ASCII_BANCO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/DOCUMENTO_ASCII_BANCO\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"SECCION_ASCII_BANCO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"NRO_SECCION\",\r\n        \"DESC_SECCION\"\r\n      ],\r\n      \"properties\": {\r\n        \"NRO_SECCION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"DESC_SECCION\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 40,\r\n          \"minLength\": 0\r\n        },\r\n        \"COLUMNA_ASCII_BANCO\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/COLUMNA_ASCII_BANCO\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"COLUMNA_ASCII_BANCO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_VARIABLE_ASCII_BANCO\",\r\n        \"NRO_COLUMNA\",\r\n        \"LONGITUD\",\r\n        \"TIPO_DATO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_VARIABLE_ASCII_BANCO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"NRO_COLUMNA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"LEYENDA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        },\r\n        \"LONGITUD\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"TIPO_DATO\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"TIPO_FORMATO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        }\r\n      }\r\n    },\r\n    \"DOCUMENTO_ASCII_BANCO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_TIPO_DOCUMENTO\",\r\n        \"COD_DOCUMENTO_ASCII_BANCO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_TIPO_DOCUMENTO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_DOCUMENTO_ASCII_BANCO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 3,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class SECCION_ASCII_BANCO\n    {\n        [Newtonsoft.Json.JsonProperty(\"NRO_SECCION\", Required = Newtonsoft.Json.Required.Always)]\n        public int NRO_SECCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_SECCION\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_SECCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COLUMNA_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<COLUMNA_ASCII_BANCO> COLUMNA_ASCII_BANCO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class COLUMNA_ASCII_BANCO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_VARIABLE_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_VARIABLE_ASCII_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_COLUMNA\", Required = Newtonsoft.Json.Required.Always)]\n        public int NRO_COLUMNA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string LEYENDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LONGITUD\", Required = Newtonsoft.Json.Required.Always)]\n        public int LONGITUD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_DATO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string TIPO_DATO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_FORMATO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string TIPO_FORMATO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class DOCUMENTO_ASCII_BANCO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_DOCUMENTO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_TIPO_DOCUMENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_DOCUMENTO_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_DOCUMENTO_ASCII_BANCO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class PARAMETRO_ASCII_BANCO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_BANCO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_PARAMETRO_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_PARAMETRO_ASCII_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_PARAMETRO_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_PARAMETRO_ASCII_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ES_BANCO_SELECCIONADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ES_BANCO_SELECCIONADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ES_OTROS_BANCOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ES_OTROS_BANCOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AGRUPA_SECCION_DETALLE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AGRUPA_SECCION_DETALLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_BANCO_EMP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_BANCO_EMP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CAJA_AHORRO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_CAJA_AHORRO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CTA_CTE\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_CTA_CTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_DECIMAL\", Required = Newtonsoft.Json.Required.Always)]\n        public byte CANT_DECIMAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SEPARA_DECIMAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string SEPARA_DECIMAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SEPARA_MIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string SEPARA_MIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SEPARA_FECHA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string SEPARA_FECHA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOLO_DECIMAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOLO_DECIMAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOLO_MIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOLO_MIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOLO_FECHA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOLO_FECHA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MASCARA_NUMERO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string MASCARA_NUMERO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MASCARA_FECHA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string MASCARA_FECHA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ARCHIVO_BANCO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(255)]\n        public string ARCHIVO_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_DB\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_DB { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_CH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_VV_MESON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_VV_MESON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_VV_CORREO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_VV_CORREO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_VV_EMPRESA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_VV_EMPRESA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GENERA_ASCII_SEGUN\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string GENERA_ASCII_SEGUN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SECCION_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<SECCION_ASCII_BANCO> SECCION_ASCII_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DOCUMENTO_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<DOCUMENTO_ASCII_BANCO> DOCUMENTO_ASCII_BANCO { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface SECCION_ASCII_BANCO {\n    NRO_SECCION: number;\n    DESC_SECCION: string;\n    COLUMNA_ASCII_BANCO: COLUMNA_ASCII_BANCO[] | undefined;\n}\n\nexport interface COLUMNA_ASCII_BANCO {\n    ID_VARIABLE_ASCII_BANCO: number;\n    NRO_COLUMNA: number;\n    LEYENDA: string | undefined;\n    LONGITUD: number;\n    TIPO_DATO: string;\n    TIPO_FORMATO: string | undefined;\n}\n\nexport interface DOCUMENTO_ASCII_BANCO {\n    ID_TIPO_DOCUMENTO: number;\n    COD_DOCUMENTO_ASCII_BANCO: string;\n}\n\nexport interface PARAMETRO_ASCII_BANCO {\n    ID_BANCO: number;\n    COD_PARAMETRO_ASCII_BANCO: string;\n    DESC_PARAMETRO_ASCII_BANCO: string;\n    HABILITADO: string | undefined;\n    ES_BANCO_SELECCIONADO: string | undefined;\n    ES_OTROS_BANCOS: string | undefined;\n    AGRUPA_SECCION_DETALLE: string | undefined;\n    COD_BANCO_EMP: string | undefined;\n    COD_CAJA_AHORRO: string;\n    COD_CTA_CTE: string;\n    CANT_DECIMAL: number;\n    SEPARA_DECIMAL: string | undefined;\n    SEPARA_MIL: string | undefined;\n    SEPARA_FECHA: string | undefined;\n    SIMBOLO_DECIMAL: string | undefined;\n    SIMBOLO_MIL: string | undefined;\n    SIMBOLO_FECHA: string | undefined;\n    MASCARA_NUMERO: string;\n    MASCARA_FECHA: string;\n    ARCHIVO_BANCO: string | undefined;\n    COD_DB: string | undefined;\n    COD_CH: string | undefined;\n    COD_VV_MESON: string | undefined;\n    COD_VV_CORREO: string | undefined;\n    COD_VV_EMPRESA: string | undefined;\n    GENERA_ASCII_SEGUN: string;\n    OBSERVACIONES: string | undefined;\n    SECCION_ASCII_BANCO: SECCION_ASCII_BANCO[] | undefined;\n    DOCUMENTO_ASCII_BANCO: DOCUMENTO_ASCII_BANCO[] | undefined;\n}",
+          "example": {
+            "ID_BANCO": 0,
+            "COD_PARAMETRO_ASCII_BANCO": null,
+            "DESC_PARAMETRO_ASCII_BANCO": null,
+            "HABILITADO": "S",
+            "ES_BANCO_SELECCIONADO": "N",
+            "ES_OTROS_BANCOS": "N",
+            "AGRUPA_SECCION_DETALLE": "N",
+            "COD_BANCO_EMP": null,
+            "COD_CAJA_AHORRO": "1",
+            "COD_CTA_CTE": "0",
+            "CANT_DECIMAL": 2,
+            "SEPARA_DECIMAL": "S",
+            "SEPARA_MIL": "N",
+            "SEPARA_FECHA": "S",
+            "SIMBOLO_DECIMAL": ".",
+            "SIMBOLO_MIL": null,
+            "SIMBOLO_FECHA": "/",
+            "MASCARA_NUMERO": "Con blancos",
+            "MASCARA_FECHA": "dd/mm/aaaa",
+            "ARCHIVO_BANCO": null,
+            "COD_DB": null,
+            "COD_CH": null,
+            "COD_VV_MESON": null,
+            "COD_VV_CORREO": null,
+            "COD_VV_EMPRESA": null,
+            "GENERA_ASCII_SEGUN": "CBU o número de cuenta",
+            "OBSERVACIONES": null,
+            "SECCION_ASCII_BANCO": [
+              {
+                "NRO_SECCION": 0,
+                "DESC_SECCION": null,
+                "COLUMNA_ASCII_BANCO": [
+                  {
+                    "ID_VARIABLE_ASCII_BANCO": 0,
+                    "NRO_COLUMNA": 0,
+                    "LEYENDA": null,
+                    "LONGITUD": 0,
+                    "TIPO_DATO": null,
+                    "TIPO_FORMATO": null
+                  }
+                ]
+              }
+            ],
+            "DOCUMENTO_ASCII_BANCO": [
+              {
+                "ID_TIPO_DOCUMENTO": 0,
+                "COD_DOCUMENTO_ASCII_BANCO": null
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"PARAMETRO_ASCII_BANCO\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"ID_BANCO\",\r\n    \"COD_PARAMETRO_ASCII_BANCO\",\r\n    \"DESC_PARAMETRO_ASCII_BANCO\",\r\n    \"COD_CAJA_AHORRO\",\r\n    \"COD_CTA_CTE\",\r\n    \"CANT_DECIMAL\",\r\n    \"MASCARA_NUMERO\",\r\n    \"MASCARA_FECHA\",\r\n    \"GENERA_ASCII_SEGUN\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_PARAMETRO_ASCII_BANCO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_BANCO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_PARAMETRO_ASCII_BANCO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_PARAMETRO_ASCII_BANCO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"HABILITADO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ES_BANCO_SELECCIONADO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ES_OTROS_BANCOS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"AGRUPA_SECCION_DETALLE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"COD_BANCO_EMP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_CAJA_AHORRO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_CTA_CTE\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"CANT_DECIMAL\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"byte\"\r\n    },\r\n    \"SEPARA_DECIMAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"SEPARA_MIL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"SEPARA_FECHA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"SIMBOLO_DECIMAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SIMBOLO_MIL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SIMBOLO_FECHA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"MASCARA_NUMERO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"MASCARA_FECHA\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"ARCHIVO_BANCO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 255,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_DB\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_CH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_VV_MESON\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_VV_CORREO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_VV_EMPRESA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"GENERA_ASCII_SEGUN\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"SECCION_ASCII_BANCO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/SECCION_ASCII_BANCO\"\r\n      }\r\n    },\r\n    \"DOCUMENTO_ASCII_BANCO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/DOCUMENTO_ASCII_BANCO\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"SECCION_ASCII_BANCO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_PARAMETRO_ASCII_BANCO\",\r\n        \"NRO_SECCION\",\r\n        \"DESC_SECCION\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_SECCION_ASCII_BANCO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_PARAMETRO_ASCII_BANCO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"NRO_SECCION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"DESC_SECCION\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 40,\r\n          \"minLength\": 0\r\n        },\r\n        \"COLUMNA_ASCII_BANCO\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/COLUMNA_ASCII_BANCO\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"COLUMNA_ASCII_BANCO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_VARIABLE_ASCII_BANCO\",\r\n        \"ID_SECCION_ASCII_BANCO\",\r\n        \"NRO_COLUMNA\",\r\n        \"LONGITUD\",\r\n        \"TIPO_DATO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_COLUMNA_ASCII_BANCO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_VARIABLE_ASCII_BANCO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SECCION_ASCII_BANCO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"NRO_COLUMNA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"LEYENDA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        },\r\n        \"LONGITUD\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"TIPO_DATO\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"TIPO_FORMATO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        }\r\n      }\r\n    },\r\n    \"DOCUMENTO_ASCII_BANCO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_PARAMETRO_ASCII_BANCO\",\r\n        \"ID_TIPO_DOCUMENTO\",\r\n        \"COD_DOCUMENTO_ASCII_BANCO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_DOCUMENTO_ASCII_BANCO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_PARAMETRO_ASCII_BANCO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_TIPO_DOCUMENTO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_DOCUMENTO_ASCII_BANCO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 3,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class SECCION_ASCII_BANCO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_SECCION_ASCII_BANCO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SECCION_ASCII_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PARAMETRO_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_PARAMETRO_ASCII_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_SECCION\", Required = Newtonsoft.Json.Required.Always)]\n        public int NRO_SECCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_SECCION\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_SECCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COLUMNA_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<COLUMNA_ASCII_BANCO> COLUMNA_ASCII_BANCO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class COLUMNA_ASCII_BANCO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_COLUMNA_ASCII_BANCO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_COLUMNA_ASCII_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_VARIABLE_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_VARIABLE_ASCII_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SECCION_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_SECCION_ASCII_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_COLUMNA\", Required = Newtonsoft.Json.Required.Always)]\n        public int NRO_COLUMNA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string LEYENDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LONGITUD\", Required = Newtonsoft.Json.Required.Always)]\n        public int LONGITUD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_DATO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string TIPO_DATO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_FORMATO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string TIPO_FORMATO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class DOCUMENTO_ASCII_BANCO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_DOCUMENTO_ASCII_BANCO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_DOCUMENTO_ASCII_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PARAMETRO_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_PARAMETRO_ASCII_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_DOCUMENTO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_TIPO_DOCUMENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_DOCUMENTO_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_DOCUMENTO_ASCII_BANCO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class PARAMETRO_ASCII_BANCO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_PARAMETRO_ASCII_BANCO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PARAMETRO_ASCII_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_BANCO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_PARAMETRO_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_PARAMETRO_ASCII_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_PARAMETRO_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_PARAMETRO_ASCII_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ES_BANCO_SELECCIONADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ES_BANCO_SELECCIONADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ES_OTROS_BANCOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ES_OTROS_BANCOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AGRUPA_SECCION_DETALLE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string AGRUPA_SECCION_DETALLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_BANCO_EMP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_BANCO_EMP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CAJA_AHORRO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_CAJA_AHORRO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CTA_CTE\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_CTA_CTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_DECIMAL\", Required = Newtonsoft.Json.Required.Always)]\n        public byte CANT_DECIMAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SEPARA_DECIMAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string SEPARA_DECIMAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SEPARA_MIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string SEPARA_MIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SEPARA_FECHA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string SEPARA_FECHA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOLO_DECIMAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOLO_DECIMAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOLO_MIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOLO_MIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOLO_FECHA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOLO_FECHA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MASCARA_NUMERO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string MASCARA_NUMERO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MASCARA_FECHA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string MASCARA_FECHA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ARCHIVO_BANCO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(255)]\n        public string ARCHIVO_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_DB\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_DB { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_CH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_VV_MESON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_VV_MESON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_VV_CORREO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_VV_CORREO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_VV_EMPRESA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_VV_EMPRESA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GENERA_ASCII_SEGUN\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string GENERA_ASCII_SEGUN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SECCION_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<SECCION_ASCII_BANCO> SECCION_ASCII_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DOCUMENTO_ASCII_BANCO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<DOCUMENTO_ASCII_BANCO> DOCUMENTO_ASCII_BANCO { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface SECCION_ASCII_BANCO {\n    ID_SECCION_ASCII_BANCO: number;\n    ID_PARAMETRO_ASCII_BANCO: number;\n    NRO_SECCION: number;\n    DESC_SECCION: string;\n    COLUMNA_ASCII_BANCO: COLUMNA_ASCII_BANCO[] | undefined;\n}\n\nexport interface COLUMNA_ASCII_BANCO {\n    ID_COLUMNA_ASCII_BANCO: number;\n    ID_VARIABLE_ASCII_BANCO: number;\n    ID_SECCION_ASCII_BANCO: number;\n    NRO_COLUMNA: number;\n    LEYENDA: string | undefined;\n    LONGITUD: number;\n    TIPO_DATO: string;\n    TIPO_FORMATO: string | undefined;\n}\n\nexport interface DOCUMENTO_ASCII_BANCO {\n    ID_DOCUMENTO_ASCII_BANCO: number;\n    ID_PARAMETRO_ASCII_BANCO: number;\n    ID_TIPO_DOCUMENTO: number;\n    COD_DOCUMENTO_ASCII_BANCO: string;\n}\n\nexport interface PARAMETRO_ASCII_BANCO {\n    ID_PARAMETRO_ASCII_BANCO: number;\n    ID_BANCO: number;\n    COD_PARAMETRO_ASCII_BANCO: string;\n    DESC_PARAMETRO_ASCII_BANCO: string;\n    HABILITADO: string | undefined;\n    ES_BANCO_SELECCIONADO: string | undefined;\n    ES_OTROS_BANCOS: string | undefined;\n    AGRUPA_SECCION_DETALLE: string | undefined;\n    COD_BANCO_EMP: string | undefined;\n    COD_CAJA_AHORRO: string;\n    COD_CTA_CTE: string;\n    CANT_DECIMAL: number;\n    SEPARA_DECIMAL: string | undefined;\n    SEPARA_MIL: string | undefined;\n    SEPARA_FECHA: string | undefined;\n    SIMBOLO_DECIMAL: string | undefined;\n    SIMBOLO_MIL: string | undefined;\n    SIMBOLO_FECHA: string | undefined;\n    MASCARA_NUMERO: string;\n    MASCARA_FECHA: string;\n    ARCHIVO_BANCO: string | undefined;\n    COD_DB: string | undefined;\n    COD_CH: string | undefined;\n    COD_VV_MESON: string | undefined;\n    COD_VV_CORREO: string | undefined;\n    COD_VV_EMPRESA: string | undefined;\n    GENERA_ASCII_SEGUN: string;\n    OBSERVACIONES: string | undefined;\n    SECCION_ASCII_BANCO: SECCION_ASCII_BANCO[] | undefined;\n    DOCUMENTO_ASCII_BANCO: DOCUMENTO_ASCII_BANCO[] | undefined;\n}",
+          "example": {
+            "ID_PARAMETRO_ASCII_BANCO": 0,
+            "ID_BANCO": 0,
+            "COD_PARAMETRO_ASCII_BANCO": null,
+            "DESC_PARAMETRO_ASCII_BANCO": null,
+            "HABILITADO": "S",
+            "ES_BANCO_SELECCIONADO": "N",
+            "ES_OTROS_BANCOS": "N",
+            "AGRUPA_SECCION_DETALLE": "N",
+            "COD_BANCO_EMP": null,
+            "COD_CAJA_AHORRO": "1",
+            "COD_CTA_CTE": "0",
+            "CANT_DECIMAL": 2,
+            "SEPARA_DECIMAL": "S",
+            "SEPARA_MIL": "N",
+            "SEPARA_FECHA": "S",
+            "SIMBOLO_DECIMAL": ".",
+            "SIMBOLO_MIL": null,
+            "SIMBOLO_FECHA": "/",
+            "MASCARA_NUMERO": "Con blancos",
+            "MASCARA_FECHA": "dd/mm/aaaa",
+            "ARCHIVO_BANCO": null,
+            "COD_DB": null,
+            "COD_CH": null,
+            "COD_VV_MESON": null,
+            "COD_VV_CORREO": null,
+            "COD_VV_EMPRESA": null,
+            "GENERA_ASCII_SEGUN": "CBU o número de cuenta",
+            "OBSERVACIONES": null,
+            "SECCION_ASCII_BANCO": [
+              {
+                "ID_SECCION_ASCII_BANCO": 0,
+                "ID_PARAMETRO_ASCII_BANCO": 0,
+                "NRO_SECCION": 0,
+                "DESC_SECCION": null,
+                "COLUMNA_ASCII_BANCO": [
+                  {
+                    "ID_COLUMNA_ASCII_BANCO": 0,
+                    "ID_VARIABLE_ASCII_BANCO": 0,
+                    "ID_SECCION_ASCII_BANCO": 0,
+                    "NRO_COLUMNA": 0,
+                    "LEYENDA": null,
+                    "LONGITUD": 0,
+                    "TIPO_DATO": null,
+                    "TIPO_FORMATO": null
+                  }
+                ]
+              }
+            ],
+            "DOCUMENTO_ASCII_BANCO": [
+              {
+                "ID_DOCUMENTO_ASCII_BANCO": 0,
+                "ID_PARAMETRO_ASCII_BANCO": 0,
+                "ID_TIPO_DOCUMENTO": 0,
+                "COD_DOCUMENTO_ASCII_BANCO": null
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "AXV_PARAMETRO_ASCII_BANCO": [
+      "ID_BANCO",
+      "COD_PARAMETRO_ASCII_BANCO",
+      "DESC_PARAMETRO_ASCII_BANCO",
+      "COD_DESCRIP_BANCO",
+      "HABILITADO",
+      "ES_BANCO_SELECCIONADO",
+      "ES_OTROS_BANCOS",
+      "AGRUPA_SECCION_DETALLE",
+      "COD_BANCO_EMP",
+      "COD_CAJA_AHORRO",
+      "COD_CTA_CTE",
+      "CANT_DECIMAL",
+      "SEPARA_DECIMAL",
+      "SEPARA_MIL",
+      "SEPARA_FECHA",
+      "SIMBOLO_DECIMAL",
+      "SIMBOLO_MIL",
+      "SIMBOLO_FECHA",
+      "MASCARA_NUMERO",
+      "MASCARA_FECHA",
+      "COD_DB",
+      "COD_CH",
+      "GENERA_ASCII_SEGUN",
+      "OBSERVACIONES"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

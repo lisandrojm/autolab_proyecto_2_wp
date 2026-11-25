@@ -1,0 +1,56 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_CRITERIO_ACTUALIZACION_PRECIOS": 2,
+        "coD_CRITERIO_ACTUALIZACION_PRECIOS": "01",
+        "desC_CRITERIO_ACTUALIZACION_PRECIOS": "LMB-GENERAL",
+        "basE_DE_CALCULO": "V",
+        "iD_GVA10_BASE_VENTAS": 1,
+        "proveedoR_HABITUAL": false,
+        "considerA_BONIFICACION": false,
+        "criteriO_ACTUALIZACION": "P",
+        "valoR_CRITERIO_ACTUALIZACION": 0,
+        "criteriO_CORRECCION": "N",
+        "iD_TIPO_COTIZACION": 1,
+        "considerA_IMPUESTOS": false,
+        "actualizA_ART_SINPRECIO": false,
+        "actualizA_PEDIDOS": "N",
+        "filteR_RULE": "H4sIAAAAAAAACl2Qy2rDQAxF/0VrL7qenakJBEpaTMmmhKDa12FA1ph5FEzov1du7abpbnSkK47mSq/zhDoljO8y73UI5LSIVHRkKbgrdh7Sb2RXtMs+6IFH/GcvHHlMG30M2vsFk6P60FBFbRFY++1kkb8797eXTiVvxfOEyDlEy3dBM3tNtmTxNuI144JooOHM5K7ke2j2gzfo6MwiN4GKcgSe8AEh91DRXdPlWPBpSsKXX/kW3AeVmdzAkvD9E940l1nTTHX/k2ZZL1nHWkzCHZowmu66+gtEqfXrbAEAAA==",
+        "sqL_FILTER_RULE": "1 = 1",
+        "respetA_PRECIO_MODIFICADO_MANUAL": false,
+        "roW_VERSION": "AAAAAADf5Lg="
+      },
+      {
+        "iD_CRITERIO_ACTUALIZACION_PRECIOS": 3,
+        "coD_CRITERIO_ACTUALIZACION_PRECIOS": "02",
+        "desC_CRITERIO_ACTUALIZACION_PRECIOS": "LMB-GENERAL-DOLAR",
+        "basE_DE_CALCULO": "V",
+        "iD_GVA10_BASE_VENTAS": 3,
+        "proveedoR_HABITUAL": false,
+        "considerA_BONIFICACION": false,
+        "criteriO_ACTUALIZACION": "P",
+        "valoR_CRITERIO_ACTUALIZACION": 0,
+        "criteriO_CORRECCION": "N",
+        "iD_TIPO_COTIZACION": 2,
+        "considerA_IMPUESTOS": false,
+        "actualizA_ART_SINPRECIO": false,
+        "actualizA_PEDIDOS": "N",
+        "filteR_RULE": "H4sIAAAAAAAACl2Qy2rDQAxF/0VrL7qenakJBEpaTMmmhKDa12FA1ph5FEzov1du7abpbnSkK47mSq/zhDoljO8y73UI5LSIVHRkKbgrdh7Sb2RXtMs+6IFH/GcvHHlMG30M2vsFk6P60FBFbRFY++1kkb8797eXTiVvxfOEyDlEy3dBM3tNtmTxNuI144JooOHM5K7ke2j2gzfo6MwiN4GKcgSe8AEh91DRXdPlWPBpSsKXX/kW3AeVmdzAkvD9E940l1nTTHX/k2ZZL1nHWkzCHZowmu66+gtEqfXrbAEAAA==",
+        "sqL_FILTER_RULE": "1 = 1",
+        "respetA_PRECIO_MODIFICADO_MANUAL": false,
+        "roW_VERSION": "AAAAAADf5Lk="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

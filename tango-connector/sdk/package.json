@@ -1,0 +1,15 @@
+{
+  "name": "@lumba/tango-connector-sdk",
+  "version": "0.7.2",
+  "private": true,
+  "description": "Cliente TypeScript del tango-connector: la API de Tango con API key, tipos y helpers",
+  "license": "UNLICENSED",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "README.md"],
+  "engines": { "node": ">=18.17" },
+  "scripts": {
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
+    "prepack": "npm run build"
+  }
+}

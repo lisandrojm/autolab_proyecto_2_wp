@@ -1,0 +1,22 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_GRUPO_JERARQUICO": 1,
+        "coD_GRUPO_JERARQUICO": "001DIRE",
+        "desC_GRUPO_JERARQUICO": "DIRECCION",
+        "roW_VERSION": "AAAAAADO1HA="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

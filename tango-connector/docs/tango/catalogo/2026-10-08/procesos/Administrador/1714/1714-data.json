@@ -1,0 +1,394 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_PERMISO": 1,
+        "iD_USER_ROL": 1,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 1,
+        "roW_VERSION": "AAAAAAAGX6w="
+      },
+      {
+        "iD_PERMISO": 2,
+        "iD_USER_ROL": 1,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 2,
+        "roW_VERSION": "AAAAAAAGX60="
+      },
+      {
+        "iD_PERMISO": 3,
+        "iD_USER_ROL": 1,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 3,
+        "roW_VERSION": "AAAAAAAGX64="
+      },
+      {
+        "iD_PERMISO": 4,
+        "iD_USER_ROL": 1,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 4,
+        "roW_VERSION": "AAAAAAAGX68="
+      },
+      {
+        "iD_PERMISO": 5,
+        "iD_USER_ROL": 1,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 5,
+        "roW_VERSION": "AAAAAAAGX7A="
+      },
+      {
+        "iD_PERMISO": 6,
+        "iD_USER_ROL": 1,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 6,
+        "roW_VERSION": "AAAAAAAGX7E="
+      },
+      {
+        "iD_PERMISO": 7,
+        "iD_USER_ROL": 1,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 7,
+        "roW_VERSION": "AAAAAAAGX7I="
+      },
+      {
+        "iD_PERMISO": 8,
+        "iD_USER_ROL": 1,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 8,
+        "roW_VERSION": "AAAAAAAGX7M="
+      },
+      {
+        "iD_PERMISO": 9,
+        "iD_USER_ROL": 1,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 9,
+        "roW_VERSION": "AAAAAAAGX7Q="
+      },
+      {
+        "iD_PERMISO": 10,
+        "iD_USER_ROL": 1,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 10,
+        "roW_VERSION": "AAAAAAAGX7U="
+      },
+      {
+        "iD_PERMISO": 11,
+        "iD_USER_ROL": 1,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 11,
+        "roW_VERSION": "AAAAAAAGX7Y="
+      },
+      {
+        "iD_PERMISO": 12,
+        "iD_USER_ROL": 3,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 3,
+        "roW_VERSION": "AAAAAAAGX7c="
+      },
+      {
+        "iD_PERMISO": 13,
+        "iD_USER_ROL": 3,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 6,
+        "roW_VERSION": "AAAAAAAGX7g="
+      },
+      {
+        "iD_PERMISO": 14,
+        "iD_USER_ROL": 3,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 8,
+        "roW_VERSION": "AAAAAAAGX7k="
+      },
+      {
+        "iD_PERMISO": 15,
+        "iD_USER_ROL": 3,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 9,
+        "roW_VERSION": "AAAAAAAGX7o="
+      },
+      {
+        "iD_PERMISO": 16,
+        "iD_USER_ROL": 3,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 10,
+        "roW_VERSION": "AAAAAAAGX7s="
+      },
+      {
+        "iD_PERMISO": 17,
+        "iD_USER_ROL": 5,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 3,
+        "roW_VERSION": "AAAAAAAGX7w="
+      },
+      {
+        "iD_PERMISO": 18,
+        "iD_USER_ROL": 5,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 8,
+        "roW_VERSION": "AAAAAAAGX70="
+      },
+      {
+        "iD_PERMISO": 19,
+        "iD_USER_ROL": 7,
+        "iD_ROL": 7,
+        "iD_EMPRESA": 3,
+        "roW_VERSION": "AAAAAAAGX74="
+      },
+      {
+        "iD_PERMISO": 20,
+        "iD_USER_ROL": 7,
+        "iD_ROL": 7,
+        "iD_EMPRESA": 8,
+        "roW_VERSION": "AAAAAAAGX78="
+      },
+      {
+        "iD_PERMISO": 21,
+        "iD_USER_ROL": 7,
+        "iD_ROL": 7,
+        "iD_EMPRESA": 9,
+        "roW_VERSION": "AAAAAAAGX8A="
+      },
+      {
+        "iD_PERMISO": 22,
+        "iD_USER_ROL": 8,
+        "iD_ROL": 8,
+        "iD_EMPRESA": 3,
+        "roW_VERSION": "AAAAAAAGX8E="
+      },
+      {
+        "iD_PERMISO": 23,
+        "iD_USER_ROL": 8,
+        "iD_ROL": 8,
+        "iD_EMPRESA": 8,
+        "roW_VERSION": "AAAAAAAGX8I="
+      },
+      {
+        "iD_PERMISO": 24,
+        "iD_USER_ROL": 8,
+        "iD_ROL": 8,
+        "iD_EMPRESA": 9,
+        "roW_VERSION": "AAAAAAAGX8M="
+      },
+      {
+        "iD_PERMISO": 25,
+        "iD_USER_ROL": 9,
+        "iD_ROL": 9,
+        "iD_EMPRESA": 6,
+        "roW_VERSION": "AAAAAAAGX8Q="
+      },
+      {
+        "iD_PERMISO": 26,
+        "iD_USER_ROL": 9,
+        "iD_ROL": 9,
+        "iD_EMPRESA": 10,
+        "roW_VERSION": "AAAAAAAGX8U="
+      },
+      {
+        "iD_PERMISO": 27,
+        "iD_USER_ROL": 10,
+        "iD_ROL": 9,
+        "iD_EMPRESA": 11,
+        "roW_VERSION": "AAAAAAAGX8Y="
+      },
+      {
+        "iD_PERMISO": 28,
+        "iD_USER_ROL": 10,
+        "iD_ROL": 10,
+        "iD_EMPRESA": 3,
+        "roW_VERSION": "AAAAAAAGX8c="
+      },
+      {
+        "iD_PERMISO": 29,
+        "iD_USER_ROL": 10,
+        "iD_ROL": 10,
+        "iD_EMPRESA": 8,
+        "roW_VERSION": "AAAAAAAGX8g="
+      },
+      {
+        "iD_PERMISO": 30,
+        "iD_USER_ROL": 10,
+        "iD_ROL": 10,
+        "iD_EMPRESA": 9,
+        "roW_VERSION": "AAAAAAAGX8k="
+      },
+      {
+        "iD_PERMISO": 31,
+        "iD_USER_ROL": 11,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 3,
+        "roW_VERSION": "AAAAAAAGX8o="
+      },
+      {
+        "iD_PERMISO": 32,
+        "iD_USER_ROL": 11,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 6,
+        "roW_VERSION": "AAAAAAAGX8s="
+      },
+      {
+        "iD_PERMISO": 33,
+        "iD_USER_ROL": 11,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 8,
+        "roW_VERSION": "AAAAAAAGX8w="
+      },
+      {
+        "iD_PERMISO": 34,
+        "iD_USER_ROL": 11,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 9,
+        "roW_VERSION": "AAAAAAAGX80="
+      },
+      {
+        "iD_PERMISO": 35,
+        "iD_USER_ROL": 11,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 10,
+        "roW_VERSION": "AAAAAAAGX84="
+      },
+      {
+        "iD_PERMISO": 36,
+        "iD_USER_ROL": 11,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 11,
+        "roW_VERSION": "AAAAAAAGX88="
+      },
+      {
+        "iD_PERMISO": 37,
+        "iD_USER_ROL": 12,
+        "iD_ROL": 11,
+        "iD_EMPRESA": 3,
+        "roW_VERSION": "AAAAAAAGX9A="
+      },
+      {
+        "iD_PERMISO": 38,
+        "iD_USER_ROL": 12,
+        "iD_ROL": 11,
+        "iD_EMPRESA": 8,
+        "roW_VERSION": "AAAAAAAGX9E="
+      },
+      {
+        "iD_PERMISO": 39,
+        "iD_USER_ROL": 12,
+        "iD_ROL": 11,
+        "iD_EMPRESA": 9,
+        "roW_VERSION": "AAAAAAAGX9I="
+      },
+      {
+        "iD_PERMISO": 40,
+        "iD_USER_ROL": 13,
+        "iD_ROL": 9,
+        "iD_EMPRESA": 11,
+        "roW_VERSION": "AAAAAAAGX9M="
+      },
+      {
+        "iD_PERMISO": 41,
+        "iD_USER_ROL": 1,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 12,
+        "roW_VERSION": "AAAAAAAJEMA="
+      },
+      {
+        "iD_PERMISO": 42,
+        "iD_USER_ROL": 7,
+        "iD_ROL": 7,
+        "iD_EMPRESA": 12,
+        "roW_VERSION": "AAAAAAAJEPs="
+      },
+      {
+        "iD_PERMISO": 43,
+        "iD_USER_ROL": 10,
+        "iD_ROL": 10,
+        "iD_EMPRESA": 12,
+        "roW_VERSION": "AAAAAAAJEPw="
+      },
+      {
+        "iD_PERMISO": 44,
+        "iD_USER_ROL": 5,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 12,
+        "roW_VERSION": "AAAAAAAJEP0="
+      },
+      {
+        "iD_PERMISO": 45,
+        "iD_USER_ROL": 8,
+        "iD_ROL": 8,
+        "iD_EMPRESA": 12,
+        "roW_VERSION": "AAAAAAAJEP4="
+      },
+      {
+        "iD_PERMISO": 46,
+        "iD_USER_ROL": 3,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 12,
+        "roW_VERSION": "AAAAAAAJEP8="
+      },
+      {
+        "iD_PERMISO": 47,
+        "iD_USER_ROL": 11,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 12,
+        "roW_VERSION": "AAAAAAAJEQE="
+      },
+      {
+        "iD_PERMISO": 57,
+        "iD_USER_ROL": 14,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 12,
+        "roW_VERSION": "AAAAAAAJ6/s="
+      },
+      {
+        "iD_PERMISO": 60,
+        "iD_USER_ROL": 1,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 13,
+        "roW_VERSION": "AAAAAAAQJy4="
+      },
+      {
+        "iD_PERMISO": 61,
+        "iD_USER_ROL": 15,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 13,
+        "roW_VERSION": "AAAAAAAQJ2Y="
+      },
+      {
+        "iD_PERMISO": 62,
+        "iD_USER_ROL": 11,
+        "iD_ROL": 1,
+        "iD_EMPRESA": 13,
+        "roW_VERSION": "AAAAAAAQJ2c="
+      },
+      {
+        "iD_PERMISO": 63,
+        "iD_USER_ROL": 15,
+        "iD_ROL": 12,
+        "iD_EMPRESA": 3,
+        "roW_VERSION": "AAAAAAAQjg0="
+      },
+      {
+        "iD_PERMISO": 64,
+        "iD_USER_ROL": 16,
+        "iD_ROL": 13,
+        "iD_EMPRESA": 8,
+        "roW_VERSION": "AAAAAAATMDs="
+      },
+      {
+        "iD_PERMISO": 65,
+        "iD_USER_ROL": 16,
+        "iD_ROL": 13,
+        "iD_EMPRESA": 3,
+        "roW_VERSION": "AAAAAAATMDw="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

@@ -1,0 +1,1013 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_PARAMETRIZACION": 1,
+        "coD_ENTIDAD": "010010101",
+        "iD_ENTIDAD": 1,
+        "iD_CUENTA": 1,
+        "iD_CUENTA_VENTAS_ARTICULOS": 1,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/is="
+      },
+      {
+        "iD_PARAMETRIZACION": 5,
+        "coD_ENTIDAD": "010020102",
+        "iD_ENTIDAD": 4,
+        "iD_CUENTA": 4,
+        "iD_CUENTA_VENTAS_ARTICULOS": 4,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/i0="
+      },
+      {
+        "iD_PARAMETRIZACION": 7,
+        "coD_ENTIDAD": "010020101",
+        "iD_ENTIDAD": 3,
+        "iD_CUENTA": 3,
+        "iD_CUENTA_VENTAS_ARTICULOS": 3,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/iw="
+      },
+      {
+        "iD_PARAMETRIZACION": 9,
+        "coD_ENTIDAD": "010020201",
+        "iD_ENTIDAD": 5,
+        "iD_CUENTA": 6,
+        "iD_CUENTA_VENTAS_ARTICULOS": 6,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/i4="
+      },
+      {
+        "iD_PARAMETRIZACION": 11,
+        "coD_ENTIDAD": "010020202",
+        "iD_ENTIDAD": 6,
+        "iD_CUENTA": 6,
+        "iD_CUENTA_VENTAS_ARTICULOS": 7,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/i8="
+      },
+      {
+        "iD_PARAMETRIZACION": 13,
+        "coD_ENTIDAD": "010020301",
+        "iD_ENTIDAD": 7,
+        "iD_CUENTA": 13,
+        "iD_CUENTA_VENTAS_ARTICULOS": 13,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/jE="
+      },
+      {
+        "iD_PARAMETRIZACION": 15,
+        "coD_ENTIDAD": "010020302",
+        "iD_ENTIDAD": 8,
+        "iD_CUENTA": 14,
+        "iD_CUENTA_VENTAS_ARTICULOS": 14,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/jI="
+      },
+      {
+        "iD_PARAMETRIZACION": 17,
+        "coD_ENTIDAD": "010020501",
+        "iD_ENTIDAD": 11,
+        "iD_CUENTA": 17,
+        "iD_CUENTA_VENTAS_ARTICULOS": 17,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/jU="
+      },
+      {
+        "iD_PARAMETRIZACION": 18,
+        "coD_ENTIDAD": "010060101",
+        "iD_ENTIDAD": 17,
+        "iD_CUENTA": 23,
+        "iD_CUENTA_VENTAS_ARTICULOS": 23,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/j0="
+      },
+      {
+        "iD_PARAMETRIZACION": 19,
+        "coD_ENTIDAD": "010020401",
+        "iD_ENTIDAD": 9,
+        "iD_CUENTA": 15,
+        "iD_CUENTA_VENTAS_ARTICULOS": 15,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/jM="
+      },
+      {
+        "iD_PARAMETRIZACION": 20,
+        "coD_ENTIDAD": "010020502",
+        "iD_ENTIDAD": 12,
+        "iD_CUENTA": 180,
+        "iD_CUENTA_VENTAS_ARTICULOS": 180,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/jY="
+      },
+      {
+        "iD_PARAMETRIZACION": 21,
+        "coD_ENTIDAD": "010020602",
+        "iD_ENTIDAD": 13,
+        "iD_CUENTA": 19,
+        "iD_CUENTA_VENTAS_ARTICULOS": 19,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/jc="
+      },
+      {
+        "iD_PARAMETRIZACION": 22,
+        "coD_ENTIDAD": "010030101",
+        "iD_ENTIDAD": 14,
+        "iD_CUENTA": 20,
+        "iD_CUENTA_VENTAS_ARTICULOS": 20,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/jg="
+      },
+      {
+        "iD_PARAMETRIZACION": 23,
+        "coD_ENTIDAD": "010040101",
+        "iD_ENTIDAD": 15,
+        "iD_CUENTA": 21,
+        "iD_CUENTA_VENTAS_ARTICULOS": 21,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/js="
+      },
+      {
+        "iD_PARAMETRIZACION": 24,
+        "coD_ENTIDAD": "010050101",
+        "iD_ENTIDAD": 16,
+        "iD_CUENTA": 22,
+        "iD_CUENTA_VENTAS_ARTICULOS": 22,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/jw="
+      },
+      {
+        "iD_PARAMETRIZACION": 25,
+        "coD_ENTIDAD": "010070101",
+        "iD_ENTIDAD": 18,
+        "iD_CUENTA": 24,
+        "iD_CUENTA_VENTAS_ARTICULOS": 24,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/j4="
+      },
+      {
+        "iD_PARAMETRIZACION": 26,
+        "coD_ENTIDAD": "010080101",
+        "iD_ENTIDAD": 19,
+        "iD_CUENTA": 25,
+        "iD_CUENTA_VENTAS_ARTICULOS": 25,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/kI="
+      },
+      {
+        "iD_PARAMETRIZACION": 27,
+        "coD_ENTIDAD": "0100910101",
+        "iD_CUENTA": 26,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/Mc="
+      },
+      {
+        "iD_PARAMETRIZACION": 28,
+        "coD_ENTIDAD": "010100101",
+        "iD_ENTIDAD": 21,
+        "iD_CUENTA": 27,
+        "iD_CUENTA_VENTAS_ARTICULOS": 27,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/kQ="
+      },
+      {
+        "iD_PARAMETRIZACION": 29,
+        "coD_ENTIDAD": "010110101",
+        "iD_ENTIDAD": 22,
+        "iD_CUENTA": 28,
+        "iD_CUENTA_VENTAS_ARTICULOS": 28,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/kU="
+      },
+      {
+        "iD_PARAMETRIZACION": 30,
+        "coD_ENTIDAD": "010120101",
+        "iD_ENTIDAD": 23,
+        "iD_CUENTA": 29,
+        "iD_CUENTA_VENTAS_ARTICULOS": 29,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/kY="
+      },
+      {
+        "iD_PARAMETRIZACION": 31,
+        "coD_ENTIDAD": "010130101",
+        "iD_ENTIDAD": 24,
+        "iD_CUENTA": 30,
+        "iD_CUENTA_VENTAS_ARTICULOS": 30,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/kc="
+      },
+      {
+        "iD_PARAMETRIZACION": 32,
+        "coD_ENTIDAD": "010140101",
+        "iD_ENTIDAD": 25,
+        "iD_CUENTA": 31,
+        "iD_CUENTA_VENTAS_ARTICULOS": 31,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/kk="
+      },
+      {
+        "iD_PARAMETRIZACION": 33,
+        "coD_ENTIDAD": "010150101",
+        "iD_ENTIDAD": 26,
+        "iD_CUENTA": 212,
+        "iD_CUENTA_VENTAS_ARTICULOS": 32,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADSf+E="
+      },
+      {
+        "iD_PARAMETRIZACION": 34,
+        "coD_ENTIDAD": "010160101",
+        "iD_ENTIDAD": 27,
+        "iD_CUENTA": 33,
+        "iD_CUENTA_VENTAS_ARTICULOS": 33,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/ks="
+      },
+      {
+        "iD_PARAMETRIZACION": 35,
+        "coD_ENTIDAD": "010170101",
+        "iD_ENTIDAD": 28,
+        "iD_CUENTA": 34,
+        "iD_CUENTA_VENTAS_ARTICULOS": 34,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/kw="
+      },
+      {
+        "iD_PARAMETRIZACION": 36,
+        "coD_ENTIDAD": "010180101",
+        "iD_ENTIDAD": 29,
+        "iD_CUENTA": 35,
+        "iD_CUENTA_VENTAS_ARTICULOS": 35,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/k0="
+      },
+      {
+        "iD_PARAMETRIZACION": 37,
+        "coD_ENTIDAD": "010190101",
+        "iD_ENTIDAD": 30,
+        "iD_CUENTA": 36,
+        "iD_CUENTA_VENTAS_ARTICULOS": 36,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/k4="
+      },
+      {
+        "iD_PARAMETRIZACION": 38,
+        "coD_ENTIDAD": "010200101",
+        "iD_ENTIDAD": 31,
+        "iD_CUENTA": 37,
+        "iD_CUENTA_VENTAS_ARTICULOS": 37,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/k8="
+      },
+      {
+        "iD_PARAMETRIZACION": 39,
+        "coD_ENTIDAD": "020010101",
+        "iD_ENTIDAD": 32,
+        "iD_CUENTA": 38,
+        "iD_CUENTA_VENTAS_ARTICULOS": 38,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/mw="
+      },
+      {
+        "iD_PARAMETRIZACION": 40,
+        "coD_ENTIDAD": "020010201",
+        "iD_ENTIDAD": 33,
+        "iD_CUENTA": 39,
+        "iD_CUENTA_VENTAS_ARTICULOS": 39,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/m0="
+      },
+      {
+        "iD_PARAMETRIZACION": 41,
+        "coD_ENTIDAD": "020010202",
+        "iD_ENTIDAD": 34,
+        "iD_CUENTA": 40,
+        "iD_CUENTA_VENTAS_ARTICULOS": 40,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/m4="
+      },
+      {
+        "iD_PARAMETRIZACION": 46,
+        "coD_ENTIDAD": "020010401",
+        "iD_ENTIDAD": 39,
+        "iD_CUENTA": 45,
+        "iD_CUENTA_VENTAS_ARTICULOS": 45,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/nM="
+      },
+      {
+        "iD_PARAMETRIZACION": 49,
+        "coD_ENTIDAD": "020010501",
+        "iD_ENTIDAD": 42,
+        "iD_CUENTA": 48,
+        "iD_CUENTA_VENTAS_ARTICULOS": 48,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/nY="
+      },
+      {
+        "iD_PARAMETRIZACION": 50,
+        "coD_ENTIDAD": "020010601",
+        "iD_ENTIDAD": 43,
+        "iD_CUENTA": 49,
+        "iD_CUENTA_VENTAS_ARTICULOS": 49,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/nc="
+      },
+      {
+        "iD_PARAMETRIZACION": 51,
+        "coD_ENTIDAD": "020010701",
+        "iD_ENTIDAD": 44,
+        "iD_CUENTA": 50,
+        "iD_CUENTA_VENTAS_ARTICULOS": 50,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/no="
+      },
+      {
+        "iD_PARAMETRIZACION": 52,
+        "coD_ENTIDAD": "020020101",
+        "iD_ENTIDAD": 45,
+        "iD_CUENTA": 51,
+        "iD_CUENTA_VENTAS_ARTICULOS": 51,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/n4="
+      },
+      {
+        "iD_PARAMETRIZACION": 53,
+        "coD_ENTIDAD": "020020201",
+        "iD_ENTIDAD": 46,
+        "iD_CUENTA": 52,
+        "iD_CUENTA_VENTAS_ARTICULOS": 52,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/n8="
+      },
+      {
+        "iD_PARAMETRIZACION": 54,
+        "coD_ENTIDAD": "020020301",
+        "iD_ENTIDAD": 47,
+        "iD_CUENTA": 53,
+        "iD_CUENTA_VENTAS_ARTICULOS": 53,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/oA="
+      },
+      {
+        "iD_PARAMETRIZACION": 55,
+        "coD_ENTIDAD": "020020401",
+        "iD_ENTIDAD": 48,
+        "iD_CUENTA": 54,
+        "iD_CUENTA_VENTAS_ARTICULOS": 54,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/oE="
+      },
+      {
+        "iD_PARAMETRIZACION": 56,
+        "coD_ENTIDAD": "020020501",
+        "iD_ENTIDAD": 49,
+        "iD_CUENTA": 55,
+        "iD_CUENTA_VENTAS_ARTICULOS": 55,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/oM="
+      },
+      {
+        "iD_PARAMETRIZACION": 57,
+        "coD_ENTIDAD": "020020601",
+        "iD_ENTIDAD": 50,
+        "iD_CUENTA": 56,
+        "iD_CUENTA_VENTAS_ARTICULOS": 56,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/oQ="
+      },
+      {
+        "iD_PARAMETRIZACION": 58,
+        "coD_ENTIDAD": "020020701",
+        "iD_ENTIDAD": 51,
+        "iD_CUENTA": 57,
+        "iD_CUENTA_VENTAS_ARTICULOS": 57,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/oY="
+      },
+      {
+        "iD_PARAMETRIZACION": 59,
+        "coD_ENTIDAD": "020030101",
+        "iD_ENTIDAD": 52,
+        "iD_CUENTA": 58,
+        "iD_CUENTA_VENTAS_ARTICULOS": 58,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/oo="
+      },
+      {
+        "iD_PARAMETRIZACION": 60,
+        "coD_ENTIDAD": "020030201",
+        "iD_ENTIDAD": 53,
+        "iD_CUENTA": 59,
+        "iD_CUENTA_VENTAS_ARTICULOS": 59,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/os="
+      },
+      {
+        "iD_PARAMETRIZACION": 61,
+        "coD_ENTIDAD": "020030301",
+        "iD_ENTIDAD": 54,
+        "iD_CUENTA": 60,
+        "iD_CUENTA_VENTAS_ARTICULOS": 60,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/ow="
+      },
+      {
+        "iD_PARAMETRIZACION": 62,
+        "coD_ENTIDAD": "020030401",
+        "iD_ENTIDAD": 55,
+        "iD_CUENTA": 61,
+        "iD_CUENTA_VENTAS_ARTICULOS": 61,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/o0="
+      },
+      {
+        "iD_PARAMETRIZACION": 63,
+        "coD_ENTIDAD": "020030501",
+        "iD_ENTIDAD": 56,
+        "iD_CUENTA": 62,
+        "iD_CUENTA_VENTAS_ARTICULOS": 62,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/o4="
+      },
+      {
+        "iD_PARAMETRIZACION": 64,
+        "coD_ENTIDAD": "020030601",
+        "iD_ENTIDAD": 57,
+        "iD_CUENTA": 63,
+        "iD_CUENTA_VENTAS_ARTICULOS": 63,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/pA="
+      },
+      {
+        "iD_PARAMETRIZACION": 65,
+        "coD_ENTIDAD": "020030701",
+        "iD_ENTIDAD": 58,
+        "iD_CUENTA": 64,
+        "iD_CUENTA_VENTAS_ARTICULOS": 64,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/pE="
+      },
+      {
+        "iD_PARAMETRIZACION": 66,
+        "coD_ENTIDAD": "020030801",
+        "iD_ENTIDAD": 59,
+        "iD_CUENTA": 65,
+        "iD_CUENTA_VENTAS_ARTICULOS": 65,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/pI="
+      },
+      {
+        "iD_PARAMETRIZACION": 67,
+        "coD_ENTIDAD": "020030901",
+        "iD_ENTIDAD": 60,
+        "iD_CUENTA": 66,
+        "iD_CUENTA_VENTAS_ARTICULOS": 66,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/pM="
+      },
+      {
+        "iD_PARAMETRIZACION": 68,
+        "coD_ENTIDAD": "020031001",
+        "iD_ENTIDAD": 61,
+        "iD_CUENTA": 67,
+        "iD_CUENTA_VENTAS_ARTICULOS": 67,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/pQ="
+      },
+      {
+        "iD_PARAMETRIZACION": 69,
+        "coD_ENTIDAD": "020040101",
+        "iD_ENTIDAD": 62,
+        "iD_CUENTA": 68,
+        "iD_CUENTA_VENTAS_ARTICULOS": 68,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/p4="
+      },
+      {
+        "iD_PARAMETRIZACION": 70,
+        "coD_ENTIDAD": "020040201",
+        "iD_ENTIDAD": 63,
+        "iD_CUENTA": 69,
+        "iD_CUENTA_VENTAS_ARTICULOS": 69,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/p8="
+      },
+      {
+        "iD_PARAMETRIZACION": 75,
+        "coD_ENTIDAD": "020040301",
+        "iD_ENTIDAD": 68,
+        "iD_CUENTA": 74,
+        "iD_CUENTA_VENTAS_ARTICULOS": 74,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/qQ="
+      },
+      {
+        "iD_PARAMETRIZACION": 76,
+        "coD_ENTIDAD": "020040401",
+        "iD_ENTIDAD": 69,
+        "iD_CUENTA": 75,
+        "iD_CUENTA_VENTAS_ARTICULOS": 75,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/qU="
+      },
+      {
+        "iD_PARAMETRIZACION": 77,
+        "coD_ENTIDAD": "020040501",
+        "iD_ENTIDAD": 70,
+        "iD_CUENTA": 76,
+        "iD_CUENTA_VENTAS_ARTICULOS": 76,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/qY="
+      },
+      {
+        "iD_PARAMETRIZACION": 78,
+        "coD_ENTIDAD": "020050101",
+        "iD_ENTIDAD": 71,
+        "iD_CUENTA": 77,
+        "iD_CUENTA_VENTAS_ARTICULOS": 77,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/qg="
+      },
+      {
+        "iD_PARAMETRIZACION": 79,
+        "coD_ENTIDAD": "020050201",
+        "iD_ENTIDAD": 72,
+        "iD_CUENTA": 78,
+        "iD_CUENTA_VENTAS_ARTICULOS": 78,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/qk="
+      },
+      {
+        "iD_PARAMETRIZACION": 80,
+        "coD_ENTIDAD": "020050301",
+        "iD_ENTIDAD": 73,
+        "iD_CUENTA": 79,
+        "iD_CUENTA_VENTAS_ARTICULOS": 79,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/qo="
+      },
+      {
+        "iD_PARAMETRIZACION": 81,
+        "coD_ENTIDAD": "020050401",
+        "iD_ENTIDAD": 74,
+        "iD_CUENTA": 80,
+        "iD_CUENTA_VENTAS_ARTICULOS": 80,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/qs="
+      },
+      {
+        "iD_PARAMETRIZACION": 82,
+        "coD_ENTIDAD": "020050501",
+        "iD_ENTIDAD": 75,
+        "iD_CUENTA": 81,
+        "iD_CUENTA_VENTAS_ARTICULOS": 81,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/qw="
+      },
+      {
+        "iD_PARAMETRIZACION": 83,
+        "coD_ENTIDAD": "020050601",
+        "iD_ENTIDAD": 76,
+        "iD_CUENTA": 82,
+        "iD_CUENTA_VENTAS_ARTICULOS": 82,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/q0="
+      },
+      {
+        "iD_PARAMETRIZACION": 84,
+        "coD_ENTIDAD": "020060101",
+        "iD_ENTIDAD": 77,
+        "iD_CUENTA": 83,
+        "iD_CUENTA_VENTAS_ARTICULOS": 83,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/q4="
+      },
+      {
+        "iD_PARAMETRIZACION": 87,
+        "coD_ENTIDAD": "020060201",
+        "iD_ENTIDAD": 80,
+        "iD_CUENTA": 86,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/rE="
+      },
+      {
+        "iD_PARAMETRIZACION": 88,
+        "coD_ENTIDAD": "020060301",
+        "iD_ENTIDAD": 81,
+        "iD_CUENTA": 87,
+        "iD_CUENTA_VENTAS_ARTICULOS": 87,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/rM="
+      },
+      {
+        "iD_PARAMETRIZACION": 91,
+        "coD_ENTIDAD": "020060401",
+        "iD_ENTIDAD": 84,
+        "iD_CUENTA": 90,
+        "iD_CUENTA_VENTAS_ARTICULOS": 90,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/rY="
+      },
+      {
+        "iD_PARAMETRIZACION": 93,
+        "coD_ENTIDAD": "020060601",
+        "iD_ENTIDAD": 86,
+        "iD_CUENTA": 92,
+        "iD_CUENTA_VENTAS_ARTICULOS": 92,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/rg="
+      },
+      {
+        "iD_PARAMETRIZACION": 94,
+        "coD_ENTIDAD": "020070101",
+        "iD_ENTIDAD": 87,
+        "iD_CUENTA": 93,
+        "iD_CUENTA_VENTAS_ARTICULOS": 93,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/rk="
+      },
+      {
+        "iD_PARAMETRIZACION": 97,
+        "coD_ENTIDAD": "020070201",
+        "iD_ENTIDAD": 90,
+        "iD_CUENTA": 96,
+        "iD_CUENTA_VENTAS_ARTICULOS": 96,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/rw="
+      },
+      {
+        "iD_PARAMETRIZACION": 100,
+        "coD_ENTIDAD": "020070301",
+        "iD_ENTIDAD": 93,
+        "iD_CUENTA": 99,
+        "iD_CUENTA_VENTAS_ARTICULOS": 99,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/r8="
+      },
+      {
+        "iD_PARAMETRIZACION": 104,
+        "coD_ENTIDAD": "020080101",
+        "iD_ENTIDAD": 97,
+        "iD_CUENTA": 103,
+        "iD_CUENTA_VENTAS_ARTICULOS": 103,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/sQ="
+      },
+      {
+        "iD_PARAMETRIZACION": 105,
+        "coD_ENTIDAD": "020080201",
+        "iD_ENTIDAD": 98,
+        "iD_CUENTA": 104,
+        "iD_CUENTA_VENTAS_ARTICULOS": 104,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/sU="
+      },
+      {
+        "iD_PARAMETRIZACION": 106,
+        "coD_ENTIDAD": "020080301",
+        "iD_ENTIDAD": 99,
+        "iD_CUENTA": 105,
+        "iD_CUENTA_VENTAS_ARTICULOS": 105,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/sY="
+      },
+      {
+        "iD_PARAMETRIZACION": 107,
+        "coD_ENTIDAD": "020080401",
+        "iD_ENTIDAD": 100,
+        "iD_CUENTA": 106,
+        "iD_CUENTA_VENTAS_ARTICULOS": 106,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/sc="
+      },
+      {
+        "iD_PARAMETRIZACION": 108,
+        "coD_ENTIDAD": "020080501",
+        "iD_ENTIDAD": 101,
+        "iD_CUENTA": 107,
+        "iD_CUENTA_VENTAS_ARTICULOS": 107,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/sg="
+      },
+      {
+        "iD_PARAMETRIZACION": 109,
+        "coD_ENTIDAD": "020080601",
+        "iD_ENTIDAD": 102,
+        "iD_CUENTA": 108,
+        "iD_CUENTA_VENTAS_ARTICULOS": 108,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/sk="
+      },
+      {
+        "iD_PARAMETRIZACION": 110,
+        "coD_ENTIDAD": "020080701",
+        "iD_ENTIDAD": 103,
+        "iD_CUENTA": 109,
+        "iD_CUENTA_VENTAS_ARTICULOS": 109,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/so="
+      },
+      {
+        "iD_PARAMETRIZACION": 111,
+        "coD_ENTIDAD": "020080801",
+        "iD_ENTIDAD": 104,
+        "iD_CUENTA": 110,
+        "iD_CUENTA_VENTAS_ARTICULOS": 110,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/ss="
+      },
+      {
+        "iD_PARAMETRIZACION": 112,
+        "coD_ENTIDAD": "020080901",
+        "iD_ENTIDAD": 105,
+        "iD_CUENTA": 111,
+        "iD_CUENTA_VENTAS_ARTICULOS": 111,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/sw="
+      },
+      {
+        "iD_PARAMETRIZACION": 113,
+        "coD_ENTIDAD": "020081001",
+        "iD_ENTIDAD": 106,
+        "iD_CUENTA": 112,
+        "iD_CUENTA_VENTAS_ARTICULOS": 112,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/s0="
+      },
+      {
+        "iD_PARAMETRIZACION": 114,
+        "coD_ENTIDAD": "020081101",
+        "iD_ENTIDAD": 107,
+        "iD_CUENTA": 113,
+        "iD_CUENTA_VENTAS_ARTICULOS": 113,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/s4="
+      },
+      {
+        "iD_PARAMETRIZACION": 115,
+        "coD_ENTIDAD": "020081201",
+        "iD_ENTIDAD": 108,
+        "iD_CUENTA": 114,
+        "iD_CUENTA_VENTAS_ARTICULOS": 114,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/s8="
+      },
+      {
+        "iD_PARAMETRIZACION": 116,
+        "coD_ENTIDAD": "020081301",
+        "iD_ENTIDAD": 109,
+        "iD_CUENTA": 115,
+        "iD_CUENTA_VENTAS_ARTICULOS": 115,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/tE="
+      },
+      {
+        "iD_PARAMETRIZACION": 117,
+        "coD_ENTIDAD": "020081401",
+        "iD_ENTIDAD": 110,
+        "iD_CUENTA": 116,
+        "iD_CUENTA_VENTAS_ARTICULOS": 116,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/tI="
+      },
+      {
+        "iD_PARAMETRIZACION": 118,
+        "coD_ENTIDAD": "020081501",
+        "iD_ENTIDAD": 111,
+        "iD_CUENTA": 117,
+        "iD_CUENTA_VENTAS_ARTICULOS": 117,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/tQ="
+      },
+      {
+        "iD_PARAMETRIZACION": 119,
+        "coD_ENTIDAD": "020081601",
+        "iD_ENTIDAD": 112,
+        "iD_CUENTA": 118,
+        "iD_CUENTA_VENTAS_ARTICULOS": 118,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/tU="
+      },
+      {
+        "iD_PARAMETRIZACION": 120,
+        "coD_ENTIDAD": "020081701",
+        "iD_ENTIDAD": 113,
+        "iD_CUENTA": 119,
+        "iD_CUENTA_VENTAS_ARTICULOS": 119,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/tY="
+      },
+      {
+        "iD_PARAMETRIZACION": 122,
+        "coD_ENTIDAD": "020081901",
+        "iD_ENTIDAD": 115,
+        "iD_CUENTA": 121,
+        "iD_CUENTA_VENTAS_ARTICULOS": 121,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/tg="
+      },
+      {
+        "iD_PARAMETRIZACION": 123,
+        "coD_ENTIDAD": "020082001",
+        "iD_ENTIDAD": 116,
+        "iD_CUENTA": 122,
+        "iD_CUENTA_VENTAS_ARTICULOS": 122,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/tk="
+      },
+      {
+        "iD_PARAMETRIZACION": 125,
+        "coD_ENTIDAD": "020082201",
+        "iD_ENTIDAD": 118,
+        "iD_CUENTA": 124,
+        "iD_CUENTA_VENTAS_ARTICULOS": 124,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/ts="
+      },
+      {
+        "iD_PARAMETRIZACION": 126,
+        "coD_ENTIDAD": "020082301",
+        "iD_ENTIDAD": 119,
+        "iD_CUENTA": 125,
+        "iD_CUENTA_VENTAS_ARTICULOS": 125,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/tw="
+      },
+      {
+        "iD_PARAMETRIZACION": 127,
+        "coD_ENTIDAD": "020082401",
+        "iD_ENTIDAD": 120,
+        "iD_CUENTA": 126,
+        "iD_CUENTA_VENTAS_ARTICULOS": 126,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/t0="
+      },
+      {
+        "iD_PARAMETRIZACION": 128,
+        "coD_ENTIDAD": "020090101",
+        "iD_ENTIDAD": 121,
+        "iD_CUENTA": 127,
+        "iD_CUENTA_VENTAS_ARTICULOS": 127,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/uU="
+      },
+      {
+        "iD_PARAMETRIZACION": 129,
+        "coD_ENTIDAD": "020090201",
+        "iD_ENTIDAD": 122,
+        "iD_CUENTA": 128,
+        "iD_CUENTA_VENTAS_ARTICULOS": 128,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/uY="
+      },
+      {
+        "iD_PARAMETRIZACION": 130,
+        "coD_ENTIDAD": "020090301",
+        "iD_ENTIDAD": 123,
+        "iD_CUENTA": 129,
+        "iD_CUENTA_VENTAS_ARTICULOS": 129,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/ug="
+      },
+      {
+        "iD_PARAMETRIZACION": 131,
+        "coD_ENTIDAD": "020090401",
+        "iD_ENTIDAD": 124,
+        "iD_CUENTA": 130,
+        "iD_CUENTA_VENTAS_ARTICULOS": 130,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/u0="
+      },
+      {
+        "iD_PARAMETRIZACION": 132,
+        "coD_ENTIDAD": "020090501",
+        "iD_ENTIDAD": 125,
+        "iD_CUENTA": 131,
+        "iD_CUENTA_VENTAS_ARTICULOS": 131,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/u8="
+      },
+      {
+        "iD_PARAMETRIZACION": 134,
+        "coD_ENTIDAD": "020090701",
+        "iD_ENTIDAD": 127,
+        "iD_CUENTA": 133,
+        "iD_CUENTA_VENTAS_ARTICULOS": 133,
+        "confirmA_ACTUALIZAR_COMBINACIONES": false,
+        "canT_COMBINACIONES": 0,
+        "roW_VERSION": "AAAAAADP/vM="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

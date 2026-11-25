@@ -1,0 +1,37 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_PARAMETRIZACION": 1,
+        "coD_ENTIDAD": "001",
+        "iD_ENTIDAD": 1,
+        "iD_CUENTA": 1,
+        "roW_VERSION": "AAAAAADQAqw="
+      },
+      {
+        "iD_PARAMETRIZACION": 2,
+        "coD_ENTIDAD": "002",
+        "iD_ENTIDAD": 2,
+        "iD_CUENTA": 27,
+        "roW_VERSION": "AAAAAADQAq0="
+      },
+      {
+        "iD_PARAMETRIZACION": 3,
+        "coD_ENTIDAD": "003",
+        "iD_ENTIDAD": 3,
+        "iD_CUENTA": 27,
+        "roW_VERSION": "AAAAAADQAq4="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

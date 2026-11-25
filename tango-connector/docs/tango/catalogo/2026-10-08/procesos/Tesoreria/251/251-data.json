@@ -1,0 +1,22 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_CONCEPTO_CONCILIACION": 1,
+        "coD_CONCEPTO_CONCILIACION": "1",
+        "desC_CONCEPTO_CONCILIACION": "CONCEPTO GENERAL",
+        "roW_VERSION": "AAAAAADO0u8="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

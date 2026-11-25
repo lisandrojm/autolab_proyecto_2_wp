@@ -1,0 +1,27 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_TIPO_HORA": 1,
+        "coD_TIPO_HORA": "SIN_HORA",
+        "desC_TIPO_HORA": "Fuera de horario",
+        "normaL_EXTRA": "Normal",
+        "prioridaD_TIPO_HORA": 0,
+        "coloR_TIPO_HORA": "#000000",
+        "afectA_COMPENSACION": "S",
+        "observaciones": "Tipo de hora utilizado por el sistema para computar las horas reales trabajadas fuera de horario.",
+        "roW_VERSION": "AAAAAADPSEs="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

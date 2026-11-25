@@ -1,0 +1,65 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_CONDICION_COMPRA": 1,
+        "coD_CONDIC": 1,
+        "desC_CONDI": "CONTADO",
+        "f_CREDITO": false,
+        "roW_VERSION": "AAAAAADPVQY="
+      },
+      {
+        "iD_CONDICION_COMPRA": 2,
+        "coD_CONDIC": 2,
+        "desC_CONDI": "CUENTA CORRIENTE 30D",
+        "f_CREDITO": false,
+        "roW_VERSION": "AAAAAADPVQc="
+      },
+      {
+        "iD_CONDICION_COMPRA": 3,
+        "coD_CONDIC": 3,
+        "desC_CONDI": "TARJETA DE CREDITO EN CUOTAS",
+        "f_CREDITO": false,
+        "roW_VERSION": "AAAAAADPVQg="
+      },
+      {
+        "iD_CONDICION_COMPRA": 4,
+        "coD_CONDIC": 4,
+        "desC_CONDI": "TARJETA DE CREDITO CONTADO",
+        "f_CREDITO": false,
+        "roW_VERSION": "AAAAAADPVQk="
+      },
+      {
+        "iD_CONDICION_COMPRA": 5,
+        "coD_CONDIC": 5,
+        "desC_CONDI": "CUENTA CORRIENTE 5D",
+        "f_CREDITO": false,
+        "roW_VERSION": "AAAAAADPVQo="
+      },
+      {
+        "iD_CONDICION_COMPRA": 6,
+        "coD_CONDIC": 6,
+        "desC_CONDI": "CUENTA CORRIENTE 1D",
+        "f_CREDITO": false,
+        "roW_VERSION": "AAAAAADPVQs="
+      },
+      {
+        "iD_CONDICION_COMPRA": 7,
+        "coD_CONDIC": 7,
+        "desC_CONDI": "MERCADO PAGO",
+        "f_CREDITO": false,
+        "roW_VERSION": "AAAAAADPVQw="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

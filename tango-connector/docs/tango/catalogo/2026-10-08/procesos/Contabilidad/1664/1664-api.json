@@ -1,0 +1,416 @@
+{
+  "title": "Asientos contables",
+  "moduleId": 6,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"ASIENTO_CONTABLE_DTO\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"FECHA_ASIENTO\",\r\n    \"CLASE_ASIENTO\",\r\n    \"ID_TIPO_ASIENTO\",\r\n    \"ESTADO_ASIENTO_ANALITICO\",\r\n    \"ID_MONEDA_ASIENTO\"\r\n  ],\r\n  \"properties\": {\r\n    \"FECHA_ASIENTO\": {\r\n      \"type\": \"string\",\r\n      \"format\": \"date-time\",\r\n      \"minLength\": 1\r\n    },\r\n    \"NRO_ASIENTO_ANALITICO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"NRO_INTERNO_ANALITICO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CLASE_ASIENTO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"ID_TIPO_ASIENTO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ESTADO_ASIENTO_ANALITICO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"ID_MONEDA_ASIENTO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ORIGEN_ASIENTO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"DESC_ASIENTO_ANALITICO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 100,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"RENGLON_ANALITICO_DTO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/RENGLON_ANALITICO_DTO\"\r\n      }\r\n    },\r\n    \"ASIENTO_COTIZACION_ANALITICO_CN\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/ASIENTO_COTIZACION_ANALITICO_CN\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"RENGLON_ANALITICO_DTO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_CUENTA\",\r\n        \"FECHA_ORIGEN\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_CUENTA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"IMPORTE_DEBE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"IMPORTE_HABER\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"FECHA_ORIGEN\": {\r\n          \"type\": \"string\",\r\n          \"format\": \"date-time\",\r\n          \"minLength\": 1\r\n        },\r\n        \"DESC_LEYENDA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 100,\r\n          \"minLength\": 0\r\n        },\r\n        \"IMPORTE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"CANTIDAD\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"TIPO_AUXILIAR\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/TIPO_AUXILIAR_DTO\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"TIPO_AUXILIAR_DTO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_TIPO_AUXILIAR\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_REGLA_APROPIACION\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"AUXILIAR\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/AUXILIAR_DTO\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"AUXILIAR_DTO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_AUXILIAR\",\r\n        \"PORC_APROPIACION\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_AUXILIAR\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"PORC_APROPIACION\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\",\r\n          \"maximum\": 100.0,\r\n          \"minimum\": 0.0\r\n        },\r\n        \"LEYENDA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 100,\r\n          \"minLength\": 0\r\n        },\r\n        \"IMPORTE_ADICIONAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"CANTIDAD_ADICIONAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"SUBAUXILIAR\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/SUBAUXILIAR_DTO\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"SUBAUXILIAR_DTO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_SUBAUXILIAR\",\r\n        \"PORC_APROPIACION\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_SUBAUXILIAR\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"PORC_APROPIACION\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\",\r\n          \"maximum\": 100.0,\r\n          \"minimum\": 0.0\r\n        },\r\n        \"LEYENDA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 100,\r\n          \"minLength\": 0\r\n        },\r\n        \"IMPORTE_ADICIONAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"CANTIDAD_ADICIONAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        }\r\n      }\r\n    },\r\n    \"ASIENTO_COTIZACION_ANALITICO_CN\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"COTIZACION_ALTERNATIVA\",\r\n        \"ID_MONEDA\",\r\n        \"ID_TIPO_COTIZACION\"\r\n      ],\r\n      \"properties\": {\r\n        \"COTIZACION_ALTERNATIVA\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"ID_MONEDA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_TIPO_COTIZACION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class RENGLON_ANALITICO_DTO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE_DEBE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE_DEBE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE_HABER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE_HABER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_ORIGEN\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public System.DateTimeOffset FECHA_ORIGEN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_LEYENDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string DESC_LEYENDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANTIDAD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CANTIDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_AUXILIAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TIPO_AUXILIAR_DTO> TIPO_AUXILIAR { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TIPO_AUXILIAR_DTO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_AUXILIAR\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TIPO_AUXILIAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_REGLA_APROPIACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_REGLA_APROPIACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AUXILIAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<AUXILIAR_DTO> AUXILIAR { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class AUXILIAR_DTO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_AUXILIAR\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_AUXILIAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_APROPIACION\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Range(0D, 100D)]\n        public decimal PORC_APROPIACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string LEYENDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE_ADICIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANTIDAD_ADICIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CANTIDAD_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SUBAUXILIAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<SUBAUXILIAR_DTO> SUBAUXILIAR { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class SUBAUXILIAR_DTO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_SUBAUXILIAR\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_SUBAUXILIAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_APROPIACION\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Range(0D, 100D)]\n        public decimal PORC_APROPIACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string LEYENDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE_ADICIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANTIDAD_ADICIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CANTIDAD_ADICIONAL { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class ASIENTO_COTIZACION_ANALITICO_CN\n    {\n        [Newtonsoft.Json.JsonProperty(\"COTIZACION_ALTERNATIVA\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal COTIZACION_ALTERNATIVA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_COTIZACION\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_TIPO_COTIZACION { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class ASIENTO_CONTABLE_DTO\n    {\n        [Newtonsoft.Json.JsonProperty(\"FECHA_ASIENTO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public System.DateTimeOffset FECHA_ASIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_ASIENTO_ANALITICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? NRO_ASIENTO_ANALITICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_INTERNO_ANALITICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? NRO_INTERNO_ANALITICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CLASE_ASIENTO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string CLASE_ASIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_ASIENTO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_TIPO_ASIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ESTADO_ASIENTO_ANALITICO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string ESTADO_ASIENTO_ANALITICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA_ASIENTO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_MONEDA_ASIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ORIGEN_ASIENTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ORIGEN_ASIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_ASIENTO_ANALITICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string DESC_ASIENTO_ANALITICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"RENGLON_ANALITICO_DTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<RENGLON_ANALITICO_DTO> RENGLON_ANALITICO_DTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ASIENTO_COTIZACION_ANALITICO_CN\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<ASIENTO_COTIZACION_ANALITICO_CN> ASIENTO_COTIZACION_ANALITICO_CN { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface RENGLON_ANALITICO_DTO {\n    ID_CUENTA: number;\n    IMPORTE_DEBE: number | undefined;\n    IMPORTE_HABER: number | undefined;\n    FECHA_ORIGEN: Date;\n    DESC_LEYENDA: string | undefined;\n    IMPORTE: number | undefined;\n    CANTIDAD: number | undefined;\n    TIPO_AUXILIAR: TIPO_AUXILIAR_DTO[] | undefined;\n}\n\nexport interface TIPO_AUXILIAR_DTO {\n    ID_TIPO_AUXILIAR: number;\n    ID_REGLA_APROPIACION: number | undefined;\n    AUXILIAR: AUXILIAR_DTO[] | undefined;\n}\n\nexport interface AUXILIAR_DTO {\n    ID_AUXILIAR: number;\n    PORC_APROPIACION: number;\n    LEYENDA: string | undefined;\n    IMPORTE_ADICIONAL: number | undefined;\n    CANTIDAD_ADICIONAL: number | undefined;\n    SUBAUXILIAR: SUBAUXILIAR_DTO[] | undefined;\n}\n\nexport interface SUBAUXILIAR_DTO {\n    ID_SUBAUXILIAR: number;\n    PORC_APROPIACION: number;\n    LEYENDA: string | undefined;\n    IMPORTE_ADICIONAL: number | undefined;\n    CANTIDAD_ADICIONAL: number | undefined;\n}\n\nexport interface ASIENTO_COTIZACION_ANALITICO_CN {\n    COTIZACION_ALTERNATIVA: number;\n    ID_MONEDA: number;\n    ID_TIPO_COTIZACION: number;\n}\n\nexport interface ASIENTO_CONTABLE_DTO {\n    FECHA_ASIENTO: Date;\n    NRO_ASIENTO_ANALITICO: number | undefined;\n    NRO_INTERNO_ANALITICO: number | undefined;\n    CLASE_ASIENTO: string;\n    ID_TIPO_ASIENTO: number;\n    ESTADO_ASIENTO_ANALITICO: string;\n    ID_MONEDA_ASIENTO: number;\n    ORIGEN_ASIENTO: string | undefined;\n    DESC_ASIENTO_ANALITICO: string | undefined;\n    OBSERVACIONES: string | undefined;\n    RENGLON_ANALITICO_DTO: RENGLON_ANALITICO_DTO[] | undefined;\n    ASIENTO_COTIZACION_ANALITICO_CN: ASIENTO_COTIZACION_ANALITICO_CN[] | undefined;\n}",
+          "example": {
+            "FECHA_ASIENTO": "2026-10-08T14:18:39.4321868",
+            "NRO_ASIENTO_ANALITICO": 0,
+            "NRO_INTERNO_ANALITICO": 0,
+            "CLASE_ASIENTO": "Básico",
+            "ID_TIPO_ASIENTO": 0,
+            "ESTADO_ASIENTO_ANALITICO": null,
+            "ID_MONEDA_ASIENTO": 1,
+            "ORIGEN_ASIENTO": "Manual",
+            "DESC_ASIENTO_ANALITICO": null,
+            "OBSERVACIONES": null,
+            "RENGLON_ANALITICO_DTO": [
+              {
+                "ID_CUENTA": 0,
+                "IMPORTE_DEBE": 0,
+                "IMPORTE_HABER": 0,
+                "FECHA_ORIGEN": "0001-01-01T00:00:00",
+                "DESC_LEYENDA": null,
+                "IMPORTE": 0,
+                "CANTIDAD": 0,
+                "TIPO_AUXILIAR": [
+                  {
+                    "ID_TIPO_AUXILIAR": 0,
+                    "ID_REGLA_APROPIACION": 0,
+                    "AUXILIAR": [
+                      {
+                        "ID_AUXILIAR": 0,
+                        "PORC_APROPIACION": 0,
+                        "LEYENDA": null,
+                        "IMPORTE_ADICIONAL": 0,
+                        "CANTIDAD_ADICIONAL": 0,
+                        "SUBAUXILIAR": [
+                          {
+                            "ID_SUBAUXILIAR": 0,
+                            "PORC_APROPIACION": 0,
+                            "LEYENDA": null,
+                            "IMPORTE_ADICIONAL": 0,
+                            "CANTIDAD_ADICIONAL": 0
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "ASIENTO_COTIZACION_ANALITICO_CN": [
+              {
+                "COTIZACION_ALTERNATIVA": 60,
+                "ID_MONEDA": 2,
+                "ID_TIPO_COTIZACION": 1
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"ASIENTO_CONTABLE_DTO\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"FECHA_ASIENTO\",\r\n    \"CLASE_ASIENTO\",\r\n    \"ID_TIPO_ASIENTO\",\r\n    \"ESTADO_ASIENTO_ANALITICO\",\r\n    \"ID_MONEDA_ASIENTO\"\r\n  ],\r\n  \"properties\": {\r\n    \"FECHA_ASIENTO\": {\r\n      \"type\": \"string\",\r\n      \"format\": \"date-time\",\r\n      \"minLength\": 1\r\n    },\r\n    \"NRO_ASIENTO_ANALITICO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"NRO_INTERNO_ANALITICO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CLASE_ASIENTO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"ID_TIPO_ASIENTO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ESTADO_ASIENTO_ANALITICO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"ID_MONEDA_ASIENTO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ORIGEN_ASIENTO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"DESC_ASIENTO_ANALITICO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 100,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_ASIENTO_ANALITICO_CN\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"RENGLON_ANALITICO_DTO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/RENGLON_ANALITICO_DTO\"\r\n      }\r\n    },\r\n    \"ASIENTO_COTIZACION_ANALITICO_CN\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/ASIENTO_COTIZACION_ANALITICO_CN\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"RENGLON_ANALITICO_DTO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_CUENTA\",\r\n        \"FECHA_ORIGEN\",\r\n        \"ID_ASIENTO_ANALITICO_CN\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_CUENTA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"IMPORTE_DEBE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"IMPORTE_HABER\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"FECHA_ORIGEN\": {\r\n          \"type\": \"string\",\r\n          \"format\": \"date-time\",\r\n          \"minLength\": 1\r\n        },\r\n        \"DESC_LEYENDA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 100,\r\n          \"minLength\": 0\r\n        },\r\n        \"IMPORTE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"CANTIDAD\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"ID_RENGLON_ANALITICO_CN\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_ASIENTO_ANALITICO_CN\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"TIPO_AUXILIAR\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/TIPO_AUXILIAR_DTO\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"TIPO_AUXILIAR_DTO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_TIPO_AUXILIAR_DTO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_TIPO_AUXILIAR\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_REGLA_APROPIACION\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"AUXILIAR\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/AUXILIAR_DTO\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"AUXILIAR_DTO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_AUXILIAR\",\r\n        \"PORC_APROPIACION\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_AUXILIAR_ANALITICO_CN\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_ASIENTO_ANALITICO_CN\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_AUXILIAR\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"PORC_APROPIACION\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\",\r\n          \"maximum\": 100.0,\r\n          \"minimum\": 0.0\r\n        },\r\n        \"LEYENDA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 100,\r\n          \"minLength\": 0\r\n        },\r\n        \"IMPORTE_ADICIONAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"CANTIDAD_ADICIONAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"SUBAUXILIAR\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/SUBAUXILIAR_DTO\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"SUBAUXILIAR_DTO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_SUBAUXILIAR\",\r\n        \"PORC_APROPIACION\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_SUBAUXILIAR_ANALITICO_CN\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_AUXILIAR_ANALITICO_CN\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SUBAUXILIAR\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"PORC_APROPIACION\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\",\r\n          \"maximum\": 100.0,\r\n          \"minimum\": 0.0\r\n        },\r\n        \"LEYENDA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 100,\r\n          \"minLength\": 0\r\n        },\r\n        \"IMPORTE_ADICIONAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"CANTIDAD_ADICIONAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        }\r\n      }\r\n    },\r\n    \"ASIENTO_COTIZACION_ANALITICO_CN\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"COTIZACION_ALTERNATIVA\",\r\n        \"ID_ASIENTO_ANALITICO_CN\",\r\n        \"ID_MONEDA\",\r\n        \"ID_TIPO_COTIZACION\"\r\n      ],\r\n      \"properties\": {\r\n        \"COTIZACION_ALTERNATIVA\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"ID_ASIENTO_COTIZACION_ANALITICO_CN\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_ASIENTO_ANALITICO_CN\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_MONEDA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_TIPO_COTIZACION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class RENGLON_ANALITICO_DTO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE_DEBE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE_DEBE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE_HABER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE_HABER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_ORIGEN\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public System.DateTimeOffset FECHA_ORIGEN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_LEYENDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string DESC_LEYENDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANTIDAD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CANTIDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_RENGLON_ANALITICO_CN\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_RENGLON_ANALITICO_CN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_ANALITICO_CN\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_ASIENTO_ANALITICO_CN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_AUXILIAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TIPO_AUXILIAR_DTO> TIPO_AUXILIAR { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TIPO_AUXILIAR_DTO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_AUXILIAR_DTO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TIPO_AUXILIAR_DTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_AUXILIAR\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TIPO_AUXILIAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_REGLA_APROPIACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_REGLA_APROPIACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AUXILIAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<AUXILIAR_DTO> AUXILIAR { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class AUXILIAR_DTO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_AUXILIAR_ANALITICO_CN\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_AUXILIAR_ANALITICO_CN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_ANALITICO_CN\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_ASIENTO_ANALITICO_CN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_AUXILIAR\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_AUXILIAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_APROPIACION\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Range(0D, 100D)]\n        public decimal PORC_APROPIACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string LEYENDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE_ADICIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANTIDAD_ADICIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CANTIDAD_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SUBAUXILIAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<SUBAUXILIAR_DTO> SUBAUXILIAR { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class SUBAUXILIAR_DTO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_SUBAUXILIAR_ANALITICO_CN\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SUBAUXILIAR_ANALITICO_CN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_AUXILIAR_ANALITICO_CN\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_AUXILIAR_ANALITICO_CN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SUBAUXILIAR\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_SUBAUXILIAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_APROPIACION\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Range(0D, 100D)]\n        public decimal PORC_APROPIACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string LEYENDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE_ADICIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANTIDAD_ADICIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CANTIDAD_ADICIONAL { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class ASIENTO_COTIZACION_ANALITICO_CN\n    {\n        [Newtonsoft.Json.JsonProperty(\"COTIZACION_ALTERNATIVA\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal COTIZACION_ALTERNATIVA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_COTIZACION_ANALITICO_CN\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_ASIENTO_COTIZACION_ANALITICO_CN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_ANALITICO_CN\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_ASIENTO_ANALITICO_CN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_COTIZACION\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_TIPO_COTIZACION { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class ASIENTO_CONTABLE_DTO\n    {\n        [Newtonsoft.Json.JsonProperty(\"FECHA_ASIENTO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public System.DateTimeOffset FECHA_ASIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_ASIENTO_ANALITICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? NRO_ASIENTO_ANALITICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_INTERNO_ANALITICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? NRO_INTERNO_ANALITICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CLASE_ASIENTO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string CLASE_ASIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_ASIENTO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_TIPO_ASIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ESTADO_ASIENTO_ANALITICO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string ESTADO_ASIENTO_ANALITICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA_ASIENTO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_MONEDA_ASIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ORIGEN_ASIENTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ORIGEN_ASIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_ASIENTO_ANALITICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string DESC_ASIENTO_ANALITICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_ANALITICO_CN\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_ASIENTO_ANALITICO_CN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"RENGLON_ANALITICO_DTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<RENGLON_ANALITICO_DTO> RENGLON_ANALITICO_DTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ASIENTO_COTIZACION_ANALITICO_CN\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<ASIENTO_COTIZACION_ANALITICO_CN> ASIENTO_COTIZACION_ANALITICO_CN { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface RENGLON_ANALITICO_DTO {\n    ID_CUENTA: number;\n    IMPORTE_DEBE: number | undefined;\n    IMPORTE_HABER: number | undefined;\n    FECHA_ORIGEN: Date;\n    DESC_LEYENDA: string | undefined;\n    IMPORTE: number | undefined;\n    CANTIDAD: number | undefined;\n    ID_RENGLON_ANALITICO_CN: number;\n    ID_ASIENTO_ANALITICO_CN: number;\n    TIPO_AUXILIAR: TIPO_AUXILIAR_DTO[] | undefined;\n}\n\nexport interface TIPO_AUXILIAR_DTO {\n    ID_TIPO_AUXILIAR_DTO: number;\n    ID_TIPO_AUXILIAR: number;\n    ID_REGLA_APROPIACION: number | undefined;\n    AUXILIAR: AUXILIAR_DTO[] | undefined;\n}\n\nexport interface AUXILIAR_DTO {\n    ID_AUXILIAR_ANALITICO_CN: number;\n    ID_ASIENTO_ANALITICO_CN: number;\n    ID_AUXILIAR: number;\n    PORC_APROPIACION: number;\n    LEYENDA: string | undefined;\n    IMPORTE_ADICIONAL: number | undefined;\n    CANTIDAD_ADICIONAL: number | undefined;\n    SUBAUXILIAR: SUBAUXILIAR_DTO[] | undefined;\n}\n\nexport interface SUBAUXILIAR_DTO {\n    ID_SUBAUXILIAR_ANALITICO_CN: number;\n    ID_AUXILIAR_ANALITICO_CN: number;\n    ID_SUBAUXILIAR: number;\n    PORC_APROPIACION: number;\n    LEYENDA: string | undefined;\n    IMPORTE_ADICIONAL: number | undefined;\n    CANTIDAD_ADICIONAL: number | undefined;\n}\n\nexport interface ASIENTO_COTIZACION_ANALITICO_CN {\n    COTIZACION_ALTERNATIVA: number;\n    ID_ASIENTO_COTIZACION_ANALITICO_CN: number;\n    ID_ASIENTO_ANALITICO_CN: number;\n    ID_MONEDA: number;\n    ID_TIPO_COTIZACION: number;\n}\n\nexport interface ASIENTO_CONTABLE_DTO {\n    FECHA_ASIENTO: Date;\n    NRO_ASIENTO_ANALITICO: number | undefined;\n    NRO_INTERNO_ANALITICO: number | undefined;\n    CLASE_ASIENTO: string;\n    ID_TIPO_ASIENTO: number;\n    ESTADO_ASIENTO_ANALITICO: string;\n    ID_MONEDA_ASIENTO: number;\n    ORIGEN_ASIENTO: string | undefined;\n    DESC_ASIENTO_ANALITICO: string | undefined;\n    OBSERVACIONES: string | undefined;\n    ID_ASIENTO_ANALITICO_CN: number;\n    RENGLON_ANALITICO_DTO: RENGLON_ANALITICO_DTO[] | undefined;\n    ASIENTO_COTIZACION_ANALITICO_CN: ASIENTO_COTIZACION_ANALITICO_CN[] | undefined;\n}",
+          "example": {
+            "FECHA_ASIENTO": "2026-10-08T14:18:39.9893461",
+            "NRO_ASIENTO_ANALITICO": 0,
+            "NRO_INTERNO_ANALITICO": 0,
+            "CLASE_ASIENTO": "Básico",
+            "ID_TIPO_ASIENTO": 0,
+            "ESTADO_ASIENTO_ANALITICO": null,
+            "ID_MONEDA_ASIENTO": 1,
+            "ORIGEN_ASIENTO": "Manual",
+            "DESC_ASIENTO_ANALITICO": null,
+            "OBSERVACIONES": null,
+            "ID_ASIENTO_ANALITICO_CN": 0,
+            "RENGLON_ANALITICO_DTO": [
+              {
+                "ID_CUENTA": 0,
+                "IMPORTE_DEBE": 0,
+                "IMPORTE_HABER": 0,
+                "FECHA_ORIGEN": "0001-01-01T00:00:00",
+                "DESC_LEYENDA": null,
+                "IMPORTE": 0,
+                "CANTIDAD": 0,
+                "ID_RENGLON_ANALITICO_CN": 0,
+                "ID_ASIENTO_ANALITICO_CN": 0,
+                "TIPO_AUXILIAR": [
+                  {
+                    "ID_TIPO_AUXILIAR_DTO": 0,
+                    "ID_TIPO_AUXILIAR": 0,
+                    "ID_REGLA_APROPIACION": 0,
+                    "AUXILIAR": [
+                      {
+                        "ID_AUXILIAR_ANALITICO_CN": 0,
+                        "ID_ASIENTO_ANALITICO_CN": 0,
+                        "ID_AUXILIAR": 0,
+                        "PORC_APROPIACION": 0,
+                        "LEYENDA": null,
+                        "IMPORTE_ADICIONAL": 0,
+                        "CANTIDAD_ADICIONAL": 0,
+                        "SUBAUXILIAR": [
+                          {
+                            "ID_SUBAUXILIAR_ANALITICO_CN": 0,
+                            "ID_AUXILIAR_ANALITICO_CN": 0,
+                            "ID_SUBAUXILIAR": 0,
+                            "PORC_APROPIACION": 0,
+                            "LEYENDA": null,
+                            "IMPORTE_ADICIONAL": 0,
+                            "CANTIDAD_ADICIONAL": 0
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "ASIENTO_COTIZACION_ANALITICO_CN": [
+              {
+                "COTIZACION_ALTERNATIVA": 60,
+                "ID_ASIENTO_COTIZACION_ANALITICO_CN": -1,
+                "ID_ASIENTO_ANALITICO_CN": 0,
+                "ID_MONEDA": 2,
+                "ID_TIPO_COTIZACION": 1
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "AXV_ASIENTO_ANALITICO_CN": [
+      "NRO_INTERNO_ANALITICO",
+      "NRO_ASIENTO_ANALITICO",
+      "DESC_ASIENTO_ANALITICO",
+      "FECHA_ASIENTO",
+      "ORIGEN_ASIENTO",
+      "ORIGEN_EXTERNO",
+      "CLASE_ASIENTO",
+      "ESTADO_ASIENTO_ANALITICO",
+      "ASIENTO_EXTRACONTABLE",
+      "DESC_PERIODO",
+      "DESFE_PERIODO",
+      "HASFE_PERIODO",
+      "NRO_EJERCICIO",
+      "ESTADO_EJERCICIO",
+      "EJERCICIO_ACTUAL",
+      "EJERCICIO_ANTERIOR",
+      "COD_ASIENTO_MODELO",
+      "DESC_ASIENTO_MODELO",
+      "COD_TIPO_ASIENTO",
+      "DESC_TIPO_ASIENTO",
+      "NRO_ASIENTO_REVERTIDO_CN",
+      "NRO_ASIENTO_REVERSION_CN",
+      "ESTADO_RESUMEN",
+      "ID_ASIENTO_RESUMEN_CN",
+      "NRO_ASIENTO_RESUMEN",
+      "DESC_ASIENTO_RESUMEN",
+      "FECHA_ASIENTO_ASIENTO_RESUMEN_CN",
+      "COD_MONEDA",
+      "DESC_MONEDA",
+      "OBSERVACIONES",
+      "USUARIO_INGRESO",
+      "FECHA_INGRESO",
+      "TERMINAL_INGRESO",
+      "USUARIO_ULTIMA_MODIFICACION",
+      "FECHA_ULTIMA_MODIFICACION",
+      "TERMINAL_ULTIMA_MODIFICACION",
+      "AXV_RENGLON_ASIENTO_ANALITICO_CN",
+      "AXV_LIQUIDACION_EXT_ASIENTO_ANALITICO",
+      "AXV_COMPROBANTE_EXT_ASIENTO_ANALITICO"
+    ],
+    "AXV_RENGLON_ASIENTO_ANALITICO_CN": [
+      "COD_CUENTA",
+      "DESC_CUENTA",
+      "FECHA_ORIGEN",
+      "DESC_LEYENDA"
+    ],
+    "AXV_LIQUIDACION_EXT_ASIENTO_ANALITICO": [
+      "NRO_LEGAJO",
+      "ID_DATO_FIJO",
+      "APELLIDO",
+      "NOMBRE",
+      "NRO_RECIBO",
+      "DESC_PAGO",
+      "FECHA_LIQUIDACION",
+      "PER_LIQUIDACION",
+      "FECHA_PAGO"
+    ],
+    "AXV_COMPROBANTE_EXT_ASIENTO_ANALITICO": [
+      "COD_TIPO_COMPROBANTE",
+      "NRO_COMPROBANTE",
+      "FECHA_COMPROBANTE",
+      "COD_CONTACTO_EXTERNO",
+      "NOMBRE_CONTACTO_EXTERNO",
+      "COD_TIPO_COMPROBANTE_INTERNO",
+      "NRO_COMPROBANTE_INTERNO"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

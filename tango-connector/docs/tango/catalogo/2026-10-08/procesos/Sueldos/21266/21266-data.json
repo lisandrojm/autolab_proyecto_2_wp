@@ -1,0 +1,94 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "actualizA_TODOS_MESES": false,
+        "iD_MAESTRO_TOPE_GCIA_ANUAL": 1,
+        "peR_TOPE": "2024-12-01T00:00:00",
+        "roW_VERSION": "AAAAAADc4/c="
+      },
+      {
+        "actualizA_TODOS_MESES": false,
+        "iD_MAESTRO_TOPE_GCIA_ANUAL": 2,
+        "peR_TOPE": "2025-01-01T00:00:00",
+        "roW_VERSION": "AAAAAADc4/k="
+      },
+      {
+        "actualizA_TODOS_MESES": false,
+        "iD_MAESTRO_TOPE_GCIA_ANUAL": 3,
+        "peR_TOPE": "2025-02-01T00:00:00",
+        "roW_VERSION": "AAAAAADc4/s="
+      },
+      {
+        "actualizA_TODOS_MESES": false,
+        "iD_MAESTRO_TOPE_GCIA_ANUAL": 4,
+        "peR_TOPE": "2025-03-01T00:00:00",
+        "roW_VERSION": "AAAAAADc4/0="
+      },
+      {
+        "actualizA_TODOS_MESES": false,
+        "iD_MAESTRO_TOPE_GCIA_ANUAL": 5,
+        "peR_TOPE": "2025-04-01T00:00:00",
+        "roW_VERSION": "AAAAAADc4/8="
+      },
+      {
+        "actualizA_TODOS_MESES": false,
+        "iD_MAESTRO_TOPE_GCIA_ANUAL": 6,
+        "peR_TOPE": "2025-05-01T00:00:00",
+        "roW_VERSION": "AAAAAADc5AI="
+      },
+      {
+        "actualizA_TODOS_MESES": false,
+        "iD_MAESTRO_TOPE_GCIA_ANUAL": 7,
+        "peR_TOPE": "2025-06-01T00:00:00",
+        "roW_VERSION": "AAAAAADc5AQ="
+      },
+      {
+        "actualizA_TODOS_MESES": false,
+        "iD_MAESTRO_TOPE_GCIA_ANUAL": 8,
+        "peR_TOPE": "2025-07-01T00:00:00",
+        "roW_VERSION": "AAAAAADc5AY="
+      },
+      {
+        "actualizA_TODOS_MESES": false,
+        "iD_MAESTRO_TOPE_GCIA_ANUAL": 9,
+        "peR_TOPE": "2025-08-01T00:00:00",
+        "roW_VERSION": "AAAAAADc5Ag="
+      },
+      {
+        "actualizA_TODOS_MESES": false,
+        "iD_MAESTRO_TOPE_GCIA_ANUAL": 10,
+        "peR_TOPE": "2025-09-01T00:00:00",
+        "roW_VERSION": "AAAAAADc5Ao="
+      },
+      {
+        "actualizA_TODOS_MESES": false,
+        "iD_MAESTRO_TOPE_GCIA_ANUAL": 11,
+        "peR_TOPE": "2025-10-01T00:00:00",
+        "roW_VERSION": "AAAAAADc5Aw="
+      },
+      {
+        "actualizA_TODOS_MESES": false,
+        "iD_MAESTRO_TOPE_GCIA_ANUAL": 12,
+        "peR_TOPE": "2025-11-01T00:00:00",
+        "roW_VERSION": "AAAAAADc5A4="
+      },
+      {
+        "actualizA_TODOS_MESES": false,
+        "iD_MAESTRO_TOPE_GCIA_ANUAL": 13,
+        "peR_TOPE": "2025-12-01T00:00:00",
+        "roW_VERSION": "AAAAAADc5BA="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

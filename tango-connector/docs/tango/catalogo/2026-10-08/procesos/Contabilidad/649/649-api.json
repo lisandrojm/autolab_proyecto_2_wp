@@ -1,0 +1,128 @@
+{
+  "title": "Contabilización de comprobantes",
+  "moduleId": 6,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "ContabilidadDetallePorComprobanteModel": [
+      "ID_SUCURSAL",
+      "MODULO",
+      "SUCURSAL",
+      "COMPROBANTE",
+      "ASIENTO_ANULACION",
+      "FECHA_COMPROBANTE",
+      "CLIENTEPROVEEDOR",
+      "RAZON_SOCIAL",
+      "COMPROBANTE_INTERNO",
+      "NRO_INTERNO",
+      "FECHA_ASIENTO",
+      "NRO_ASIENTO",
+      "NRO_ASIENTO_INTERNO",
+      "CLASE_ASIENTO",
+      "ORIGEN_ASIENTO",
+      "ESTADO",
+      "CONCEPTO",
+      "USUARIO_INGRESO",
+      "FECHA_INGRESO",
+      "TERMINAL_INGRESO",
+      "USUARIO_ULTIMA_MODIFICACION",
+      "FECHA_ULTIMA_MODIFICACION",
+      "TERMINAL_ULTIMA_MODIFICACION",
+      "LOTE_IMPORTACION",
+      "LOTE_EXPORTACION",
+      "USUARIO_EXPORTACION",
+      "FECHA_EXPORTACION",
+      "TERMINAL_EXPORTACION",
+      "USUARIO_IMPORTACION",
+      "FECHA_IMPORTACION",
+      "TERMINAL_IMPORTACION",
+      "NRO_SUCURSAL",
+      "COD_TIPO_COMPROBANTE",
+      "DESC_TIPO_COMPROBANTE",
+      "NRO_INTERNO_ASIENTO",
+      "NRO_ASIENTO_FICHA"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

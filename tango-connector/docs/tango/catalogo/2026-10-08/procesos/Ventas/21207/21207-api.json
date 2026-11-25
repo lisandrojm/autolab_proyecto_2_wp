@@ -1,0 +1,323 @@
+{
+  "title": "Perfiles de cierre de caja",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"PERFIL_CIERRE_CAJA\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_PERFIL\",\r\n    \"HABILITADO\",\r\n    \"PRIORIDAD_FORMA_ENVIO\",\r\n    \"PERMITE_CIERRE_FISCAL_CIERRE_CAJA\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_PERFIL\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_PERFIL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"HABILITADO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"FILLER\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 100,\r\n      \"minLength\": 0\r\n    },\r\n    \"VISUALIZA_SALDO_CAJA_PANTALLA\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"VISUALIZA_SALDO_CAJA_INFORME\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"INGRESA_CONTEO_FISICO\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"VISUALIZA_CONTEO_FISICO_INFORME\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"GENERA_ASIENTOS\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"PRIORIDAD_FORMA_ENVIO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"PERMITE_REVERTIR_CIERRE\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"GENERA_NOTA_CREDITO_AUTOMATICA\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8000,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_PERFIL_NOTA_CREDITO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"GENERA_MOVIMIENTO_TRANSFERENCIA_VALORES\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"CUENTA_EFECTIVO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_SBA02\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"PERMITE_DEPURAR_NOTA_CREDITO_AUTOMATICA\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"PERMITE_CIERRE_FISCAL_CIERRE_CAJA\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"USUARIOS\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/USUARIO_PERFIL_CIERRE_CAJA\"\r\n      }\r\n    },\r\n    \"USUARIOS_INFORMES\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/PERFIL_CIERRE_CAJA_USUARIO_INFORMES\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"USUARIO_PERFIL_CIERRE_CAJA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"USUARIO1\"\r\n      ],\r\n      \"properties\": {\r\n        \"USUARIO1\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 255,\r\n          \"minLength\": 0\r\n        },\r\n        \"COD_PERFIL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 10,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"PERFIL_CIERRE_CAJA_USUARIO_INFORMES\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"USUARIO\"\r\n      ],\r\n      \"properties\": {\r\n        \"USUARIO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 255,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class USUARIO_PERFIL_CIERRE_CAJA\n    {\n        [Newtonsoft.Json.JsonProperty(\"USUARIO1\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(255)]\n        public string USUARIO1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_PERFIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_PERFIL { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class PERFIL_CIERRE_CAJA_USUARIO_INFORMES\n    {\n        [Newtonsoft.Json.JsonProperty(\"USUARIO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(255)]\n        public string USUARIO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class PERFIL_CIERRE_CAJA\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_PERFIL\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_PERFIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Always)]\n        public bool HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FILLER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string FILLER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VISUALIZA_SALDO_CAJA_PANTALLA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? VISUALIZA_SALDO_CAJA_PANTALLA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VISUALIZA_SALDO_CAJA_INFORME\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? VISUALIZA_SALDO_CAJA_INFORME { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INGRESA_CONTEO_FISICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? INGRESA_CONTEO_FISICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VISUALIZA_CONTEO_FISICO_INFORME\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? VISUALIZA_CONTEO_FISICO_INFORME { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GENERA_ASIENTOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? GENERA_ASIENTOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PRIORIDAD_FORMA_ENVIO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string PRIORIDAD_FORMA_ENVIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERMITE_REVERTIR_CIERRE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? PERMITE_REVERTIR_CIERRE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GENERA_NOTA_CREDITO_AUTOMATICA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? GENERA_NOTA_CREDITO_AUTOMATICA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL_NOTA_CREDITO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_PERFIL_NOTA_CREDITO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GENERA_MOVIMIENTO_TRANSFERENCIA_VALORES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? GENERA_MOVIMIENTO_TRANSFERENCIA_VALORES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CUENTA_EFECTIVO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string CUENTA_EFECTIVO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA02\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA02 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERMITE_DEPURAR_NOTA_CREDITO_AUTOMATICA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? PERMITE_DEPURAR_NOTA_CREDITO_AUTOMATICA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERMITE_CIERRE_FISCAL_CIERRE_CAJA\", Required = Newtonsoft.Json.Required.Always)]\n        public bool PERMITE_CIERRE_FISCAL_CIERRE_CAJA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USUARIOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<USUARIO_PERFIL_CIERRE_CAJA> USUARIOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USUARIOS_INFORMES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<PERFIL_CIERRE_CAJA_USUARIO_INFORMES> USUARIOS_INFORMES { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface USUARIO_PERFIL_CIERRE_CAJA {\n    USUARIO1: string;\n    COD_PERFIL: string | undefined;\n}\n\nexport interface PERFIL_CIERRE_CAJA_USUARIO_INFORMES {\n    USUARIO: string;\n}\n\nexport interface PERFIL_CIERRE_CAJA {\n    COD_PERFIL: string;\n    DESC_PERFIL: string | undefined;\n    HABILITADO: boolean;\n    FILLER: string | undefined;\n    VISUALIZA_SALDO_CAJA_PANTALLA: boolean | undefined;\n    VISUALIZA_SALDO_CAJA_INFORME: boolean | undefined;\n    INGRESA_CONTEO_FISICO: boolean | undefined;\n    VISUALIZA_CONTEO_FISICO_INFORME: boolean | undefined;\n    GENERA_ASIENTOS: boolean | undefined;\n    PRIORIDAD_FORMA_ENVIO: string;\n    PERMITE_REVERTIR_CIERRE: boolean | undefined;\n    GENERA_NOTA_CREDITO_AUTOMATICA: boolean | undefined;\n    OBSERVACIONES: string | undefined;\n    ID_PERFIL_NOTA_CREDITO: number | undefined;\n    ID_SBA01: number | undefined;\n    GENERA_MOVIMIENTO_TRANSFERENCIA_VALORES: boolean | undefined;\n    CUENTA_EFECTIVO: string | undefined;\n    ID_SBA02: number | undefined;\n    PERMITE_DEPURAR_NOTA_CREDITO_AUTOMATICA: boolean | undefined;\n    PERMITE_CIERRE_FISCAL_CIERRE_CAJA: boolean;\n    USUARIOS: USUARIO_PERFIL_CIERRE_CAJA[] | undefined;\n    USUARIOS_INFORMES: PERFIL_CIERRE_CAJA_USUARIO_INFORMES[] | undefined;\n}",
+          "example": {
+            "COD_PERFIL": null,
+            "DESC_PERFIL": null,
+            "HABILITADO": true,
+            "FILLER": null,
+            "VISUALIZA_SALDO_CAJA_PANTALLA": false,
+            "VISUALIZA_SALDO_CAJA_INFORME": true,
+            "INGRESA_CONTEO_FISICO": false,
+            "VISUALIZA_CONTEO_FISICO_INFORME": false,
+            "GENERA_ASIENTOS": false,
+            "PRIORIDAD_FORMA_ENVIO": "N",
+            "PERMITE_REVERTIR_CIERRE": false,
+            "GENERA_NOTA_CREDITO_AUTOMATICA": false,
+            "OBSERVACIONES": null,
+            "ID_PERFIL_NOTA_CREDITO": 0,
+            "ID_SBA01": 0,
+            "GENERA_MOVIMIENTO_TRANSFERENCIA_VALORES": false,
+            "CUENTA_EFECTIVO": "E",
+            "ID_SBA02": 0,
+            "PERMITE_DEPURAR_NOTA_CREDITO_AUTOMATICA": false,
+            "PERMITE_CIERRE_FISCAL_CIERRE_CAJA": true,
+            "USUARIOS": [
+              {
+                "USUARIO1": null,
+                "COD_PERFIL": null
+              }
+            ],
+            "USUARIOS_INFORMES": [
+              {
+                "USUARIO": null
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"PERFIL_CIERRE_CAJA\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_PERFIL\",\r\n    \"HABILITADO\",\r\n    \"PRIORIDAD_FORMA_ENVIO\",\r\n    \"PERMITE_CIERRE_FISCAL_CIERRE_CAJA\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_PERFIL\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_PERFIL\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_PERFIL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"HABILITADO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"FILLER\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 100,\r\n      \"minLength\": 0\r\n    },\r\n    \"VISUALIZA_SALDO_CAJA_PANTALLA\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"VISUALIZA_SALDO_CAJA_INFORME\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"INGRESA_CONTEO_FISICO\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"VISUALIZA_CONTEO_FISICO_INFORME\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"GENERA_ASIENTOS\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"PRIORIDAD_FORMA_ENVIO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"PERMITE_REVERTIR_CIERRE\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"GENERA_NOTA_CREDITO_AUTOMATICA\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8000,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_PERFIL_NOTA_CREDITO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA01\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"GENERA_MOVIMIENTO_TRANSFERENCIA_VALORES\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"CUENTA_EFECTIVO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_SBA02\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"PERMITE_DEPURAR_NOTA_CREDITO_AUTOMATICA\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"PERMITE_CIERRE_FISCAL_CIERRE_CAJA\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"USUARIOS\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/USUARIO_PERFIL_CIERRE_CAJA\"\r\n      }\r\n    },\r\n    \"USUARIOS_INFORMES\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/PERFIL_CIERRE_CAJA_USUARIO_INFORMES\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"USUARIO_PERFIL_CIERRE_CAJA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_PERFIL\",\r\n        \"USUARIO1\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_PERFIL_DETALLE\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_PERFIL\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"USUARIO1\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 255,\r\n          \"minLength\": 0\r\n        },\r\n        \"COD_PERFIL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 10,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"PERFIL_CIERRE_CAJA_USUARIO_INFORMES\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_PERFIL\",\r\n        \"USUARIO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_PERFIL_CIERRE_CAJA_USUARIO_INFORMES\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_PERFIL\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"USUARIO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 255,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class USUARIO_PERFIL_CIERRE_CAJA\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL_DETALLE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERFIL_DETALLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USUARIO1\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(255)]\n        public string USUARIO1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_PERFIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_PERFIL { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class PERFIL_CIERRE_CAJA_USUARIO_INFORMES\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL_CIERRE_CAJA_USUARIO_INFORMES\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERFIL_CIERRE_CAJA_USUARIO_INFORMES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USUARIO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(255)]\n        public string USUARIO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class PERFIL_CIERRE_CAJA\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_PERFIL\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_PERFIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Always)]\n        public bool HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FILLER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string FILLER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VISUALIZA_SALDO_CAJA_PANTALLA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? VISUALIZA_SALDO_CAJA_PANTALLA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VISUALIZA_SALDO_CAJA_INFORME\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? VISUALIZA_SALDO_CAJA_INFORME { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INGRESA_CONTEO_FISICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? INGRESA_CONTEO_FISICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VISUALIZA_CONTEO_FISICO_INFORME\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? VISUALIZA_CONTEO_FISICO_INFORME { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GENERA_ASIENTOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? GENERA_ASIENTOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PRIORIDAD_FORMA_ENVIO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string PRIORIDAD_FORMA_ENVIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERMITE_REVERTIR_CIERRE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? PERMITE_REVERTIR_CIERRE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GENERA_NOTA_CREDITO_AUTOMATICA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? GENERA_NOTA_CREDITO_AUTOMATICA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL_NOTA_CREDITO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_PERFIL_NOTA_CREDITO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GENERA_MOVIMIENTO_TRANSFERENCIA_VALORES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? GENERA_MOVIMIENTO_TRANSFERENCIA_VALORES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CUENTA_EFECTIVO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string CUENTA_EFECTIVO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA02\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA02 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERMITE_DEPURAR_NOTA_CREDITO_AUTOMATICA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? PERMITE_DEPURAR_NOTA_CREDITO_AUTOMATICA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERMITE_CIERRE_FISCAL_CIERRE_CAJA\", Required = Newtonsoft.Json.Required.Always)]\n        public bool PERMITE_CIERRE_FISCAL_CIERRE_CAJA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USUARIOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<USUARIO_PERFIL_CIERRE_CAJA> USUARIOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USUARIOS_INFORMES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<PERFIL_CIERRE_CAJA_USUARIO_INFORMES> USUARIOS_INFORMES { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface USUARIO_PERFIL_CIERRE_CAJA {\n    ID_PERFIL_DETALLE: number;\n    ID_PERFIL: number;\n    USUARIO1: string;\n    COD_PERFIL: string | undefined;\n}\n\nexport interface PERFIL_CIERRE_CAJA_USUARIO_INFORMES {\n    ID_PERFIL_CIERRE_CAJA_USUARIO_INFORMES: number;\n    ID_PERFIL: number;\n    USUARIO: string;\n}\n\nexport interface PERFIL_CIERRE_CAJA {\n    ID_PERFIL: number;\n    COD_PERFIL: string;\n    DESC_PERFIL: string | undefined;\n    HABILITADO: boolean;\n    FILLER: string | undefined;\n    VISUALIZA_SALDO_CAJA_PANTALLA: boolean | undefined;\n    VISUALIZA_SALDO_CAJA_INFORME: boolean | undefined;\n    INGRESA_CONTEO_FISICO: boolean | undefined;\n    VISUALIZA_CONTEO_FISICO_INFORME: boolean | undefined;\n    GENERA_ASIENTOS: boolean | undefined;\n    PRIORIDAD_FORMA_ENVIO: string;\n    PERMITE_REVERTIR_CIERRE: boolean | undefined;\n    GENERA_NOTA_CREDITO_AUTOMATICA: boolean | undefined;\n    OBSERVACIONES: string | undefined;\n    ID_PERFIL_NOTA_CREDITO: number | undefined;\n    ID_SBA01: number | undefined;\n    GENERA_MOVIMIENTO_TRANSFERENCIA_VALORES: boolean | undefined;\n    CUENTA_EFECTIVO: string | undefined;\n    ID_SBA02: number | undefined;\n    PERMITE_DEPURAR_NOTA_CREDITO_AUTOMATICA: boolean | undefined;\n    PERMITE_CIERRE_FISCAL_CIERRE_CAJA: boolean;\n    USUARIOS: USUARIO_PERFIL_CIERRE_CAJA[] | undefined;\n    USUARIOS_INFORMES: PERFIL_CIERRE_CAJA_USUARIO_INFORMES[] | undefined;\n}",
+          "example": {
+            "ID_PERFIL": 0,
+            "COD_PERFIL": null,
+            "DESC_PERFIL": null,
+            "HABILITADO": true,
+            "FILLER": null,
+            "VISUALIZA_SALDO_CAJA_PANTALLA": false,
+            "VISUALIZA_SALDO_CAJA_INFORME": true,
+            "INGRESA_CONTEO_FISICO": false,
+            "VISUALIZA_CONTEO_FISICO_INFORME": false,
+            "GENERA_ASIENTOS": false,
+            "PRIORIDAD_FORMA_ENVIO": "N",
+            "PERMITE_REVERTIR_CIERRE": false,
+            "GENERA_NOTA_CREDITO_AUTOMATICA": false,
+            "OBSERVACIONES": null,
+            "ID_PERFIL_NOTA_CREDITO": 0,
+            "ID_SBA01": 0,
+            "GENERA_MOVIMIENTO_TRANSFERENCIA_VALORES": false,
+            "CUENTA_EFECTIVO": "E",
+            "ID_SBA02": 0,
+            "PERMITE_DEPURAR_NOTA_CREDITO_AUTOMATICA": false,
+            "PERMITE_CIERRE_FISCAL_CIERRE_CAJA": true,
+            "USUARIOS": [
+              {
+                "ID_PERFIL_DETALLE": 0,
+                "ID_PERFIL": 0,
+                "USUARIO1": null,
+                "COD_PERFIL": null
+              }
+            ],
+            "USUARIOS_INFORMES": [
+              {
+                "ID_PERFIL_CIERRE_CAJA_USUARIO_INFORMES": 0,
+                "ID_PERFIL": 0,
+                "USUARIO": null
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "AXV_PERFIL_CIERRE_CAJA": [
+      "HABILITADO",
+      "VISUALIZA_SALDO_CAJA_PANTALLA",
+      "VISUALIZA_SALDO_CAJA_INFORME",
+      "INGRESA_CONTEO_FISICO",
+      "VISUALIZA_CONTEO_FISICO_INFORME",
+      "GENERA_ASIENTOS",
+      "PERMITE_REVERTIR_CIERRE",
+      "GENERA_NOTA_CREDITO_AUTOMATICA",
+      "OBSERVACIONES",
+      "ID_PERFIL_NOTA_CREDITO",
+      "ID_SBA01",
+      "GENERA_MOVIMIENTO_TRANSFERENCIA_VALORES",
+      "CUENTA_EFECTIVO",
+      "ID_SBA02",
+      "PERMITE_DEPURAR_NOTA_CREDITO_AUTOMATICA",
+      "PERMITE_CIERRE_FISCAL_CIERRE_CAJA",
+      "COD_PERFIL",
+      "DESC_PERFIL",
+      "USERS"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

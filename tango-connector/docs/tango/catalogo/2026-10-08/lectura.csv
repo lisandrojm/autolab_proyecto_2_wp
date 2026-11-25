@@ -1,0 +1,618 @@
+accessNumber,descripcion,modulo,path,tipo,lectura,tablas,campos
+20186,Copias de seguridad,Administrador,Administrador\Consultas\Planificador,LIVE,GetApiLiveQueryData,CopiasDeSeguridadModel(6),6
+20187,Depuración,Administrador,Administrador\Consultas\Planificador,LIVE,GetApiLiveQueryData,DepuracionModel(6),6
+20188,Tareas de automatización contable,Administrador,Administrador\Consultas\Planificador,LIVE,GetApiLiveQueryData,TareasDeAutomatizacionContableModel(8),8
+20389,Suscripciones,Administrador,Administrador\Consultas\Planificador,LIVE,GetApiLiveQueryData,SuscripcionesModel(19),19
+20177,Empresas,Administrador,Administrador\Consultas\Sistema,LIVE,GetApiLiveQueryData,EmpresasModel(7),7
+20178,Servidores,Administrador,Administrador\Consultas\Sistema,LIVE,GetApiLiveQueryData,ServidoresModel(5),5
+20179,Usuarios,Administrador,Administrador\Consultas\Sistema,LIVE,GetApiLiveQueryData,UsuariosModel(8),8
+20180,Campos adicionales,Administrador,Administrador\Consultas\Sistema,LIVE,GetApiLiveQueryData,CamposAdicionalesModel(7),7
+20183,Roles,Administrador,Administrador\Consultas\Sistema,LIVE,GetApiLiveQueryData,RolesModel(7),7
+20184,Permisos,Administrador,Administrador\Consultas\Sistema,LIVE,GetApiLiveQueryData,PermisosModel(9),9
+20240,Permisos de usuarios,Administrador,Administrador\Consultas\Sistema,LIVE,GetApiLiveQueryData,PermisosUsuariosModel(15),15
+1418,Empresas,Administrador,Administrador\Empresas,CRUD,Get GetById GetByFilter,Empresa(19),19
+1570,Roles,Administrador,Administrador\Seguridad,CRUD,Get GetById GetByFilter,Rol(7) RolPluginTangoAI(2),9
+1714,Permisos,Administrador,Administrador\Seguridad,CRUD,Get GetById GetByFilter,Permiso(1),1
+3237,Frecuencias,Administrador,Administrador\Servicios\Planificador,CRUD,Get GetById GetByFilter,PTA03(28),28
+1975,Sectores,Compras,Compras\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,CPA51(3),3
+2628,Conceptos de compra,Compras,Compras\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,CPA45(15),15
+2656,Compradores,Compras,Compras\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,CPA50(3),3
+2664,Rubros comerciales,Compras,Compras\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,GVA151(5),5
+2728,Provincias,Compras,Compras\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,CPA57(8),8
+2748,Países,Compras,Compras\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,CPA108(5),5
+2874,Tipos de gasto,Compras,Compras\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,CPA70(5),5
+3142,Proveedores,Compras,Compras\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,AXV_PROVEEDOR(98),98
+3275,Textos para comprobantes,Compras,Compras\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,CPA38(5),5
+3479,Condiciones de compra,Compras,Compras\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,CONDICION_COMPRA(5) RENGLON_CONDICION_COMPRA(7),12
+19706,Retenciones,Compras,Compras\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,RETENCION_COMPRAS(31) RETENCION_COMPRAS_ESCALA(7) RETENCION_COMPRAS_BASE_CALCULO(4),42
+19759,Alícuotas,Compras,Compras\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,CPA14(18),18
+21885,Clasificación para retenciones,Compras,Compras\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,CLASIFICACION_RETENCION(3),3
+2782,Definición de listas,Compras,Compras\Archivos\Actualizaciones\Precios de Compra,CRUD,Get GetById GetByFilter,CPA43(5),5
+2847,Solicitantes,Compras,Compras\Archivos\Actualizaciones\Solicitudes de Compra,CRUD,Get GetById GetByFilter,CPA131(4),4
+2860,Clasificaciones,Compras,Compras\Archivos\Actualizaciones\Solicitudes de Compra,CRUD,Get GetById GetByFilter,CPA113(4),4
+2688,Ítems de autorización para orden de compra,Compras,Compras\Archivos\Carga Inicial,CRUD,Get GetById GetByFilter,CPA_CONCEPTO_AUTORIZACION(4),4
+2957,Agrupaciones de Proveedores,Compras,Compras\Archivos\Carga Inicial,CRUD,Get GetById GetByFilter,CPA03(3),3
+2973,Tipos de Comprobante,Compras,Compras\Archivos\Carga Inicial,CRUD,Get GetById GetByFilter,TIPO_COMPROBANTE_COMPRAS(16),16
+3158,Talonarios,Compras,Compras\Archivos\Carga Inicial,CRUD,Get GetById GetByFilter,CPA56(24),24
+2792,de Autorización de Orden de Compra,Compras,Compras\Archivos\Carga Inicial\Perfiles,CRUD,Get GetById GetByFilter,CPA_PERFIL_AUTORIZACION_OC(23) CPA_PERFIL_AUTORIZACION_OC_CONCEPTO(2) CPA_PERFIL_AUTORIZACION_OC_COMPRADOR(3) CPA_PERFIL_AUTORIZACION_OC_SUCURSALES (2) CPA_PERFIL_AUTORIZACION_OC_TALONARIO (2) CPA_PERFIL_AUTORIZACION_OC_SECTOR(3) CPA_PERFIL_AUTORIZACION_OC_USUARIO(4),39
+3378,de Autorización de comprobantes de compras,Compras,Compras\Archivos\Carga Inicial\Perfiles,CRUD,Get GetById GetByFilter,CPA92(9) CPA89(5),14
+12961,de Solicitud de Compra,Compras,Compras\Archivos\Carga Inicial\Perfiles,CRUD,Get GetById GetByFilter,AXV_CPA114(4),4
+21600,Perfiles para el administrador de comprobantes por AI,Compras,Compras\Archivos\Carga Inicial\Perfiles,CRUD,Get GetById GetByFilter,PERFIL_ADMINISTRADOR_COMPROBANTE_COMPRAS(8) PERFIL_ADMINISTRADOR_COMPROBANTE_COMPRAS_USUARIO(2),10
+65,Proveedores,Compras,Compras\Archivos\Parametrización contable,CRUD,Get GetById GetByFilter,PROVEEDOR(11) APROPIACION_PROVEEDOR(5) AUXILIAR_REGLA_PROVEEDOR(4) SUBAUXILIAR_REGLA_PROVEEDOR(3),23
+134,Modelos de asientos,Compras,Compras\Archivos\Parametrización contable,CRUD,Get GetById GetByFilter,ASIENTO_MODELO_CP(9) RENGLON_MODELO_CP(9) TIPO_AUXILIAR_MODELO_CP(3),21
+138,Tipos de comprobantes,Compras,Compras\Archivos\Parametrización contable,CRUD,Get GetById GetByFilter,TIPO_COMPROBANTE_CP(6),6
+158,Tipos de gastos,Compras,Compras\Archivos\Parametrización contable,CRUD,Get GetById GetByFilter,TIPO_GASTO_CP(7),7
+170,Conceptos,Compras,Compras\Archivos\Parametrización contable,CRUD,Get GetById GetByFilter,CONCEPTO_CP(6) APROPIACION_CONCEPTO_CP(6) AUXILIAR_REGLA_CONCEPTO_CP(4) SUBAUXILIAR_REGLA_CONCEPTO_CP(3),19
+10939,Detalle por comprobante,Compras,Compras\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,ComprasDetallePorComprobanteModel(62),62
+10941,Detalle por cuenta,Compras,Compras\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,ComprasDetallePorCuentaModel(55),55
+10942,Contabilización de comprobantes,Compras,Compras\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,CompraseImportacionesContabilizacionDeComprobantesModel(48),48
+10949,Detalle por auxiliar,Compras,Compras\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,ComprasDetallePorAuxiliarModel(67),67
+11335,Detalle por subauxiliar,Compras,Compras\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,ComprasDetallePorSubauxiliarModel(57),57
+11623,Multidimensional de asientos,Compras,Compras\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,ComprasMultidimensionalDeAsientosModel(61),61
+21494,Contabilización de comprobantes pendientes de exportar,Compras,Compras\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,CompraseImportacionesContabilizacionDeComprobantesPendientesExportarModel(48),48
+13142,Resumen de cuentas,Compras,Compras\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,CompraseImportacionesDetalleDeResumenDeCuentaModel(47),47
+13145,Diferencias de cambio pendientes,Compras,Compras\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,CompraseImportacionesCuentaCorrienteModel(39),39
+13149,Resumen de cuentas - Documentos,Compras,Compras\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,CompraseImportacionesDetalleDeResumenDeCuentaDocumentosModel(43),43
+13151,Diferencia en los estados para proveedores cláusula,Compras,Compras\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,CompraseImportacionesModel(42),42
+14184,Ficha Live de órdenes de pago,Compras,Compras\Consultas\Cuenta Corriente,PDF,GetPdf,ORDEN_PAGO(48) VALORES(8) LIVE_FN_OrdenPago_ComprobantesRelacionados(8) IMPUTACIONES(10) RETENCIONES(6) DOCUMENTOS(9) TOTALES(4),93
+17693,Ranking de acreedores,Compras,Compras\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,CompraseImportacionesRankingDeAcreedoresModel(48),48
+17694,Deudas vencidas,Compras,Compras\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,CompraseImportacionesDeudasVencidasModel(55),55
+17695,Deudas a vencer,Compras,Compras\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,CompraseImportacionesDeudasAVencerModel(55),55
+17696,Pagos a realizar,Compras,Compras\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,CompraseImportacionesPagosARealizarModel(55),55
+17697,C. P. R. pendientes,Compras,Compras\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,CompraseImportacionesCPRPendientesModel(26),26
+17698,Pagos realizados,Compras,Compras\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,CompraseImportacionesCuentaCorrientePagosRealizadosModel(41),41
+17699,Consulta de órdenes de pago,Compras,Compras\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,CompraseImportacionesCuentaCorrienteOrdenesDePagoModel(35),35
+19688,Comprobantes MiPymes,Compras,Compras\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,CompraseImportacionesComprobantesMiPymesModel(46),46
+21766,Retenciones de Ingresos Brutos - ARBA,Compras,Compras\Consultas\Cuenta Corriente\Retenciones,LIVE,GetApiLiveQueryData,ComprobantesDeRetencionesArbaMenuModel(15),15
+21846,Retenciones anuladas ARBA,Compras,Compras\Consultas\Cuenta Corriente\Retenciones,LIVE,GetApiLiveQueryData,ComprobantesDeRetencionesBajaArbaBaseModel(11),11
+10084,Consolidado de compras y ventas,Compras,Compras\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasConsolidadoDeComprobantesVentasYComprasModel(25),25
+10091,Detalle de comprobantes,Compras,Compras\Consultas\Facturación,LIVE,GetApiLiveQueryData,CompraseImportacionesDetalleDeComprobantesModel(107),107
+12065,Comprobantes eliminados,Compras,Compras\Consultas\Facturación,LIVE,GetApiLiveQueryData,CompraseImportacionesComprobantesEliminadosModel(61),61
+12548,Comprobantes no ingresados al Libro IVA de Compras,Compras,Compras\Consultas\Facturación,LIVE,GetApiLiveQueryData,CompraseImportacionesComprobantesNoIngresadosAlLibroIVADeComprasModel(42),42
+12863,Facturas pendientes de recibir,Compras,Compras\Consultas\Facturación,LIVE,GetApiLiveQueryData,CompraseImportacionesPendientesDeRecibirModel(55),55
+17705,Resumen,Compras,Compras\Consultas\Facturación,LIVE,GetApiLiveQueryData,CompraseImportacionesResumenModel(97),97
+17706,Ranking de compras,Compras,Compras\Consultas\Facturación,LIVE,GetApiLiveQueryData,CompraseImportacionesFacturacionRankingDeComprasModel(36),36
+17707,Ranking por artículo,Compras,Compras\Consultas\Facturación,LIVE,GetApiLiveQueryData,CompraseImportacionesRankingPorArticuloModel(37),37
+17708,Comparativo,Compras,Compras\Consultas\Facturación,LIVE,GetApiLiveQueryData,CompraseImportacionesComparativoModel(38),38
+17709,Por Mes / Año,Compras,Compras\Consultas\Facturación,LIVE,GetApiLiveQueryData,CompraseImportacionesPorMesAnioModel(4),4
+17710,Comprobantes con diferencias,Compras,Compras\Consultas\Facturación,LIVE,GetApiLiveQueryData,CompraseImportacionesFacturacionComprobantesConDiferenciasModel(31),31
+17711,Resumen por artículo,Compras,Compras\Consultas\Facturación,LIVE,GetApiLiveQueryData,CompraseImportacionesResumenDeComprasPorArticuloModel(109),109
+17712,Comparativo por artículo,Compras,Compras\Consultas\Facturación,LIVE,GetApiLiveQueryData,CompraseImportacionesComparativoPorArticuloModel(61),61
+17713,Consulta,Compras,Compras\Consultas\Facturación,LIVE,GetApiLiveQueryData,CompraseImportacionesFacturacionConsultaDeFacturacionDeComprasModel(49),49
+11589,Plan de entrega / recepciones,Compras,Compras\Consultas\Ordenes de compra,LIVE,GetApiLiveQueryData,CompraseImportacionesPlanDeEntrega_RecepcionesModel(29),29
+12500,Detalle,Compras,Compras\Consultas\Ordenes de compra,LIVE,GetApiLiveQueryData,CompraseImportacionesOrdenesDeCompraDetalleDeOrdenesDeCompraModel(47),47
+12655,Con entregas planificadas vencidas,Compras,Compras\Consultas\Ordenes de compra,LIVE,GetApiLiveQueryData,CompraseImportacionesOrdenesDeCompraConEntregasPlanificadasVencidasModel(27),27
+12717,Seguimiento de autorización,Compras,Compras\Consultas\Ordenes de compra,LIVE,GetApiLiveQueryData,CompraseImportacionesSeguimientoDeAutorizacionDeOrdenesDeCompraModel(58),58
+12836,Pendientes de recibir,Compras,Compras\Consultas\Ordenes de compra,LIVE,GetApiLiveQueryData,CompraseImportacionesPendientesDeRecibirModel(68),68
+12861,Pendientes de facturar,Compras,Compras\Consultas\Ordenes de compra,LIVE,GetApiLiveQueryData,CompraseImportacionesPendientesDeFacturarModel(69),69
+14154,Ficha Live de órdenes de compra,Compras,Compras\Consultas\Ordenes de compra,PDF,GetPdf,ORDEN_COMPRA(53) LIVE_FN_OrdenCompra_ComprobantesRelacionados(10) RENGLONES_ORDEN_COMPRA(33) TEXTOS(4) TOTALES(3) DATOS_ADJUNTOS_ORD_COMPRAS(6),109
+17701,Pendientes de autorizar,Compras,Compras\Consultas\Ordenes de compra,LIVE,GetApiLiveQueryData,CompraseImportacionesPendientesDeAutorizarModel(55),55
+17702,Consulta,Compras,Compras\Consultas\Ordenes de compra,LIVE,GetApiLiveQueryData,CompraseImportacionesOrdenesDeCompraOrdenesDeCompraModel(36),36
+17703,Resumen por artículo,Compras,Compras\Consultas\Ordenes de compra,LIVE,GetApiLiveQueryData,CompraseImportacionesResumenPorArticuloDeOrdenesDeCompraModel(115),115
+20278,Auditoría de modificación de precios,Compras,Compras\Consultas\Ordenes de compra,LIVE,GetApiLiveQueryData,CompraseImportacionesOrdenesDeCompraAuditoriaDePrecioModel(42),42
+13114,Por proveedor,Compras,Compras\Consultas\Precios,LIVE,GetApiLiveQueryData,CompraseImportacionesPreciosListasDePreciosPorProveedorModel(93),93
+20208,Solicitudes de precios,Compras,Compras\Consultas\Precios,LIVE,GetApiLiveQueryData,CompraseImportacionesConsultaDeSolicitudesDePreciosModel(57),57
+13139,Saldos,Compras,Compras\Consultas\Proveedores,LIVE,GetApiLiveQueryData,CompraseImportacionesProveedoresModel(51),51
+17721,Nómina,Compras,Compras\Consultas\Proveedores,LIVE,GetApiLiveQueryData,CompraseImportacionesProveedoresModel(68),68
+12066,Eliminados,Compras,Compras\Consultas\Remitos,LIVE,GetApiLiveQueryData,CompraseImportacionesRemitosEliminadosModel(39),39
+12869,Pendientes de facturar,Compras,Compras\Consultas\Remitos,LIVE,GetApiLiveQueryData,CompraseImportacionesPendientesDeFacturarModel(53),53
+13185,Detalle de comprobantes,Compras,Compras\Consultas\Remitos,LIVE,GetApiLiveQueryData,CompraseImportacionesDetalleDeComprobantesModel(71),71
+17723,Con diferencias,Compras,Compras\Consultas\Remitos,LIVE,GetApiLiveQueryData,CompraseImportacionesRemitosRemitosConDiferenciasModel(52),52
+17724,Consulta,Compras,Compras\Consultas\Remitos,LIVE,GetApiLiveQueryData,CompraseImportacionesConsultaModel(38),38
+17716,Resumen por artículo,Compras,Compras\Consultas\Solicitudes de compra,LIVE,GetApiLiveQueryData,CompraseImportacionesSolicitudesDeComprasResumenPorArticuloModel(96),96
+17717,Pendientes de autorizar,Compras,Compras\Consultas\Solicitudes de compra,LIVE,GetApiLiveQueryData,CompraseImportacionesSolicitudesDeCompraPendientesDeAutorizarModel(33),33
+17718,Pendientes de recibir,Compras,Compras\Consultas\Solicitudes de compra,LIVE,GetApiLiveQueryData,CompraseImportacionesSolicitudesDeCompraPendientesDeRecibirModel(101),101
+17719,Consulta,Compras,Compras\Consultas\Solicitudes de compra,LIVE,GetApiLiveQueryData,CompraseImportacionesSolicitudesDeCompraModel(17),17
+12756,Información para F 2002,Compras,Compras\Informes\Información impositiva,LIVE,GetApiLiveQueryData,CompraseImportacionesInformacionParaFormulario2002Model(20),20
+1670,Monedas contables,Contabilidad,Contabilidad\Archivos,CRUD,Get GetById GetByFilter,MONEDA(23) SBA37(7) MONEDA_CONTABLE(0) MONEDA_ALTERNATIVA(0),30
+1601,Clases para análisis contable,Contabilidad,Contabilidad\Archivos\Análisis contable,CRUD,Get GetById GetByFilter,CLASE_INDICADOR_CONTABLE(3),3
+1626,Cuentas contables,Contabilidad,Contabilidad\Archivos\Cuentas,CRUD,Get GetById GetByFilter,AXV_CUENTA(58),58
+1442,Ejercicios,Contabilidad,Contabilidad\Archivos\Ejercicios contables,CRUD,Get GetById GetByFilter,EJERCICIO(10),10
+1610,Tipos de valorización,Contabilidad,Contabilidad\Archivos\Unidades adicionales,CRUD,Get GetById GetByFilter,TIPO_VALORIZACION(4),4
+1618,Unidades adicionales,Contabilidad,Contabilidad\Archivos\Unidades adicionales,CRUD,Get GetById GetByFilter,UNIDAD_ADICIONAL(11) VALORIZACION_UNIDAD_ADICIONAL(3),14
+1652,Valorización de unidades adicionales,Contabilidad,Contabilidad\Archivos\Unidades adicionales,CRUD,Get GetById GetByFilter,VALORIZACION_UNIDAD_ADICIONAL(4) RENGLON_VALORIZACION_UNIDAD_ADICIONAL(4),8
+1704,Grupos para variables contables,Contabilidad,Contabilidad\Archivos\Variables de Contabilidad,CRUD,Get GetById GetByFilter,VARIABLE_GRUPO_CN(1),1
+1600,Asientos extracontables,Contabilidad,Contabilidad\Asientos,CRUD,Get GetById GetByFilter,AXV_ASIENTO_ANALITICO_CN(39) AXV_RENGLON_ASIENTO_ANALITICO_CN(4) AXV_LIQUIDACION_EXT_ASIENTO_ANALITICO(9) AXV_COMPROBANTE_EXT_ASIENTO_ANALITICO(7),59
+1664,Asientos contables,Contabilidad,Contabilidad\Asientos,CRUD,Get GetById GetByFilter,AXV_ASIENTO_ANALITICO_CN(39) AXV_RENGLON_ASIENTO_ANALITICO_CN(4) AXV_LIQUIDACION_EXT_ASIENTO_ANALITICO(9) AXV_COMPROBANTE_EXT_ASIENTO_ANALITICO(7),59
+448,Detalle por cuenta,Contabilidad,Contabilidad\Consultas\Asientos analíticos,LIVE,GetApiLiveQueryData,ContabilidadDetallePorCuentaModel(45),45
+559,Detalle por asiento,Contabilidad,Contabilidad\Consultas\Asientos analíticos,LIVE,GetApiLiveQueryData,ContabilidadDetallePorAsientoBaseModel(48),48
+560,Detalle por auxiliar,Contabilidad,Contabilidad\Consultas\Asientos analíticos,LIVE,GetApiLiveQueryData,ContabilidadDetallePorAuxiliarModel(56),56
+561,Detalle por subauxiliar,Contabilidad,Contabilidad\Consultas\Asientos analíticos,LIVE,GetApiLiveQueryData,ContabilidadDetallePorSubauxiliarModel(61),61
+649,Contabilización de comprobantes,Contabilidad,Contabilidad\Consultas\Asientos analíticos,LIVE,GetApiLiveQueryData,ContabilidadDetallePorComprobanteModel(36),36
+21714,Detalle por asiento,Contabilidad,Contabilidad\Consultas\Asientos resumen,LIVE,GetApiLiveQueryData,ContabilidadDetallePorAsientoResumenModel(34),34
+21715,Detalle por cuenta,Contabilidad,Contabilidad\Consultas\Asientos resumen,LIVE,GetApiLiveQueryData,ContabilidadDetallePorCuentaResumenModel(31),31
+21716,Detalle por auxiliar,Contabilidad,Contabilidad\Consultas\Asientos resumen,LIVE,GetApiLiveQueryData,ContabilidadDetallePorAuxiliarResumenModel(42),42
+21717,Detalle por subauxiliar,Contabilidad,Contabilidad\Consultas\Asientos resumen,LIVE,GetApiLiveQueryData,ContabilidadDetallePorSubauxiliarResumenModel(47),47
+562,Nómina,Contabilidad,Contabilidad\Consultas\Cuentas,LIVE,GetApiLiveQueryData,ContabilidadNominaDeCuentasContablesModel(21),21
+647,Jerarquías,Contabilidad,Contabilidad\Consultas\Cuentas,LIVE,GetApiLiveQueryData,ContabilidadCuentasJerarquiasModel(35),35
+648,Cuentas no asignadas,Contabilidad,Contabilidad\Consultas\Cuentas,LIVE,GetApiLiveQueryData,ContabilidadCuentasNoAsignadasModel(24),24
+1025,Motivos de fichada manual,ControlDePersonal,Control de personal\Archivos,CRUD,Get GetById GetByFilter,MOTIVO_FICHADA_MANUAL(3),3
+1043,Conceptos de justificación,ControlDePersonal,Control de personal\Archivos,CRUD,Get GetById GetByFilter,CONCEPTO_JUSTIFICACION(7),7
+1127,Legajos de Control de personal,ControlDePersonal,Control de personal\Archivos,CRUD,Get GetById GetByFilter,AXV_LEGAJO(246),246
+1055,Tipos de hora,ControlDePersonal,Control de personal\Archivos\Horarios,CRUD,Get GetById GetByFilter,TIPO_HORA(7),7
+1075,Tareas,ControlDePersonal,Control de personal\Archivos\Relojes,CRUD,Get GetById GetByFilter,TAREA(3),3
+21446,Resumen,ControlDePersonal,Control de personal\Consultas\Fichadas,LIVE,GetApiLiveQueryData,ResumenFichadasModel(89),89
+21451,Resumen de rechazadas,ControlDePersonal,Control de personal\Consultas\Fichadas,LIVE,GetApiLiveQueryData,ResumenFichadasRechazadasModel(69),69
+21414,Nómina,ControlDePersonal,Control de personal\Consultas\Legajos,LIVE,GetApiLiveQueryData,ControlDePersonalNominaLegajosModel(57),57
+21444,Resumen por departamento,ControlDePersonal,Control de personal\Consultas\Partes diarios,LIVE,GetApiLiveQueryData,ResumenPartesDepartamentoModel(70),70
+21461,Resumen de reales,ControlDePersonal,Control de personal\Consultas\Partes diarios\Anormalidades y ausencias,LIVE,GetApiLiveQueryData,ResumenAnormalidadesAusenciasRealesModel(85),85
+21462,Resumen de computadas,ControlDePersonal,Control de personal\Consultas\Partes diarios\Anormalidades y ausencias,LIVE,GetApiLiveQueryData,ResumenAnormalidadesAusenciasComputadasModel(85),85
+21467,Detalle de reales,ControlDePersonal,Control de personal\Consultas\Partes diarios\Anormalidades y ausencias,LIVE,GetApiLiveQueryData,DetalleAnormalidadesAusenciasRealesModel(85),85
+21468,Detalle de computadas,ControlDePersonal,Control de personal\Consultas\Partes diarios\Anormalidades y ausencias,LIVE,GetApiLiveQueryData,DetalleAnormalidadesAusenciasComputadasModel(85),85
+21470,Resumen,ControlDePersonal,Control de personal\Consultas\Partes diarios\Compensaciones,LIVE,GetApiLiveQueryData,ResumenCompensacionesModel(63),63
+21471,Detalle de horas pendientes a compensar,ControlDePersonal,Control de personal\Consultas\Partes diarios\Compensaciones,LIVE,GetApiLiveQueryData,DetalleCompensacionesHorasPendientesModel(86),86
+21475,Detalle de horas extras sobrantes,ControlDePersonal,Control de personal\Consultas\Partes diarios\Compensaciones,LIVE,GetApiLiveQueryData,DetalleCompensacionesHorasSobrantesModel(82),82
+21476,Detalle de horas extras eliminadas,ControlDePersonal,Control de personal\Consultas\Partes diarios\Compensaciones,LIVE,GetApiLiveQueryData,DetalleCompensacionesHorasEliminadasModel(81),81
+21481,Detalle de descuentos compensados por día,ControlDePersonal,Control de personal\Consultas\Partes diarios\Compensaciones,LIVE,GetApiLiveQueryData,DetalleDescuentosCompensadosPorDiaModel(83),83
+21453,Resumen por departamento,ControlDePersonal,Control de personal\Consultas\Partes diarios\Horas,LIVE,GetApiLiveQueryData,ResumenHorasDepartamentoModel(86),86
+21454,Resumen por horario,ControlDePersonal,Control de personal\Consultas\Partes diarios\Horas,LIVE,GetApiLiveQueryData,ResumenHorasHorarioModel(86),86
+21485,Resumen por departamento,ControlDePersonal,Control de personal\Consultas\Partes diarios\Horas extras computadas,LIVE,GetApiLiveQueryData,ResumenHorasExtrasComputadasDepartamentoModel(82),82
+21486,Detalle por departamento,ControlDePersonal,Control de personal\Consultas\Partes diarios\Horas extras computadas,LIVE,GetApiLiveQueryData,DetalleHorasExtrasComputadasDepartamentoModel(82),82
+21487,Resumen por horario,ControlDePersonal,Control de personal\Consultas\Partes diarios\Horas extras computadas,LIVE,GetApiLiveQueryData,ResumenHorasExtrasComputadasHorarioModel(82),82
+21488,Detalle por horario,ControlDePersonal,Control de personal\Consultas\Partes diarios\Horas extras computadas,LIVE,GetApiLiveQueryData,DetalleHorasExtrasComputadasHorarioModel(82),82
+21490,Resumen por departamento,ControlDePersonal,Control de personal\Consultas\Partes diarios\Tareas realizadas,LIVE,GetApiLiveQueryData,ResumenTareasRealizadasDepartamentoModel(77),77
+21491,Resumen por horario,ControlDePersonal,Control de personal\Consultas\Partes diarios\Tareas realizadas,LIVE,GetApiLiveQueryData,ResumenTareasRealizadasHorarioModel(77),77
+21492,Detalle por departamento,ControlDePersonal,Control de personal\Consultas\Partes diarios\Tareas realizadas,LIVE,GetApiLiveQueryData,DetalleTareasRealizadasDepartamentoModel(77),77
+21493,Detalle por horario,ControlDePersonal,Control de personal\Consultas\Partes diarios\Tareas realizadas,LIVE,GetApiLiveQueryData,DetalleTareasRealizadasHorarioModel(77),77
+655,Comprobantes con asientos exportados,ProcesosGenerales,Procesos generales\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,ProcesosgeneralesComprobantesConAsientosExportadosModel(37),37
+656,Comprobantes con asientos importados,ProcesosGenerales,Procesos generales\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,ProcesosgeneralesComprobantesDeAsientosImportadosModel(48),48
+2011,Auditoría de transferencia de promociones,ProcesosGenerales,Procesos generales\Consultas\Transferencia,LIVE,GetApiLiveQueryData,CentralTransferenciaAuditoriaDeTransferenciaDePromocionesModel(11),11
+17974,Auditoría,ProcesosGenerales,Procesos generales\Consultas\Transferencia,LIVE,GetApiLiveQueryData,CentralTransferenciaAuditoriaDeTransferenciasModel(15),15
+1588,Leyendas para encabezados de asientos,ProcesosGenerales,Procesos generales\Datos contables,CRUD,Get GetById GetByFilter,LEYENDA_ENCABEZADO(3),3
+1598,Leyendas para líneas de asientos,ProcesosGenerales,Procesos generales\Datos contables,CRUD,Get GetById GetByFilter,LEYENDA_MOVIMIENTO(4),4
+1622,Tipos de asiento,ProcesosGenerales,Procesos generales\Datos contables,CRUD,Get GetById GetByFilter,TIPO_ASIENTO(10) MODULO_TIPO_ASIENTO(3) LEYENDA_ENCABEZADO_TIPO_ASIENTO(3),16
+1634,Clases de cuentas,ProcesosGenerales,Procesos generales\Datos contables,CRUD,Get GetById GetByFilter,CLASE_CUENTA(3),3
+1640,Agrupaciones de tipos de asiento,ProcesosGenerales,Procesos generales\Datos contables,CRUD,Get GetById GetByFilter,AGRUPACION_ASIENTO(3),3
+1656,Tipos de auxiliares,ProcesosGenerales,Procesos generales\Datos contables\Auxiliares contables,CRUD,Get GetById GetByFilter,TIPO_AUXILIAR(7) AUXILIAR(7) SUBAUXILIAR(6),20
+1668,Reglas de apropiación,ProcesosGenerales,Procesos generales\Datos contables\Auxiliares contables,CRUD,Get GetById GetByFilter,REGLA_APROPIACION(5) AUXILIAR_REGLA(5) SUBAUXILIAR_REGLA(4) MODULO_REGLA_APROPIACION(3),17
+1733,Actualización individual de auxiliares contables,ProcesosGenerales,Procesos generales\Datos contables\Auxiliares contables,CRUD,Get GetById GetByFilter,MAESTRO_CUENTA_TIPO_AUXILIAR(3) CUENTA_TIPO_AUXILIAR(7) AUXILIAR_CUENTA_TIPO_AUXILIAR(4),14
+1575,Cuentas contables,ProcesosGenerales,Procesos generales\Datos contables\Cuentas,CRUD,Get GetById GetByFilter,AXV_CUENTA(58),58
+1021,Plantillas para legajos,ProcesosGenerales,Procesos generales\Empleados,CRUD,Get GetById GetByFilter,DEFECTO_LEGAJO(112) DEFECTO_LEGAJO_TELEFONO(2) DEFECTO_LEGAJO_NOVEDAD(3) GRUPO_DEFECTO(3) DEF_COMPENSA_POR_RANGO(3) DEFECTO_LEGAJO_CBU(8) DEFECTO_CONCEPTO_PARTICULAR(4),135
+1118,Motivos de egreso,ProcesosGenerales,Procesos generales\Empleados,CRUD,Get GetById GetByFilter,MOTIVO_EGRESO(5) MOTIVO_EGRESO_CONCEPTO(1),6
+1124,Legajos,ProcesosGenerales,Procesos generales\Empleados,CRUD,Get GetById GetByFilter,AXV_LEGAJO(261),261
+1707,Puestos desempeñados,ProcesosGenerales,Procesos generales\Empleados,CRUD,Get GetById GetByFilter,PUESTO(4),4
+1832,Novedades de Sueldos,ProcesosGenerales,Procesos generales\Empleados,CRUD,Get GetById GetByFilter,NOVEDAD(24) NOVEDAD_GRUPO(2) MODULO_NOVEDAD(2),28
+21653,Operaciones que generan Débito fiscal,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Central,LIVE,GetApiLiveQueryData,CentralIvaSimpleGestionOperacionesDebitoFiscalBaseModel(21),21
+21655,Operaciones que generan restitución Débito fiscal,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Central,LIVE,GetApiLiveQueryData,CentralIvaSimpleGestionOperacionesRestitucionDebitoFiscalBaseModel(20),20
+21657,Retenciones,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Central,LIVE,GetApiLiveQueryData,CentralIvaSimpleGestionRetencionesBaseModel(13),13
+21659,Operaciones que generan restitución Crédito fiscal,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Central,LIVE,GetApiLiveQueryData,CentralIvaSimpleGestionOperacionesRestitucionCreditoFiscalBaseModel(15),15
+21661,Operaciones que generan Crédito fiscal,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Central,LIVE,GetApiLiveQueryData,CentralIvaSimpleOperacionesCreditoFiscalBaseModel(17),17
+21663,Percepciones,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Central,LIVE,GetApiLiveQueryData,CentralIvaSimplePercepcionesBaseModel(13),13
+21665,Percepciones aduaneras,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Central,LIVE,GetApiLiveQueryData,CentralIvaSimplePercepcionesAduanerasBaseModel(14),14
+21550,Operaciones que generan Débito fiscal,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Gestión,LIVE,GetApiLiveQueryData,ProcesosGeneralesIvaSimpleGestionOperacionesDebitoFiscalBaseModel(19),19
+21551,Operaciones que generan restitución Débito fiscal,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Gestión,LIVE,GetApiLiveQueryData,ProcesosGeneralesIvaSimpleGestionOperacionesRestitucionDebitoFiscalBaseModel(18),18
+21552,Operaciones que generan Crédito fiscal,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Gestión,LIVE,GetApiLiveQueryData,ProcesosGeneralesIvaSimpleGestionOperacionesCreditoFiscalWizardModel(18),18
+21553,Operaciones que generan restitución Crédito fiscal,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Gestión,LIVE,GetApiLiveQueryData,ProcesosGeneralesIvaSimpleGestionOperacionesRestitucionCreditoFiscalWizardModel(17),17
+21554,Retenciones,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Gestión,LIVE,GetApiLiveQueryData,ProcesosGeneralesIvaSimpleGestionRetencionesBaseModel(13),13
+21555,Percepciones,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Gestión,LIVE,GetApiLiveQueryData,GestionPercepcionesIvaSimpleMenuModel(13),13
+21556,Percepciones aduaneras,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Gestión,LIVE,GetApiLiveQueryData,GestionPercepcionesAduanerasIvaSimpleMenuModel(14),14
+21541,Percepciones,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Liquidador de IVA,LIVE,GetApiLiveQueryData,LiquidadorIvaPercepcionesIvaSimpleMenuModel(17),17
+21542,Percepciones aduaneras,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Liquidador de IVA,LIVE,GetApiLiveQueryData,LiquidadorIvaPercepcionesAduaIvaSimpleMenuModel(19),19
+21543,Retenciones,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Liquidador de IVA,LIVE,GetApiLiveQueryData,LiquidadorIvaRetencionesIvaSimpleMenuModel(17),17
+21544,Operaciones que generan Débito fiscal,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Liquidador de IVA,LIVE,GetApiLiveQueryData,LiquidadorIvaOperacionesDebitoFiscalMenuModel(13),13
+21545,Operaciones que generan Crédito fiscal,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Liquidador de IVA,LIVE,GetApiLiveQueryData,LiquidadorIvaOperacionesCreditoFiscalWizardModel(9),9
+21546,Operaciones que generan restitución Débito fiscal,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Liquidador de IVA,LIVE,GetApiLiveQueryData,LiquidadorIvaRestitucionDebitoFiscalMenuModel(13),13
+21547,Operaciones que generan restitución Crédito fiscal,ProcesosGenerales,Procesos generales\Informes\Soporte magnético\Portal IVA - IVA Simple\Consultas\Liquidador de IVA,LIVE,GetApiLiveQueryData,LiquidadorIvaRestitucionCreditoFiscalMenuModel(9),9
+326,Clasificación de comprobantes,ProcesosGenerales,Procesos generales\Tablas generales,CRUD,Get GetById GetByFilter,GVA81(36),36
+1030,Provincias,ProcesosGenerales,Procesos generales\Tablas generales,CRUD,Get GetById GetByFilter,PROVINCIA(7),7
+1096,Países,ProcesosGenerales,Procesos generales\Tablas generales,CRUD,Get GetById GetByFilter,PAIS(3),3
+1110,Tipos de documento,ProcesosGenerales,Procesos generales\Tablas generales,CRUD,Get GetById GetByFilter,TIPO_DOCUMENTO(6) DOC_PROVINCIAL(3),9
+1115,Nacionalidades,ProcesosGenerales,Procesos generales\Tablas generales,CRUD,Get GetById GetByFilter,NACIONALIDAD(2),2
+1125,Bancos,ProcesosGenerales,Procesos generales\Tablas generales,CRUD,Get GetById GetByFilter,BANCO(24) CUENTA_BANCARIA(6),30
+1366,Feriados,ProcesosGenerales,Procesos generales\Tablas generales,CRUD,Get GetById GetByFilter,FERIADO(3) MODULO_FERIADO(3),6
+1443,Unidades de medida,ProcesosGenerales,Procesos generales\Tablas generales,CRUD,Get GetById GetByFilter,MEDIDA(12) MODULO_MEDIDA(3),15
+1630,Indices,ProcesosGenerales,Procesos generales\Tablas generales,CRUD,Get GetById GetByFilter,INDICE(6) INDICE_VALOR(4),10
+540,Sucursales,ProcesosGenerales,Procesos generales\Tablas generales\Empresa,CRUD,Get GetById GetByFilter,SUCURSAL(20),20
+1020,Actividades ARCA para empresas,ProcesosGenerales,Procesos generales\Tablas generales\Empresa,CRUD,Get GetById GetByFilter,ACTIVIDAD_DGI(3),3
+1023,Departamentos,ProcesosGenerales,Procesos generales\Tablas generales\Empresa,CRUD,Get GetById GetByFilter,DEPARTAMENTO(3),3
+2132,Variables de impresión para campos adicionales,ProcesosGenerales,Procesos generales\Tablas generales\Formularios,CRUD,Get GetById GetByFilter,VARIABLE_ADICIONAL(5),5
+1614,Tipos de cotización,ProcesosGenerales,Procesos generales\Tablas generales\Monedas,CRUD,Get GetById GetByFilter,TIPO_COTIZACION(3),3
+1648,Cotizaciones,ProcesosGenerales,Procesos generales\Tablas generales\Monedas,CRUD,Get GetById GetByFilter,COTIZACION_MONEDA(6) RENGLON_COTIZACION_MONEDA(4),10
+1660,Monedas,ProcesosGenerales,Procesos generales\Tablas generales\Monedas,CRUD,Get GetById GetByFilter,MONEDA(23) SBA37(7) MONEDA_CONTABLE(0) MONEDA_ALTERNATIVA(0),30
+1873,Configuración de exportación de cuentas de efectivo,ProcesosGenerales,Procesos generales\Transferencias,CRUD,Get GetById GetByFilter,SBA52(14),14
+21535,Teléfonos,ProcesosGenerales,Procesos generales\WhatsApp,CRUD,Get GetById GetByFilter,TELEFONO_WA(6) TELEFONO_WA_USUARIO(3),9
+87,Artículos,Stock,Stock\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,AXV_ARTICULO(139),139
+360,Valores por defecto para artículos,Stock,Stock\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,AXV_ARTICULO_DEFECTO(135),135
+2933,Precios para Costos,Stock,Stock\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,STA12(16),16
+2941,Depósitos,Stock,Stock\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,STA22(8),8
+20259,Colectoras,Stock,Stock\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,COLECTORA(4),4
+19646,Plantillas para escalas,Stock,Stock\Archivos\Actualizaciones\Escalas,CRUD,Get GetById GetByFilter,STA115(6),6
+19654,Definición de escalas,Stock,Stock\Archivos\Actualizaciones\Escalas,CRUD,Get GetById GetByFilter,STA32(6) STA33(5),11
+2908,Componentes de Costos,Stock,Stock\Archivos\Actualizaciones\Fórmulas y kits,CRUD,Get GetById GetByFilter,STA04(4),4
+3367,Categorías para kits,Stock,Stock\Archivos\Actualizaciones\Fórmulas y kits,CRUD,Get GetById GetByFilter,TRA82(11),11
+2916,Agrupaciones de Artículos,Stock,Stock\Archivos\Carga Inicial,CRUD,Get GetById GetByFilter,STA29(3),3
+3297,Tipos de comprobante,Stock,Stock\Archivos\Carga Inicial,CRUD,Get GetById GetByFilter,STA13(16),16
+19729,Talonarios,Stock,Stock\Archivos\Carga Inicial,CRUD,Get GetById GetByFilter,STA17(13),13
+56,Artículos,Stock,Stock\Archivos\Parametrización contable,CRUD,Get GetById GetByFilter,ARTICULO_CUENTA(8) APROPIACION_ARTICULO(6) AUXILIAR_REGLA_ARTICULO(4) SUBAUXILIAR_REGLA_ARTICULO(3),21
+370,Valores por defecto para artículos,Stock,Stock\Archivos\Parametrización contable,CRUD,Get GetById GetByFilter,DEFECTO_ARTICULO_CUENTA(6) APROPIACION_DEFECTO_ARTICULO(6) AUXILIAR_REGLA_DEFECTO_ARTICULO(4) SUBAUXILIAR_REGLA_DEFECTO_ARTICULO(3),19
+17667,Stock faltante,Stock,Stock\Consultas\Artículos,LIVE,GetApiLiveQueryData,StockStockFaltanteModel(33),33
+17668,Saldos,Stock,Stock\Consultas\Artículos,LIVE,GetApiLiveQueryData,StockSaldosModel(35),35
+17669,Saldos por artículo/cliente,Stock,Stock\Consultas\Artículos,LIVE,GetApiLiveQueryData,StockSaldosPorArticuloClienteModel(54),54
+17670,Saldos por artículo/proveedor,Stock,Stock\Consultas\Artículos,LIVE,GetApiLiveQueryData,StockSaldosPorArticuloProveedorModel(49),49
+17671,Nómina,Stock,Stock\Consultas\Artículos,LIVE,GetApiLiveQueryData,StockArticulosNominaDeArticulosModel(58),58
+12567,Detalle de movimientos de stock,Stock,Stock\Consultas\Movimientos,LIVE,GetApiLiveQueryData,StockDetalleDeMovimientosDeStockModel(130),130
+17680,Índice de rotación,Stock,Stock\Consultas\Movimientos,LIVE,GetApiLiveQueryData,StockIndiceDeRotacionDeArticulosModel(17),17
+17681,Pendientes de ingresar a stock,Stock,Stock\Consultas\Movimientos,LIVE,GetApiLiveQueryData,StockMovimientosDeStockPendientesDeIngresarModel(26),26
+17682,Ingresados al stock o rechazados,Stock,Stock\Consultas\Movimientos,LIVE,GetApiLiveQueryData,StockMovimientosIngresadosAlStockORechazadosModel(38),38
+17683,Consulta,Stock,Stock\Consultas\Movimientos,LIVE,GetApiLiveQueryData,StockMovimientosConsultaModel(10),10
+17684,Resumen,Stock,Stock\Consultas\Movimientos,LIVE,GetApiLiveQueryData,StockMovimientosResumenModel(125),125
+12574,Movimientos detallados por serie,Stock,Stock\Consultas\Partidas,LIVE,GetApiLiveQueryData,StockMovimientosDetalladosPorSerieModel(83),83
+12577,Partidas con saldo sin series relacionadas,Stock,Stock\Consultas\Partidas,LIVE,GetApiLiveQueryData,StockPartidasConSaldoSinSeriesRelacionadasModel(35),35
+17686,Saldos,Stock,Stock\Consultas\Partidas,LIVE,GetApiLiveQueryData,StockPorPartidaModel(46),46
+17687,Movimientos,Stock,Stock\Consultas\Partidas,LIVE,GetApiLiveQueryData,StockMovimientosDePartidasModel(77),77
+12575,Movimientos detallados por partida,Stock,Stock\Consultas\Series,LIVE,GetApiLiveQueryData,StockMovimientosDeSeriesDetalladosPorPartidaModel(75),75
+12576,Series activas sin partidas relacionadas,Stock,Stock\Consultas\Series,LIVE,GetApiLiveQueryData,StockSeriesActivasSinPartidasRelacionadasModel(28),28
+17689,Series Activas,Stock,Stock\Consultas\Series,LIVE,GetApiLiveQueryData,StockSeriesActivasDeArticulosModel(29),29
+17690,Movimientos,Stock,Stock\Consultas\Series,LIVE,GetApiLiveQueryData,StockMovimientosDeSeriesModel(75),75
+21404,Detalle de conteos,Stock,Stock\Consultas\Tango Colectora,LIVE,GetApiLiveQueryData,StockDetalleConteosTangoColectoraModel(89),89
+20204,Ajustes por toma de inventario,Stock,Stock\Consultas\Toma de inventario,LIVE,GetApiLiveQueryData,StockAjustesDeTomaInventarioModel(20),20
+20231,Consulta de toma de inventario,Stock,Stock\Consultas\Toma de inventario,LIVE,GetApiLiveQueryData,NominaTomaInventarioModel(16),16
+12996,Evolución de costos,Stock,Stock\Consultas\Valorización\Costos,LIVE,GetApiLiveQueryData,StockCostosEvolucionDeCostosBaseModel(55),55
+13094,Actuales,Stock,Stock\Consultas\Valorización\Costos,LIVE,GetApiLiveQueryData,StockCostosCostosActualesModel(20),20
+17677,Por precio de reposición,Stock,Stock\Consultas\Valorización\Existencias,LIVE,GetApiLiveQueryData,StockPorPrecioDeReposicionModel(19),19
+17678,Por precio de última compra,Stock,Stock\Consultas\Valorización\Existencias,LIVE,GetApiLiveQueryData,StockPorPrecioDeultimaCompraModel(19),19
+17674,Por precio de reposición,Stock,Stock\Consultas\Valorización\Rentabilidad bruta,LIVE,GetApiLiveQueryData,StockRentabilidadBrutaPorPrecioDeReposicionModel(31),31
+17675,Por precio de última compra,Stock,Stock\Consultas\Valorización\Rentabilidad bruta,LIVE,GetApiLiveQueryData,StockRentabilidadBrutaPorPrecioDeultimaCompraModel(31),31
+21248,Fraccionamiento de artículos,Stock,Stock\Movimientos,CRUD,Get GetById GetByFilter,STA14(81),81
+3457,Modificación de datos de partidas,Stock,Stock\Movimientos\Mantenimiento de Partidas,CRUD,Get GetById GetByFilter,STA08(8),8
+1031,Códigos de situación de revista,Sueldos,Sueldos\Archivos\Agrupaciones del empleado,CRUD,Get GetById GetByFilter,SITUACION_REVISTA(4),4
+1066,Convenios,Sueldos,Sueldos\Archivos\Agrupaciones del empleado,CRUD,Get GetById GetByFilter,CONVENIO(25) DIA_HABIL(3),28
+1070,Categorías,Sueldos,Sueldos\Archivos\Agrupaciones del empleado,CRUD,Get GetById GetByFilter,CATEGORIA(21),21
+1078,Grupos jerárquicos,Sueldos,Sueldos\Archivos\Agrupaciones del empleado,CRUD,Get GetById GetByFilter,GRUPO_JERARQUICO(3),3
+1082,Lugares de trabajo,Sueldos,Sueldos\Archivos\Agrupaciones del empleado,CRUD,Get GetById GetByFilter,LUGAR_TRABAJO(26),26
+1074,Modalidades de contratación,Sueldos,Sueldos\Archivos\Contratos,CRUD,Get GetById GetByFilter,TIPO_CONTRATO(12),12
+1038,Legajos de Sueldos,Sueldos,Sueldos\Archivos\Empleados,CRUD,Get GetById GetByFilter,AXV_LEGAJO(262),262
+1039,Familiares,Sueldos,Sueldos\Archivos\Empleados,CRUD,Get GetById GetByFilter,AXV_FAMILIAR(94),94
+1149,Historial laboral,Sueldos,Sueldos\Archivos\Empleados,CRUD,Get GetById GetByFilter,HISTORIAL(37) HISTORIAL_ITEM_SUELDO(5),42
+1062,Legajos eventuales,Sueldos,Sueldos\Archivos\Empleados eventuales,CRUD,Get GetById GetByFilter,AXV_LEGAJO(246),246
+1063,Empresas de servicios eventuales,Sueldos,Sueldos\Archivos\Empleados eventuales,CRUD,Get GetById GetByFilter,SERVICIO_EVENTUAL(20),20
+1060,Acumulados fijos,Sueldos,Sueldos\Archivos\Empleados\Acumulados del empleado,CRUD,Get GetById GetByFilter,AXV_ACUMULADO_FIJO(91),91
+1061,Acumulados definibles,Sueldos,Sueldos\Archivos\Empleados\Acumulados del empleado,CRUD,Get GetById GetByFilter,AXV_MAESTRO_ACUMULADO_DEFINIBLE(24),24
+1041,Actualización manual de cantidades,Sueldos,Sueldos\Archivos\Empleados\Familiares a liquidar,CRUD,Get GetById GetByFilter,AXV_CANTIDAD_FAMILIAR(39),39
+1152,Tramos de imposición,Sueldos,Sueldos\Archivos\Impuesto a las ganancias,CRUD,Get GetById GetByFilter,MAESTRO_TRAMO_GCIA(3) TRAMO_GCIA(4),7
+1344,Topes de deducciones,Sueldos,Sueldos\Archivos\Impuesto a las ganancias,CRUD,Get GetById GetByFilter,MAESTRO_TOPE_GCIA(3) TOPE_GCIA(3),6
+2383,Organismos para el pago de deducciones,Sueldos,Sueldos\Archivos\Impuesto a las ganancias,CRUD,Get GetById GetByFilter,ORGANISMO_GCIA(21),21
+2603,Configuración de deducciones,Sueldos,Sueldos\Archivos\Impuesto a las ganancias,CRUD,Get GetById GetByFilter,DEDUCCION_GCIA(8),8
+21262,Tramos de imposición anuales,Sueldos,Sueldos\Archivos\Impuesto a las ganancias\Tablas anuales,CRUD,Get GetById GetByFilter,MAESTRO_TRAMO_GCIA_ANUAL(3) TRAMO_GCIA_ANUAL(4),7
+21266,Topes de deducciones anuales,Sueldos,Sueldos\Archivos\Impuesto a las ganancias\Tablas anuales,CRUD,Get GetById GetByFilter,MAESTRO_TOPE_GCIA_ANUAL(3) TOPE_GCIA_ANUAL(3),6
+412,Equivalencias para listador de conceptos y totales,Sueldos,Sueldos\Archivos\Liquidación,CRUD,Get GetById GetByFilter,EQUIVALENCIA_LISTADOR_SU(4) VALOR_EQUIVALENCIA_LISTADOR_SU(3),7
+1012,Conceptos de liquidación,Sueldos,Sueldos\Archivos\Liquidación,CRUD,Get GetById GetByFilter,AXV_CONCEPTO_LIQUIDACION(83),83
+1032,Tablas auxiliares,Sueldos,Sueldos\Archivos\Liquidación,CRUD,Get GetById GetByFilter,TABLA(8) FILA_TABLA(5),13
+1033,Matrices auxiliares,Sueldos,Sueldos\Archivos\Liquidación,CRUD,Get GetById GetByFilter,MATRIZ(13) RANGO_MATRIZ(5),18
+1034,Matrices de sueldos,Sueldos,Sueldos\Archivos\Liquidación,CRUD,Get GetById GetByFilter,MATRIZ_SUELDO(9) RANGO_MATRIZ_SUELDO(4),13
+1036,Billetes,Sueldos,Sueldos\Archivos\Liquidación,CRUD,Get GetById GetByFilter,BILLETE(1),1
+1145,Fórmulas de liquidación,Sueldos,Sueldos\Archivos\Liquidación,CRUD,Get GetById GetByFilter,AXV_FORMULA(11),11
+1245,Tipos de liquidación,Sueldos,Sueldos\Archivos\Liquidación,CRUD,Get GetById GetByFilter,TIPO_LIQUIDACION(16),16
+1569,Multitablas auxiliares,Sueldos,Sueldos\Archivos\Liquidación,CRUD,Get GetById GetByFilter,MULTITABLA(5) FILA_MULTITABLA(5) COLUMNA_MULTITABLA(6),16
+2320,Cargas sociales,Sueldos,Sueldos\Archivos\Liquidación,CRUD,Get GetById GetByFilter,ITEM_COSTO_LABORAL(10),10
+2321,Adicionales,Sueldos,Sueldos\Archivos\Liquidación,CRUD,Get GetById GetByFilter,ITEM_SUELDO(13),13
+1377,Definición de variables,Sueldos,Sueldos\Archivos\Liquidación\Variables,CRUD,Get GetById GetByFilter,AXV_VARIABLE(13),13
+1386,Grupos para variables,Sueldos,Sueldos\Archivos\Liquidación\Variables,CRUD,Get GetById GetByFilter,VARIABLE_GRUPO(1),1
+1089,Novedades,Sueldos,Sueldos\Archivos\Novedades,CRUD,Get GetById GetByFilter,NOVEDAD(26) NOVEDAD_GRUPO(2) MODULO_NOVEDAD(2),30
+1401,Grupos para novedades,Sueldos,Sueldos\Archivos\Novedades,CRUD,Get GetById GetByFilter,GRUPO_NOVEDAD(4) NOVEDAD(22),26
+2342,Ajustes afectados al mejor sueldo,Sueldos,Sueldos\Archivos\Novedades,CRUD,Get GetById GetByFilter,AJUSTE(7) FORMULA_CONCEPTO(6),13
+21152,Detalle salario mínimo vital y móvil,Sueldos,Sueldos\Archivos\Novedades,CRUD,Get GetById GetByFilter,SALARIO_MINIMO_VITAL_MOVIL(4),4
+21270,Topes para bases imponibles,Sueldos,Sueldos\Archivos\Novedades,CRUD,Get GetById GetByFilter,TOPE_BASE_IMPONIBLE(23),23
+1058,Art,Sueldos,Sueldos\Archivos\Organismos,CRUD,Get GetById GetByFilter,ART(22),22
+1083,Obras sociales,Sueldos,Sueldos\Archivos\Organismos,CRUD,Get GetById GetByFilter,OBRA_SOCIAL(27) PLAN_OS(4),31
+1086,Sindicatos,Sueldos,Sueldos\Archivos\Organismos,CRUD,Get GetById GetByFilter,SINDICATO(23),23
+1067,Zonas ARCA,Sueldos,Sueldos\Archivos\Organismos\ARCA,CRUD,Get GetById GetByFilter,ZONA_DGI(5),5
+1084,Obras sociales D.G.I.,Sueldos,Sueldos\Archivos\Organismos\ARCA,CRUD,Get GetById GetByFilter,OBRA_SOCIAL_DGI(3),3
+1148,Actividades ARCA para empleados,Sueldos,Sueldos\Archivos\Organismos\ARCA,CRUD,Get GetById GetByFilter,ACTIVIDAD_LEGAJO_DGI(6),6
+1419,Condiciones ARCA,Sueldos,Sueldos\Archivos\Organismos\ARCA,CRUD,Get GetById GetByFilter,CONDICION_LEGAJO_DGI(3),3
+1420,Situaciones ARCA,Sueldos,Sueldos\Archivos\Organismos\ARCA,CRUD,Get GetById GetByFilter,SITUACION_LEGAJO_DGI(3),3
+1539,Incapacidades ARCA,Sueldos,Sueldos\Archivos\Organismos\ARCA,CRUD,Get GetById GetByFilter,INCAPACIDAD_LEGAJO_DGI(3),3
+1706,Localidades D.G.I.,Sueldos,Sueldos\Archivos\Organismos\ARCA,CRUD,Get GetById GetByFilter,LOCALIDAD_DGI(3),3
+1711,Juzgados D.G.I.,Sueldos,Sueldos\Archivos\Organismos\ARCA,CRUD,Get GetById GetByFilter,JUZGADO_DGI(5),5
+1913,Nivel de estudios D.G.I.,Sueldos,Sueldos\Archivos\Organismos\ARCA,CRUD,Get GetById GetByFilter,NIVEL_ESTUDIO_DGI(3),3
+2295,Tipos de eventos D.G.I.,Sueldos,Sueldos\Archivos\Organismos\ARCA,CRUD,Get GetById GetByFilter,TIPO_EVENTO_DGI(3),3
+2302,Tipos de documentación D.G.I.,Sueldos,Sueldos\Archivos\Organismos\ARCA,CRUD,Get GetById GetByFilter,TIPO_DOCUMENTACION_DGI(3),3
+2308,Tipos de documentación en el exterior D.G.I.,Sueldos,Sueldos\Archivos\Organismos\ARCA,CRUD,Get GetById GetByFilter,TIPO_DOCUMENTACION_EXT_DGI(3),3
+20255,Tipos de servicios ARCA,Sueldos,Sueldos\Archivos\Organismos\ARCA,CRUD,Get GetById GetByFilter,TIPO_SERVICIO_AFIP(2),2
+1842,Modelos de asientos,Sueldos,Sueldos\Archivos\Parametrización contable,CRUD,Get GetById GetByFilter,MODELO_ASIENTO_SU(5) RENGLON_MODELO_ASIENTO_SU(5),10
+20250,Cuentas por defecto para modelos de asientos,Sueldos,Sueldos\Archivos\Parametrización contable,CRUD,Get GetById GetByFilter,AXV_CUENTA_DEFECTO_MODELO_ASIENTO_SUELDOS(10),10
+1597,Actualización individual de apropiaciones habituales,Sueldos,Sueldos\Archivos\Parametrización contable\Reglas de apropiación habituales,CRUD,Get GetById GetByFilter,LEGAJO_CONTABLE_HABITUAL(6) AUXILIAR_HABITUAL_LEGAJO(5) AUXILIAR_REGLA_HABITUAL_LEGAJO(4) SUBAUXILIAR_REGLA_HABITUAL_LEGAJO(3),18
+1853,Actualización individual de apropiaciones ocasionales,Sueldos,Sueldos\Archivos\Parametrización contable\Reglas de apropiación ocasionales,CRUD,Get GetById GetByFilter,LEGAJO_CONTABLE_OCASIONAL(7) AUXILIAR_OCASIONAL_LEGAJO(6) AUXILIAR_REGLA_OCASIONAL_LEGAJO(4) SUBAUXILIAR_REGLA_OCASIONAL_LEGAJO(3),20
+17610,Resumen,Sueldos,Sueldos\Consultas\Acreditación de haberes,LIVE,GetApiLiveQueryData,SueldosDepositosDeHaberesModel(93),93
+21517,Detalle de acreditaciones eliminadas,Sueldos,Sueldos\Consultas\Acreditación de haberes,LIVE,GetApiLiveQueryData,EliminacionAcreditacionHaberesAuditoriaModel(10),10
+20079,Nómina,Sueldos,Sueldos\Consultas\Conceptos de liquidación,LIVE,GetApiLiveQueryData,SueldosNominaDeConceptosDeLiquidacionModel(71),71
+17602,Resumen,Sueldos,Sueldos\Consultas\Conceptos liquidados,LIVE,GetApiLiveQueryData,SueldosResumenDeConceptosLiquidadosModel(176),176
+17603,Comparativo,Sueldos,Sueldos\Consultas\Conceptos liquidados,LIVE,GetApiLiveQueryData,SueldosComparativoDeConceptosLiquidadosModel(176),176
+17604,Mes/Año,Sueldos,Sueldos\Consultas\Conceptos liquidados,LIVE,GetApiLiveQueryData,SueldosConceptosLiquidadosPorMesAnioModel(172),172
+20210,Detalle,Sueldos,Sueldos\Consultas\Conceptos liquidados,LIVE,GetApiLiveQueryData,SueldosDetalleDeConceptosLiquidadosModel(175),175
+336,Detalle por cuenta,Sueldos,Sueldos\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,SueldosDetallePorCuentaModel(130),130
+352,Detalle por auxiliar,Sueldos,Sueldos\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,SueldosDetallePorAuxiliarModel(55),55
+353,Detalle por subauxiliar,Sueldos,Sueldos\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,SueldosDetallePorSubauxiliarModel(60),60
+21598,Contabilización de liquidaciones,Sueldos,Sueldos\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,ContabilizacionDeLiquidacionesModel(41),41
+21599,Contabilización de liquidaciones pendientes de exportar,Sueldos,Sueldos\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,ContabilizacionDeLiquidacionesModel(41),41
+2087,Deducciones,Sueldos,Sueldos\Consultas\Impuesto a las ganancias,LIVE,GetApiLiveQueryData,SueldosDeduccionesModel(6),6
+2088,Pagos de deducciones generales,Sueldos,Sueldos\Consultas\Impuesto a las ganancias,LIVE,GetApiLiveQueryData,SueldosPagosDeDeduccionesGeneralesModel(92),92
+2090,Tramos de imposición,Sueldos,Sueldos\Consultas\Impuesto a las ganancias,LIVE,GetApiLiveQueryData,SueldosTramosDeImposicionModel(7),7
+2097,"Retenciones, Percepciones y Pagos a cuenta",Sueldos,Sueldos\Consultas\Impuesto a las ganancias,LIVE,GetApiLiveQueryData,SueldosRetencionesPercepcionesYPagosACuentaModel(91),91
+20080,Análisis remuneraciones RG 5008,Sueldos,Sueldos\Consultas\Impuesto a las ganancias,LIVE,GetApiLiveQueryData,SueldosAnalisisRemuneracionesRG5008Model(195),195
+20194,Detalle de ajuste anual,Sueldos,Sueldos\Consultas\Impuesto a las ganancias,LIVE,GetApiLiveQueryData,SueldosDetalleAjusteAnualModel(94),94
+20287,Detalle de ajustes de impuesto a las ganancias,Sueldos,Sueldos\Consultas\Impuesto a las ganancias,LIVE,GetApiLiveQueryData,SueldosDetalleAjusteImpuestoGananciasModel(8),8
+20420,Novedades importadas de SiRADIG,Sueldos,Sueldos\Consultas\Impuesto a las ganancias,LIVE,GetApiLiveQueryData,ImportacionSiRADIGModel(95),95
+20427,Detalle Bonos / Fallos de cajas / Similar naturaleza liquidados,Sueldos,Sueldos\Consultas\Impuesto a las ganancias,LIVE,GetApiLiveQueryData,SueldosDetalleBonosLiquidadosModel(13),13
+20429,Detalles compensación análoga,Sueldos,Sueldos\Consultas\Impuesto a las ganancias,LIVE,GetApiLiveQueryData,SueldosDetalleCompensacionAnalogaModel(14),14
+20437,Ultimas novedades importadas de SiRADIG,Sueldos,Sueldos\Consultas\Impuesto a las ganancias,LIVE,GetApiLiveQueryData,UltimasNovedadesImportadasSiRADIGModel(95),95
+21396,Conceptos imposibles de informar en F.1359,Sueldos,Sueldos\Consultas\Impuesto a las ganancias,LIVE,GetApiLiveQueryData,SueldosConceptosInconsistentesModel(8),8
+21398,Importes en empleos externos imposibles de informar en F.1359,Sueldos,Sueldos\Consultas\Impuesto a las ganancias,LIVE,GetApiLiveQueryData,SueldosEmpleosExternosInconsistentesModel(9),9
+21424,Importes en otros legajos imposibles de informar en F.1359,Sueldos,Sueldos\Consultas\Impuesto a las ganancias,LIVE,GetApiLiveQueryData,SueldosOtrosLegajosInconsistentesModel(9),9
+21425,Importes en acumulados fijos imposibles de informar en F.1359,Sueldos,Sueldos\Consultas\Impuesto a las ganancias,LIVE,GetApiLiveQueryData,SueldosAcumuladosFijosInconsistentesModel(9),9
+592,Rotación de Personal por Categorías,Sueldos,Sueldos\Consultas\Indices y estadísticas,LIVE,GetApiLiveQueryData,RotacionDePersonalPorCategoriaModel(11),11
+637,Rotación de Personal General,Sueldos,Sueldos\Consultas\Indices y estadísticas,LIVE,GetApiLiveQueryData,RotacionDePersonalGeneralModel(7),7
+638,Rotación de Personal por Departamentos,Sueldos,Sueldos\Consultas\Indices y estadísticas,LIVE,GetApiLiveQueryData,RotacionDePersonalPorDepartamentoModel(9),9
+639,Rotación de Personal por Grupos jerárquicos,Sueldos,Sueldos\Consultas\Indices y estadísticas,LIVE,GetApiLiveQueryData,RotacionDePersonalGrupoJerarquicoModel(9),9
+640,Rotación de Personal por Lugar de trabajo,Sueldos,Sueldos\Consultas\Indices y estadísticas,LIVE,GetApiLiveQueryData,RotacionDePersonalLugarTrabajoModel(9),9
+641,Rotación de Personal por Agrupaciones,Sueldos,Sueldos\Consultas\Indices y estadísticas,LIVE,GetApiLiveQueryData,RotacionDePersonalAgrupacionModel(11),11
+642,Rotación de Personal por Tipos de convenios,Sueldos,Sueldos\Consultas\Indices y estadísticas,LIVE,GetApiLiveQueryData,RotacionDePersonalTipoConvenioModel(8),8
+790,Nómina,Sueldos,Sueldos\Consultas\Legajos,LIVE,GetApiLiveQueryData,SueldosNominaLegajosModel(93),93
+2630,Nómina (legajos eventuales),Sueldos,Sueldos\Consultas\Legajos,LIVE,GetApiLiveQueryData,SueldosNominaLegajosEventualesModel(55),55
+2631,Conceptos particulares,Sueldos,Sueldos\Consultas\Legajos,LIVE,GetApiLiveQueryData,SueldosConceptosParticularesModel(139),139
+20241,Apropiaciones habituales,Sueldos,Sueldos\Consultas\Legajos,LIVE,GetApiLiveQueryData,ApropiacionesHabitualesModel(98),98
+20242,Apropiaciones ocasionales,Sueldos,Sueldos\Consultas\Legajos,LIVE,GetApiLiveQueryData,ApropiacionesOcasionalesModel(98),98
+2806,Vencimientos de embargos y obligaciones,Sueldos,Sueldos\Consultas\Novedades,LIVE,GetApiLiveQueryData,SueldosVencimientosDeEmbargosYObligacionesModel(107),107
+2836,Embargos y obligaciones,Sueldos,Sueldos\Consultas\Novedades,LIVE,GetApiLiveQueryData,SueldosEmbargosYObligacionesModel(134),134
+17612,Mejor sueldo,Sueldos,Sueldos\Consultas\Novedades,LIVE,GetApiLiveQueryData,SueldosMejorSueldoModel(92),92
+17613,Ajustes registrados,Sueldos,Sueldos\Consultas\Novedades,LIVE,GetApiLiveQueryData,SueldosAjustesRegistradosModel(94),94
+17614,Novedades registradas,Sueldos,Sueldos\Consultas\Novedades,LIVE,GetApiLiveQueryData,SueldosNovedadesRegistradasModel(108),108
+20312,Saldos disponibles por novedad,Sueldos,Sueldos\Consultas\Novedades,LIVE,GetApiLiveQueryData,SaldosDisponiblesPorNovedadModel(104),104
+21501,Retenciones de embargos y obligaciones,Sueldos,Sueldos\Consultas\Novedades,LIVE,GetApiLiveQueryData,RetencionesEmbargosYObligacionesModel(136),136
+21597,Novedades registradas por departamento,Sueldos,Sueldos\Consultas\Novedades,LIVE,GetApiLiveQueryData,SueldosNovedadesRegistradasModel(108),108
+21616,Mejor sueldo por tramo laboral,Sueldos,Sueldos\Consultas\Novedades,LIVE,GetApiLiveQueryData,SueldosMejorSueldoTramoModel(94),94
+20402,Saldos de vacaciones,Sueldos,Sueldos\Consultas\Novedades\Vacaciones,LIVE,GetApiLiveQueryData,SaldoVacacionesModel(120),120
+20403,Tramos de vacaciones,Sueldos,Sueldos\Consultas\Novedades\Vacaciones,LIVE,GetApiLiveQueryData,TramosVacacionesModel(120),120
+21948,Legajos con período de prueba notificado,Sueldos,Sueldos\Consultas\Período de prueba,LIVE,GetApiLiveQueryData,PeriodoPruebaBaseModel(10),10
+21949,Legajos con modalidad de contratación actualizada,Sueldos,Sueldos\Consultas\Período de prueba,LIVE,GetApiLiveQueryData,PeriodoPruebaBaseModel(10),10
+17606,Sueldo bruto y costo estimado,Sueldos,Sueldos\Consultas\Sueldo bruto y cargas sociales,LIVE,GetApiLiveQueryData,SueldosSueldoBasicoAdicionalesYCargasSocialesModel(92),92
+17607,Detalle de adicionales al sueldo del empleado,Sueldos,Sueldos\Consultas\Sueldo bruto y cargas sociales,LIVE,GetApiLiveQueryData,SueldosAdicionalesAlSueldoBasicoModel(98),98
+17608,Detalle de tickets,Sueldos,Sueldos\Consultas\Sueldo bruto y cargas sociales,LIVE,GetApiLiveQueryData,SueldosDetalleDeTicketsModel(91),91
+2094,Mes/Año (Costo laboral y sueldo neto),Sueldos,Sueldos\Consultas\Totales liquidados,LIVE,GetApiLiveQueryData,SueldosTotalesLiquidadosPorMesAnioCostoLaboralModel(132),132
+2095,Evolución por departamento,Sueldos,Sueldos\Consultas\Totales liquidados,LIVE,GetApiLiveQueryData,SueldosEvolucionPorDepartamentoModel(128),128
+2096,Evolución por grupo jerárquico,Sueldos,Sueldos\Consultas\Totales liquidados,LIVE,GetApiLiveQueryData,SueldosEvolucionPorGrupoJerarquicoModel(128),128
+17597,Resumen por departamento,Sueldos,Sueldos\Consultas\Totales liquidados,LIVE,GetApiLiveQueryData,SueldosResumenDeTotalesLiquidadosModel(129),129
+17598,Comparativo,Sueldos,Sueldos\Consultas\Totales liquidados,LIVE,GetApiLiveQueryData,SueldosComparativoDeTotalesLiquidadosModel(124),124
+17599,Mes/Año,Sueldos,Sueldos\Consultas\Totales liquidados,LIVE,GetApiLiveQueryData,SueldosTotalesLiquidadosPorMesAnioModel(132),132
+17600,Sueldo nominal vs. Sueldo liquidado,Sueldos,Sueldos\Consultas\Totales liquidados,LIVE,GetApiLiveQueryData,SueldosSueldoNominalVsSueldoLiquidadoModel(118),118
+20207,Detalle,Sueldos,Sueldos\Consultas\Totales liquidados,LIVE,GetApiLiveQueryData,SueldosDetalleDeTotalesLiquidadosModel(129),129
+1093,Datos fijos de la liquidación,Sueldos,Sueldos\Liquidación,CRUD,Get GetById GetByFilter,AXV_DATO_FIJO(38),38
+21171,Plantillas para liquidación de conceptos,Sueldos,Sueldos\Liquidación\Conceptos,CRUD,Get GetById GetByFilter,DEFECTO_TOT_LIQUIDACION(15) DEFECTO_TOT_LIQUIDACION_CONCEPTO(2) DEFECTO_TOT_LIQUIDACION_CONCEPTO_EXCLUIDO(2),19
+1112,Detalle de licencias,Sueldos,Sueldos\Novedades,CRUD,Get GetById GetByFilter,AXV_DETALLE_LICENCIA(33),33
+2832,Embargos y obligaciones,Sueldos,Sueldos\Novedades,CRUD,Get GetById GetByFilter,AXV_EMBARGO_LEGAJO(65),65
+20350,Vacaciones,Sueldos,Sueldos\Novedades,CRUD,Get GetById GetByFilter,AXV_SALDO_VACACION(48),48
+1154,Novedades registradas,Sueldos,Sueldos\Novedades\Novedades para conceptos,CRUD,Get GetById GetByFilter,AXV_NOVEDAD_REGISTRADA(32),32
+1345,Otros ingresos - Empleos externos,Sueldos,Sueldos\Novedades\Novedades para el impuesto a las ganancias,CRUD,Get GetById GetByFilter,AXV_MAESTRO_OTRO_EMPLEO_GCIA(24),24
+1346,Pagos por deducciones generales,Sueldos,Sueldos\Novedades\Novedades para el impuesto a las ganancias,CRUD,Get GetById GetByFilter,MAESTRO_PAGO_GENERAL_GCIA(4) PAGO_GENERAL_GCIA(6) DETALLE_PAGO_GENERAL_GCIA(5),15
+2122,"Retenciones, Percepciones y Pagos a cuenta",Sueldos,Sueldos\Novedades\Novedades para el impuesto a las ganancias,CRUD,Get GetById GetByFilter,AXV_MAESTRO_PAGO_A_CUENTA_GANANCIAS(24),24
+3187,Actualización del impuesto a retener/devolver,Sueldos,Sueldos\Novedades\Novedades para el impuesto a las ganancias,CRUD,Get GetById GetByFilter,AXV_MODIFICACION_GANANCIAS_A_RETENER(27),27
+1273,Definición de formato de archivo ASCII,Sueldos,Sueldos\Procesos periódicos\Pago automático de haberes,CRUD,Get GetById GetByFilter,AXV_PARAMETRO_ASCII_BANCO(24),24
+59,Códigos de operación,Tesoreria,Tesorería\Archivos,CRUD,Get GetById GetByFilter,SBA11(4),4
+214,Agrupaciones,Tesoreria,Tesorería\Archivos,CRUD,Get GetById GetByFilter,SBA03(3),3
+218,Tipos de comprobante,Tesoreria,Tesorería\Archivos,CRUD,Get GetById GetByFilter,SBA02(24),24
+308,Códigos de relación,Tesoreria,Tesorería\Archivos,CRUD,Get GetById GetByFilter,CODIGO_RELACION(3),3
+548,Cuentas de Tesorería,Tesoreria,Tesorería\Archivos,CRUD,Get GetById GetByFilter,AXV_CUENTA_TESORERIA(47),47
+21564,Billeteras virtuales,Tesoreria,Tesorería\Archivos,CRUD,Get GetById GetByFilter,BILLETERA_VIRTUAL(3),3
+259,Chequeras,Tesoreria,Tesorería\Archivos\Cheques,CRUD,Get GetById GetByFilter,AXV_CHEQUERA_TESORERIA(13),13
+251,Conceptos de conciliación,Tesoreria,Tesorería\Archivos\Conciliación,CRUD,Get GetById GetByFilter,CONCEPTO_CONCILIACION(4),4
+172,Cuentas de Tesorería,Tesoreria,Tesorería\Archivos\Parametrización contable,CRUD,Get GetById GetByFilter,CUENTA_SB(7) APROPIACION_CUENTA_SB(5) AUXILIAR_REGLA_CUENTA_SB(4) SUBAUXILIAR_REGLA_CUENTA_SB(3),19
+175,Tipos de comprobante,Tesoreria,Tesorería\Archivos\Parametrización contable,CRUD,Get GetById GetByFilter,TIPO_COMPROBANTE_SB(7),7
+20367,Perfiles para Tango Banking,Tesoreria,Tesorería\Archivos\Perfiles,CRUD,Get GetById GetByFilter,PERFIL_BANKING(9) PERFIL_BANKING_CUENTA(2) PERFIL_BANKING_USUARIO(2),13
+183,Tarjetas,Tesoreria,Tesorería\Archivos\Tarjetas,CRUD,Get GetById GetByFilter,SBA22(40) TARJETA_VIGENCIA_COEFICIENTE(3) TARJETA_COEFICIENTE_CUOTA(4) SBA21(24) TARJETA_ABREVIATURA(4) TARJETA_PLAN_COEFICIENTE(6) TARJETA_REGALO_CONFIGURACION(11) TARJETA_CONCEPTO_DESCUENTO_TARJETA(3),95
+187,Host de tarjetas,Tesoreria,Tesorería\Archivos\Tarjetas,CRUD,Get GetById GetByFilter,HOST(5),5
+191,Terminales POS,Tesoreria,Tesorería\Archivos\Tarjetas,CRUD,Get GetById GetByFilter,TERMINAL_POS(14) TERMINAL_POS_HOST(5) TERMINAL_POS_TARJETA(8) TERMINAL_POS_NO_INTEGRADO(2),29
+198,Promociones,Tesoreria,Tesorería\Archivos\Tarjetas,CRUD,Get GetById GetByFilter,PROMOCION_TARJETA(26) PROMOCION_TARJETA_HABILITADA(3) COEFICIENTE_PROMOCION_TARJETA(5) CTA_PROMOCION_TARJETA_POR_SUCURSAL(3),37
+202,Conceptos de gastos,Tesoreria,Tesorería\Archivos\Tarjetas,CRUD,Get GetById GetByFilter,CONCEPTO_DESCUENTO_TARJETA(16),16
+206,Planes,Tesoreria,Tesorería\Archivos\Tarjetas,CRUD,Get GetById GetByFilter,PLAN_TARJETA(4),4
+11583,Consulta,Tesoreria,Tesorería\Consultas\Cheques de terceros,LIVE,GetApiLiveQueryData,TesoreriaChequesDeTercerosConsultaDeChequesDeTercerosModel(59),59
+11823,Detalle,Tesoreria,Tesorería\Consultas\Cheques de terceros,LIVE,GetApiLiveQueryData,TesoreriaDetalleDeChequesDeTercerosModel(86),86
+11824,Por Mes / Año,Tesoreria,Tesorería\Consultas\Cheques de terceros,LIVE,GetApiLiveQueryData,TesoreriaChequesDeTercerosAgrupadosPorMes_anioModel(87),87
+12180,Detalle por estado,Tesoreria,Tesorería\Consultas\Cheques de terceros,LIVE,GetApiLiveQueryData,TesoreriaDetalleDeChequesPorEstadoModel(86),86
+17751,Ranking de rechazados,Tesoreria,Tesorería\Consultas\Cheques de terceros,LIVE,GetApiLiveQueryData,TesoreriaRankingDeChequesRechazadosModel(30),30
+17752,Resumen,Tesoreria,Tesorería\Consultas\Cheques de terceros,LIVE,GetApiLiveQueryData,TesoreriaResumenDeChequesDeTercerosModel(83),83
+10505,Diferidos pendientes de transferir,Tesoreria,Tesorería\Consultas\Cheques propios,LIVE,GetApiLiveQueryData,TesoreriaDiferidosPendientesDeTransferirModel(16),16
+11584,Consulta,Tesoreria,Tesorería\Consultas\Cheques propios,LIVE,GetApiLiveQueryData,TesoreriaChequesPropiosConsultaDeChequesPropiosModel(32),32
+11825,Detalle,Tesoreria,Tesorería\Consultas\Cheques propios,LIVE,GetApiLiveQueryData,TesoreriaChequesPropiosChequesPropiosModel(50),50
+11826,Pendientes de debitar,Tesoreria,Tesorería\Consultas\Cheques propios,LIVE,GetApiLiveQueryData,TesoreriaPendientesDeDebitarModel(12),12
+11887,Cheques propios por banco,Tesoreria,Tesorería\Consultas\Cheques propios,LIVE,GetApiLiveQueryData,TesoreriaChequesPropiosChequesPropiosPorBancoModel(12),12
+17750,Resumen,Tesoreria,Tesorería\Consultas\Cheques propios,LIVE,GetApiLiveQueryData,TesoreriaChequesPropiosResumenDeChequesPropiosModel(52),52
+10558,Resumen,Tesoreria,Tesorería\Consultas\Comprobantes,LIVE,GetApiLiveQueryData,TesoreriaResumenModel(53),53
+11591,Consulta,Tesoreria,Tesorería\Consultas\Comprobantes,LIVE,GetApiLiveQueryData,TesoreriaConsultaModel(16),16
+11620,Movimientos conciliados,Tesoreria,Tesorería\Consultas\Comprobantes,LIVE,GetApiLiveQueryData,TesoreriaComprobantesMovimientosConciliadosModel(55),55
+11621,Pendientes de registrar,Tesoreria,Tesorería\Consultas\Comprobantes,LIVE,GetApiLiveQueryData,TesoreriaMovimientosPendientesDeRegistrarModel(13),13
+11656,Resumen por cuenta,Tesoreria,Tesorería\Consultas\Comprobantes,LIVE,GetApiLiveQueryData,TesoreriaResumenPorCuentaModel(145),145
+11657,Histórico de comprobantes,Tesoreria,Tesorería\Consultas\Comprobantes,LIVE,GetApiLiveQueryData,TesoreriaHistoricoDeComprobantesModel(14),14
+11659,Clasificación,Tesoreria,Tesorería\Consultas\Comprobantes,LIVE,GetApiLiveQueryData,TesoreriaComprobantesNominaDeClasificacionesModel(10),10
+11660,Ingresos y egresos por cuenta,Tesoreria,Tesorería\Consultas\Comprobantes,LIVE,GetApiLiveQueryData,TesoreriaIngresosYEgresosPorCuentaModel(41),41
+11669,Histórico de comprobantes por cuenta,Tesoreria,Tesorería\Consultas\Comprobantes,LIVE,GetApiLiveQueryData,TesoreriaHistoricoDeComprobantesPorCuentaModel(18),18
+11892,Movimientos no conciliados,Tesoreria,Tesorería\Consultas\Comprobantes,LIVE,GetApiLiveQueryData,TesoreriaComprobantesMovimientosNoConciliadosModel(57),57
+12480,Detalle,Tesoreria,Tesorería\Consultas\Comprobantes,LIVE,GetApiLiveQueryData,TesoreriaDetalleDeComprobantesModel(148),148
+17748,Resumen por tipo de operación,Tesoreria,Tesorería\Consultas\Comprobantes,LIVE,GetApiLiveQueryData,TesoreriaResumenPorTipoDeOperacionModel(49),49
+20442,Auditoría ingreso masivo de movimientos de Tesorería,Tesoreria,Tesorería\Consultas\Comprobantes,LIVE,GetApiLiveQueryData,TesoreriaAuditoriaIngresoMasivoMovimientosModel(10),10
+21260,Consulta de extractos importados,Tesoreria,Tesorería\Consultas\Conciliación,LIVE,GetApiLiveQueryData,FondosExtractosImportadosModel(20),20
+11456,Detalle por cuenta,Tesoreria,Tesorería\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,TesoreriaDetallePorCuentaModel(26),26
+11457,Contabilización de comprobantes,Tesoreria,Tesorería\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,TesoreriaContabilizacionDeComprobantesModel(39),39
+11500,Detalle por auxiliar,Tesoreria,Tesorería\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,TesoreriaDetallePorAuxiliarModel(39),39
+11504,Detalle por subauxiliar,Tesoreria,Tesorería\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,TesoreriaDetallePorSubauxiliarModel(42),42
+11617,Detalle por comprobante,Tesoreria,Tesorería\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,TesoreriaDetallePorComprobanteModel(28),28
+11643,Multidimensional de asientos,Tesoreria,Tesorería\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,TesoreriaMultidimensionalDeAsientosModel(26),26
+21497,Contabilización de comprobantes pendientes de exportar,Tesoreria,Tesorería\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,TesoreriaContabilizacionDeComprobantesPendientesExportarModel(39),39
+11658,Nómina,Tesoreria,Tesorería\Consultas\Cuentas,LIVE,GetApiLiveQueryData,TesoreriaCuentasNominaDeCuentasModel(35),35
+17747,Saldos,Tesoreria,Tesorería\Consultas\Cuentas,LIVE,GetApiLiveQueryData,TesoreriaSaldosModel(14),14
+11585,Consulta,Tesoreria,Tesorería\Consultas\Cupones,LIVE,GetApiLiveQueryData,TesoreriaCuponesConsultaDeCuponesModel(20),20
+11647,Consulta de liquidaciones,Tesoreria,Tesorería\Consultas\Cupones,LIVE,GetApiLiveQueryData,TesoreriaCuponesConsultaDeLiquidacionesModel(18),18
+11654,Proyección de acreditaciones,Tesoreria,Tesorería\Consultas\Cupones,LIVE,GetApiLiveQueryData,TesoreriaProyeccionDeAcreditacionesDeCuponesDeTarjetasDeCreditoModel(14),14
+17756,Resumen,Tesoreria,Tesorería\Consultas\Cupones,LIVE,GetApiLiveQueryData,TesoreriaCuponesResumenModel(57),57
+11249,Valores pendientes de registrar,Tesoreria,Tesorería\Consultas\Transferencia de valores desde sucursales,LIVE,GetApiLiveQueryData,TesoreriaValoresPendientesDeRegistrarModel(13),13
+17787,Valores ingresados,Tesoreria,Tesorería\Consultas\Transferencia de valores desde sucursales,LIVE,GetApiLiveQueryData,TesoreriaTransferenciaDeValoresDesdeSucursalesValoresIngresadosModel(6),6
+20446,Comparativo de saldos con Tesorería,Tesoreria,Tesorería\Tango Banking,LIVE,GetApiLiveQueryData,ConsultaPorBancoModel(20),20
+21169,Saldos por cuenta Tango Banking,Tesoreria,Tesorería\Tango Banking,LIVE,GetApiLiveQueryData,DetalleDeSaldosModel(20),20
+747,Políticas de Interés por Mora,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,INTERES_POR_MORA(20),20
+767,Motivos para Notas de Crédito,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,MOTIVO_NOTA_CREDITO(3),3
+842,Zonas,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,GVA05(5),5
+852,Provincias,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,GVA18(19),19
+864,Rubros Comerciales,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,GVA151(5),5
+884,Motivos para Pedidos,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,GVA121(3),3
+896,Clasificación para Percepciones Definibles,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,GVA150(3),3
+908,Códigos de Retención,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,GVA66(10),10
+920,Actividades Ingresos Brutos,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,GVA22(3),3
+932,Países,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,GVA133(7),7
+952,Vendedores,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,GVA23(17),17
+960,Transportes,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,GVA24(15),15
+972,Grupos Empresarios,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,GVA62(20) GVA14(136),156
+2117,Clientes,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,AXV_CLIENTE(115),115
+2497,Condiciones de Venta,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,GVA01(16) RENGLON_CONDICION_VENTA(16),32
+2700,Valores por Defecto para Clientes,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,AXV_CLIENTE_DEFECTO(81),81
+3010,Alícuotas,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,GVA41(21),21
+19677,Percepciones,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,PERCEPCION_VENTAS(20) PERCEPCION_VENTAS_BASE_CALCULO(5) PERCEPCION_VENTAS_ALICUOTA(6),31
+20342,Modelos de percepciones,Ventas,Ventas\Archivos\Actualizaciones,CRUD,Get GetById GetByFilter,MODELO_PERCEPCION_VENTAS(5) MODELO_PERCEPCION_VENTAS_ALICUOTA(6),11
+940,Motivos,Ventas,Ventas\Archivos\Actualizaciones\Cotizaciones,CRUD,Get GetById GetByFilter,GVA65(3),3
+944,Clasificación 1,Ventas,Ventas\Archivos\Actualizaciones\Cotizaciones,CRUD,Get GetById GetByFilter,GVA34(6),6
+1921,Clasificación 2,Ventas,Ventas\Archivos\Actualizaciones\Cotizaciones,CRUD,Get GetById GetByFilter,GVA34(6),6
+3347,Textos,Ventas,Ventas\Archivos\Actualizaciones\Cotizaciones,CRUD,Get GetById GetByFilter,GVA31(4),4
+984,Listas de precios,Ventas,Ventas\Archivos\Actualizaciones\Precios de Venta,CRUD,Get GetById GetByFilter,GVA10(12) GVA10_PARAMETROS_AUTOMATIZACION(5) CTA_LISTA_VENTA_POR_SUCURSAL(3),20
+20008,Actualización individual por artículo,Ventas,Ventas\Archivos\Actualizaciones\Precios de Venta,CRUD,Get GetById GetByFilter,MAESTRO_GVA17(7) GVA17(9) GVA13(10),26
+20091,Actualización individual,Ventas,Ventas\Archivos\Actualizaciones\Precios de Venta,CRUD,Get GetById GetByFilter,AXV_PRECIO_INDIVIDUAL(15),15
+20104,Criterios de actualización de precios,Ventas,Ventas\Archivos\Actualizaciones\Precios de Venta,CRUD,Get GetById GetByFilter,CRITERIO_ACTUALIZACION_PRECIOS(22) CRITERIO_ACTUALIZACION_RANGOS(6),28
+20123,Políticas de redondeo,Ventas,Ventas\Archivos\Actualizaciones\Precios de Venta,CRUD,Get GetById GetByFilter,POLITICA_REDONDEO(11) POLITICA_REDONDEO_RANGOS(6),17
+876,Agrupaciones de Clientes,Ventas,Ventas\Archivos\Carga Inicial,CRUD,Get GetById GetByFilter,GVA28(3),3
+2552,Tipos de comprobante,Ventas,Ventas\Archivos\Carga Inicial,CRUD,Get GetById GetByFilter,GVA15(17),17
+3471,Parámetros de pedidos de Tango Tiendas,Ventas,Ventas\Archivos\Carga Inicial,CRUD,Get GetById GetByFilter,GVA_PARAMETROS_PEDIDOS_TIENDAS(38) GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO(3) GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA(3) GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR(2),46
+19744,Parámetros para Códigos de Barra,Ventas,Ventas\Archivos\Carga Inicial,CRUD,Get GetById GetByFilter,GVA117(24) GVA118(8),32
+751,Perfiles de notas de crédito,Ventas,Ventas\Archivos\Carga Inicial\Perfiles,CRUD,Get GetById GetByFilter,AXV_PERFIL_NOTA_CREDITO(119),119
+996,Perfiles de consulta de precios y saldos de stock,Ventas,Ventas\Archivos\Carga Inicial\Perfiles,CRUD,Get GetById GetByFilter,GVA78(20) GVA79(5) GVA80(3) GVA85(3) SUCURSAL_PERFIL_PRECIOS_SALDOS(2),33
+1910,Perfiles de aprobación,Ventas,Ventas\Archivos\Carga Inicial\Perfiles,CRUD,Get GetById GetByFilter,GVA75(9) GVA76(5),14
+12263,Perfiles de facturación,Ventas,Ventas\Archivos\Carga Inicial\Perfiles,CRUD,Get GetById GetByFilter,AXV_PERFIL_FACTURACION(182),182
+20020,Perfiles de pedidos,Ventas,Ventas\Archivos\Carga Inicial\Perfiles,CRUD,Get GetById GetByFilter,AXV_PERFIL_PEDIDO(140),140
+21207,Perfiles de cierre de caja,Ventas,Ventas\Archivos\Carga Inicial\Perfiles,CRUD,Get GetById GetByFilter,AXV_PERFIL_CIERRE_CAJA(19),19
+21225,Perfiles de medios de pago para facturas y pedidos,Ventas,Ventas\Archivos\Carga Inicial\Perfiles,CRUD,Get GetById GetByFilter,PERFIL_MEDIO_PAGO(5) PERFIL_MEDIO_PAGO_CUENTA(5),10
+21434,Perfiles de gestión de clientes,Ventas,Ventas\Archivos\Carga Inicial\Perfiles,CRUD,Get GetById GetByFilter,AXV_PERFILES_GESTION_DE_CLIENTES(38),38
+85,Clientes,Ventas,Ventas\Archivos\Parametrización contable,CRUD,Get GetById GetByFilter,CLIENTE(9) APROPIACION_CLIENTE(6) AUXILIAR_REGLA_CLIENTE(4) SUBAUXILIAR_REGLA_CLIENTE(3),22
+106,Modelos de asientos,Ventas,Ventas\Archivos\Parametrización contable,CRUD,Get GetById GetByFilter,ASIENTO_MODELO_GV(9) RENGLON_MODELO_GV(9) TIPO_AUXILIAR_MODELO_GV(3),21
+122,Tipos de comprobantes,Ventas,Ventas\Archivos\Parametrización contable,CRUD,Get GetById GetByFilter,TIPO_COMPROBANTE_GV(7),7
+2824,Valores por defecto para clientes,Ventas,Ventas\Archivos\Parametrización contable,CRUD,Get GetById GetByFilter,DEFECTO_CLIENTE_CUENTA(6) APROPIACION_DEFECTO_CLIENTE(6) AUXILIAR_REGLA_DEFECTO_CLIENTE(4) SUBAUXILIAR_REGLA_DEFECTO_CLIENTE(3),19
+12205,Saldos,Ventas,Ventas\Consultas\Clientes,LIVE,GetApiLiveQueryData,SaldosDeClientesModel(42),42
+17961,Nómina,Ventas,Ventas\Consultas\Clientes,LIVE,GetApiLiveQueryData,ClientesModel(89),89
+11440,Detalle por comprobante,Ventas,Ventas\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,VentasContabilidadDetallePorComprobanteModel(51),51
+11443,Detalle por cuenta,Ventas,Ventas\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,VentasDetallePorCuentaModel(44),44
+11444,Detalle por auxiliar,Ventas,Ventas\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,VentasDetallePorAuxiliarModel(56),56
+11445,Detalle por subauxiliar,Ventas,Ventas\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,VentasDetallePorSubauxiliarModel(60),60
+11446,Contabilización de comprobantes,Ventas,Ventas\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,VentasContabilizacionDeComprobantesModel(54),54
+11645,Multidimensional de asientos,Ventas,Ventas\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,VentasMultidimensionalDeAsientosModel(49),49
+21483,Contabilización de comprobantes pendientes de exportar,Ventas,Ventas\Consultas\Contabilidad,LIVE,GetApiLiveQueryData,VentasContabilizacionDeComprobantesPendientesExportarModel(54),54
+12481,Detalle,Ventas,Ventas\Consultas\Cotizaciones,LIVE,GetApiLiveQueryData,VentasCotizacionesDetalleDeCotizacionesModel(47),47
+14062,Ficha Live de cotizaciones,Ventas,Ventas\Consultas\Cotizaciones,PDF,GetPdf,COTIZACION(77) LIVE_FN_Cotizaciones_ComprobantesRelacionados(9) RENGLONES(16) PLAN_ENTREGA(8) TEXTOS(4) DIRECCION_ENTREGA_REMITO(14) TOTALES(4),132
+17945,Resumen,Ventas,Ventas\Consultas\Cotizaciones,LIVE,GetApiLiveQueryData,VentasCotizacionesResumenModel(44),44
+17946,Comparativo,Ventas,Ventas\Consultas\Cotizaciones,LIVE,GetApiLiveQueryData,VentasCotizacionesComparativoModel(17),17
+17947,Por Mes / Año,Ventas,Ventas\Consultas\Cotizaciones,LIVE,GetApiLiveQueryData,VentasCotizacionesPorMesAnioModel(4),4
+17948,Consulta,Ventas,Ventas\Consultas\Cotizaciones,LIVE,GetApiLiveQueryData,VentasCotizacionesConsultaModel(39),39
+17949,Resumen por artículo,Ventas,Ventas\Consultas\Cotizaciones,LIVE,GetApiLiveQueryData,VentasCotizacionesResumenPorArticuloModel(66),66
+10921,Facturas de crédito,Ventas,Ventas\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,VentasFacturasDeCreditoModel(45),45
+10948,Notas de débito de interés por mora,Ventas,Ventas\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,VentasInteresPorMoraModel(61),61
+12555,Resumen de cuentas,Ventas,Ventas\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,VentasDetalleDeResumenDeCuentaModel(40),40
+12919,Cobranzas imputadas,Ventas,Ventas\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,VentasCuentaCorrienteCobranzasImputadasModel(55),55
+14105,Ficha Live de recibos,Ventas,Ventas\Consultas\Cuenta Corriente,PDF,GetPdf,RECIBOS(46) VALORES(13) LIVE_FN_Recibo_ComprobantesRelacionados(8) IMPUTACIONES(7) RETENCIONES(8) DOCUMENTOS(8),90
+17951,Ranking de deudores,Ventas,Ventas\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,VentasRankingDeDeudoresModel(55),55
+17952,Cobranzas a realizar,Ventas,Ventas\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,VentasCuentaCorrienteCobranzasARealizarModel(69),69
+17953,Deudas vencidas,Ventas,Ventas\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,VentasDeudasVencidasModel(73),73
+17954,Ranking de morosos,Ventas,Ventas\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,VentasRankingDeMorososModel(55),55
+17955,Deudas a vencer,Ventas,Ventas\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,VentasDeudasAVencerModel(72),72
+17956,Diferencias de cambio pendientes de emitir,Ventas,Ventas\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,VentasCuentaCorrienteDiferenciasDeCambioPendientesDeEmitirModel(44),44
+17957,C. P. R. pendientes,Ventas,Ventas\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,VentasCuentaCorrienteCprPendientesModel(42),42
+17958,Cobranzas realizadas,Ventas,Ventas\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,VentasCobranzasRealizadasModel(53),53
+17959,Consulta de recibos,Ventas,Ventas\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,VentasCuentaCorrienteRecibosModel(58),58
+17969,Cobranzas por medio de pago,Ventas,Ventas\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,VentasCuentaCorrienteCobranzaPorMedioDePagoModel(47),47
+19687,Comprobantes MiPymes,Ventas,Ventas\Consultas\Cuenta Corriente,LIVE,GetApiLiveQueryData,VentasComprobantesMiPymesModel(47),47
+12540,Cobranzas no procesadas,Ventas,Ventas\Consultas\Cuenta Corriente\Cobranzas masivas,LIVE,GetApiLiveQueryData,VentasDetalleDeCobranzasNoProcesadasModel(27),27
+12542,Facturas no exportadas a entidades recaudadoras,Ventas,Ventas\Consultas\Cuenta Corriente\Cobranzas masivas,LIVE,GetApiLiveQueryData,VentasDetalleDeFacturasNoExportadasAEntidadesRecaudadorasModel(28),28
+12544,Historial de generaciones masivas de recibos,Ventas,Ventas\Consultas\Cuenta Corriente\Cobranzas masivas,LIVE,GetApiLiveQueryData,VentasDetalleDeGeneracionMasivaDeRecibosModel(14),14
+12546,Historial de exportaciones a entidades recaudadoras,Ventas,Ventas\Consultas\Cuenta Corriente\Cobranzas masivas,LIVE,GetApiLiveQueryData,VentasDetalleDeExportacionDeFacturasAEntidadesRecaudadorasModel(14),14
+12566,Cobranzas por entidad recaudadora,Ventas,Ventas\Consultas\Cuenta Corriente\Cobranzas masivas,LIVE,GetApiLiveQueryData,VentasCobranzasPorEntidadRecaudadoraModel(48),48
+10083,Consolidado de compras y ventas,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasConsolidadoDeComprobantesVentasYComprasModel(25),25
+12158,Resumen por kits,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasFacturacionResumenPorKitsModel(182),182
+12895,Resumen semanal de ventas por medio de pago,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasResumenSemanalDeVentasPorMediosDePagoModel(12),12
+12898,Resumen semanal de comprobantes con más de una venta,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasFacturacionResumenSemanalDeComprobantesConMasDeUnaVentaModel(30),30
+12916,Ticket promedio diario,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasTicketPromedioDiarioModel(29),29
+14077,"Ficha Live de facturas, créditos y débitos",Ventas,Ventas\Consultas\Facturación,PDF,GetPdf,FACTURA_CREDITO_DEBITO(92) TODOS_CLASIFICACION_COMPROBANTES(10) RENGLONES(23) VENCIMIENTOS(9) IMPUESTOS(7) IMPUTACION_CONTABLE(7) VALORES(8) COMPROBANTE_ELECTRONICO(12) INFORMACION_ADICIONAL_AFIP(13) TOTALES(4),185
+17933,Resumen,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasFacturacionResumenModel(121),121
+17934,Resumen por artículo,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasFacturacionResumenPorArticuloModel(181),181
+17935,Ranking por artículo,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasFacturacionRankingPorArticuloModel(103),103
+17936,Facturas pendientes de remitir,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasFacturasPendientesDeRemitirModel(50),50
+17937,Comparativo,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasFacturacionComparativoModel(84),84
+17938,Ranking de ventas,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasFacturacionRankingDeVentasModel(92),92
+17939,Por Mes / Año,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasPorMesAnioModel(5),5
+17940,Por medio de pago,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasFacturacionPorMedioDePagoModel(38),38
+17941,Comparativo por artículo,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasComparativoPorArticuloModel(135),135
+17942,Consulta,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasFacturacionFacturacionModel(48),48
+17943,Detalle de comprobantes,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasFacturacionDetalleDeComprobantesModel(183),183
+19936,Ventas por origen,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasFacturacionVentasPorOrigenModel(48),48
+20192,Cantidad de comprobantes por tipo de talonario,Ventas,Ventas\Consultas\Facturación,LIVE,GetApiLiveQueryData,VentasCantidadDeComprobantesPorTipoDeTalonarioModel(36),36
+12534,Notas de crédito por promoción de tarjetas,Ventas,Ventas\Consultas\Facturación\Facturador,LIVE,GetApiLiveQueryData,VentasNotasDeCreditoPorPromocionDeTarjetasEnResumenModel(25),25
+12616,Notas de crédito pendientes de generar por pago con tarjeta de regalo,Ventas,Ventas\Consultas\Facturación\Facturador,LIVE,GetApiLiveQueryData,VentasNotasDeCreditoPendientesDeGenerarPorPagoConTarjetaDeRegaloModel(38),38
+12657,Promociones facturadas por código de promoción,Ventas,Ventas\Consultas\Facturación\Facturador,LIVE,GetApiLiveQueryData,VentasPromocionesFacturadasPorCodigoDePromocionModel(71),71
+12658,Promociones facturadas por tipo de promoción,Ventas,Ventas\Consultas\Facturación\Facturador,LIVE,GetApiLiveQueryData,VentasPromocionesFacturadasPorTipoDePromocionModel(66),66
+12662,Promociones facturadas por año / mes / día,Ventas,Ventas\Consultas\Facturación\Facturador,LIVE,GetApiLiveQueryData,VentasPromocionesPorFechaModel(71),71
+12663,Resumen por artículo con promociones,Ventas,Ventas\Consultas\Facturación\Facturador,LIVE,GetApiLiveQueryData,VentasResumenDeVentasPorArticulosConPromocionesModel(168),168
+12664,Resumen de ventas con tarjetas de regalo,Ventas,Ventas\Consultas\Facturación\Facturador,LIVE,GetApiLiveQueryData,VentasResumenDePagosDeFacturasConTarjetasDeRegaloModel(33),33
+12889,Resumen semanal de ventas,Ventas,Ventas\Consultas\Facturación\Facturador,LIVE,GetApiLiveQueryData,VentasResumenSemanalDeVentasModel(33),33
+13118,Reportes fiscales (Nueva tecnología),Ventas,Ventas\Consultas\Facturación\Facturador,LIVE,GetPdf GetApiLiveQueryData,VentasReportesFiscalesModel(15),15
+19965,Resultados de facturación automática de pedidos de Tango Tiendas,Ventas,Ventas\Consultas\Facturación\Facturador,LIVE,GetApiLiveQueryData,VentasResultadosDeFacturacionAutomaticaDePedidosDeTangoTiendasModel(8),8
+12974,Resumen de cierres Z,Ventas,Ventas\Consultas\Facturación\Facturador\Procesos de cierre,LIVE,GetApiLiveQueryData,VentasCierresZModel(41),41
+12975,Diferencias con cierres Z,Ventas,Ventas\Consultas\Facturación\Facturador\Procesos de cierre,LIVE,GetApiLiveQueryData,VentasDiferenciasConCierresZModel(17),17
+21234,Resumen de saldos por caja,Ventas,Ventas\Consultas\Facturación\Facturador\Procesos de cierre,LIVE,GetApiLiveQueryData,TesoreriaDetalleSaldosCajasModel(8),8
+21237,Resumen de cierres de caja,Ventas,Ventas\Consultas\Facturación\Facturador\Procesos de cierre,LIVE,GetPdf GetApiLiveQueryData,TesoreriaResumenDeCierresDeCajaModel(8),8
+10081,Detalle de pedidos,Ventas,Ventas\Consultas\Pedidos,LIVE,GetApiLiveQueryData,VentasPedidosDetalleDePedidosModel(137),137
+11586,Entregas pactadas / reales,Ventas,Ventas\Consultas\Pedidos,LIVE,GetApiLiveQueryData,VentasPedidosPlanesDeEntregaPactadosRealesModel(56),56
+12648,Resumen por kits,Ventas,Ventas\Consultas\Pedidos,LIVE,GetApiLiveQueryData,VentasPedidosResumenPorKitsModel(134),134
+12651,Pedidos con kits sin detalle de composición,Ventas,Ventas\Consultas\Pedidos,LIVE,GetApiLiveQueryData,VentasPedidosPedidosConKitsSinDetalleDeComposicionModel(137),137
+13157,Pedidos por origen,Ventas,Ventas\Consultas\Pedidos,LIVE,GetApiLiveQueryData,VentasPedidosPedidosPorOrigenModel(83),83
+17926,Pendientes de aprobación,Ventas,Ventas\Consultas\Pedidos,LIVE,GetApiLiveQueryData,VentasPedidosPendientesDeAprobarModel(79),79
+17927,Pendientes de remitir,Ventas,Ventas\Consultas\Pedidos,LIVE,GetApiLiveQueryData,VentasPedidosPendientesDeRemitirModel(76),76
+17928,Pendientes de facturar,Ventas,Ventas\Consultas\Pedidos,LIVE,GetApiLiveQueryData,VentasPedidosPendientesDeFacturarModel(80),80
+17929,Resumen,Ventas,Ventas\Consultas\Pedidos,LIVE,GetApiLiveQueryData,VentasPedidosResumenModel(112),112
+17930,Consulta,Ventas,Ventas\Consultas\Pedidos,LIVE,GetApiLiveQueryData,VentasPedidosConsultaModel(83),83
+17931,Resumen por artículo,Ventas,Ventas\Consultas\Pedidos,LIVE,GetApiLiveQueryData,VentasPedidosResumenPorArticuloModel(138),138
+20393,Pedidos con promociones fuera de vigencia,Ventas,Ventas\Consultas\Pedidos,LIVE,GetApiLiveQueryData,VentasPedidosPedidosConPromocionesBaseModel(49),49
+20394,Pedidos con promociones pendientes de facturar,Ventas,Ventas\Consultas\Pedidos,LIVE,GetApiLiveQueryData,VentasPedidosPedidosConPromocionesBaseModel(49),49
+20395,Pedidos con promociones por estado,Ventas,Ventas\Consultas\Pedidos,LIVE,GetApiLiveQueryData,VentasPedidosPedidosConPromocionesBaseModel(49),49
+20396,Pedidos con promociones por tipo,Ventas,Ventas\Consultas\Pedidos,LIVE,GetApiLiveQueryData,VentasPedidosPedidosConPromocionesBaseModel(49),49
+21277,Resumen por totales,Ventas,Ventas\Consultas\Pedidos,LIVE,GetApiLiveQueryData,VentasPedidosResumenPorTotalesModel(112),112
+20318,Modelos por cliente,Ventas,Ventas\Consultas\Pedidos\Pedidos automáticos,LIVE,GetApiLiveQueryData,VentasPedidosAutomaticosClientesBaseModel(59),59
+20320,Detalle de novedades,Ventas,Ventas\Consultas\Pedidos\Pedidos automáticos,LIVE,GetApiLiveQueryData,VentasPedidosNovedadesParaPedidosModel(46),46
+20326,Historial de generación de pedidos,Ventas,Ventas\Consultas\Pedidos\Pedidos automáticos,LIVE,GetApiLiveQueryData,VentasPedidosGeneracionDePedidosModel(37),37
+20372,Pendientes de generar,Ventas,Ventas\Consultas\Pedidos\Pedidos automáticos,LIVE,GetApiLiveQueryData,VentasPedidosPendientesDeGenerarModel(51),51
+20426,Detalle de modelos,Ventas,Ventas\Consultas\Pedidos\Pedidos automáticos,LIVE,GetApiLiveQueryData,VentasPedidosDetalleDeModelosModel(64),64
+20440,Clientes sin modelo,Ventas,Ventas\Consultas\Pedidos\Pedidos automáticos,LIVE,GetApiLiveQueryData,VentasPedidosClientesSinModeloModel(7),7
+20441,Clientes sin modelo vigente,Ventas,Ventas\Consultas\Pedidos\Pedidos automáticos,LIVE,GetApiLiveQueryData,VentasPedidosAutomaticosClientesBaseModel(59),59
+10348,por Artículo,Ventas,Ventas\Consultas\Precios,LIVE,GetApiLiveQueryData,VentasPreciosPreciosPorArticuloModel(43),43
+12517,Promociones,Ventas,Ventas\Consultas\Precios,LIVE,GetApiLiveQueryData,VentasPreciosPromocionesModel(28),28
+12529,Promociones por sucursal,Ventas,Ventas\Consultas\Precios,LIVE,GetApiLiveQueryData,VentasPromocionesDefinidasPorSucursalesModel(39),39
+12720,Historial de precios,Ventas,Ventas\Consultas\Precios,LIVE,GetApiLiveQueryData,VentasHistorialDePreciosModel(22),22
+12742,Precios vigentes a una fecha,Ventas,Ventas\Consultas\Precios,LIVE,GetApiLiveQueryData,VentasPreciosPreciosVigentesAUnaFechaModel(20),20
+12729,Facturación,Ventas,Ventas\Consultas\Precios\Auditoría,LIVE,GetApiLiveQueryData,VentasAuditoriaAuditoriaDePreciosEnComprobantesModel(29),29
+12734,Cotizaciones,Ventas,Ventas\Consultas\Precios\Auditoría,LIVE,GetApiLiveQueryData,VentasAuditoriaAuditoriaDePreciosEnCotizacionesModel(28),28
+12738,Pedidos,Ventas,Ventas\Consultas\Precios\Auditoría,LIVE,GetApiLiveQueryData,VentasAuditoriaAuditoriaDePreciosEnPedidosModel(27),27
+13183,Detalle de comprobantes,Ventas,Ventas\Consultas\Remitos,LIVE,GetApiLiveQueryData,VentasDetalleDeComprobantesModel(65),65
+14093,Ficha Live de remitos,Ventas,Ventas\Consultas\Remitos,PDF,GetPdf,REMITO(66) LIVE_FN_VentasRemito_ComprobantesRelacionados(8) RENGLONES(17) DIRECCION_ENTREGA_REMITO(14),105
+17963,Pendientes de facturar,Ventas,Ventas\Consultas\Remitos,LIVE,GetApiLiveQueryData,VentasRemitosPendientesDeFacturarModel(88),88
+17964,Electrónicos (C.O.T),Ventas,Ventas\Consultas\Remitos,LIVE,GetApiLiveQueryData,VentasRemitosElectronicos_COTModel(40),40
+17965,Consulta,Ventas,Ventas\Consultas\Remitos,LIVE,GetApiLiveQueryData,VentasRemitosConsultaModel(35),35
+12520,Comprobantes leídos,Ventas,Ventas\Consultas\Tango nexo\Clientes,LIVE,GetApiLiveQueryData,VentasComprobantesLeidosModel(33),33
+12522,Comprobantes pendientes de leer,Ventas,Ventas\Consultas\Tango nexo\Clientes,LIVE,GetApiLiveQueryData,VentasComprobantesPendientesDeLeerModel(30),30
+12553,Clientes que no publican en Tango nexo,Ventas,Ventas\Consultas\Tango nexo\Clientes,LIVE,GetApiLiveQueryData,VentasClientesQueNoPublicanEnTangoNexoModel(23),23
+12554,Clientes que publican en Tango nexo,Ventas,Ventas\Consultas\Tango nexo\Clientes,LIVE,GetApiLiveQueryData,VentasClientesQuePublicanEnTangoNexoModel(23),23
+13106,Pagos no procesados,Ventas,Ventas\Consultas\Tango nexo\Cobranzas,LIVE,GetApiLiveQueryData,VentasPagosEnLineaNoProcesadosModel(39),39
+13112,Solicitudes de pago electrónico,Ventas,Ventas\Consultas\Tango nexo\Cobranzas,LIVE,GetApiLiveQueryData,VentasSolicitudesDePagoElectronicoModel(32),32
+12716,Ordenes,Ventas,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,LIVE,GetApiLiveQueryData,VentasOrdenesModel(79),79
+12813,Pagos,Ventas,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,LIVE,GetApiLiveQueryData,VentasPedidosDeTangoTiendasPagosDeordenesDePedidoModel(42),42
+19912,Ordenes pendientes de facturar,Ventas,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,LIVE,GetApiLiveQueryData,VentasOrdenesPendientesDeFacturarModel(64),64
+19914,Ordenes pendientes de remitir,Ventas,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,LIVE,GetApiLiveQueryData,VentasOrdenesPendientesDeRemitirModel(66),66
+19924,Detalle de ordenes pendientes de facturar,Ventas,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,LIVE,GetApiLiveQueryData,VentasDetalleOrdenesPendientesDeFacturarModel(67),67
+19926,Detalle de ordenes pendientes de remitir,Ventas,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,LIVE,GetApiLiveQueryData,VentasDetalleOrdenesPendientesDeRemitirModel(67),67
+19928,Seguimiento de ordenes detallado,Ventas,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,LIVE,GetApiLiveQueryData,VentasSeguimientoDeOrdenesDetalladoModel(73),73
+19930,Ordenes por tienda,Ventas,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,LIVE,GetApiLiveQueryData,VentasOrdenesPorTiendaModel(6),6
+19932,Detalle de ordenes,Ventas,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,LIVE,GetApiLiveQueryData,VentasDetalleDeOrdenesDeTangoTiendasModel(93),93
+20190,Ordenes canceladas,Ventas,Ventas\Consultas\Tango nexo\Pedidos de Tango Tiendas,LIVE,GetApiLiveQueryData,VentasOrdenesCanceladasModel(33),33
+19845,Pedidos,Ventas,Ventas\Pedidos,CRUD,Get GetById GetByFilter,AXV_PEDIDO(82),82
+12289,Modelos de pedidos,Ventas,Ventas\Pedidos\Pedidos automáticos,CRUD,Get GetById GetByFilter,MODELO_PEDIDO(37) KitVariableSelectorDto(15) KitVariableDetailDto(6) MODELO_PEDIDO_RENGLON(11) MODELO_PEDIDO_DESCRIPCION_ADICIONAL(4) MODELO_PEDIDO_CLIENTE(5),78
+12290,Novedades para pedidos,Ventas,Ventas\Pedidos\Pedidos automáticos,CRUD,Get GetById GetByFilter,AXV_NOVEDAD_PEDIDO(31),31

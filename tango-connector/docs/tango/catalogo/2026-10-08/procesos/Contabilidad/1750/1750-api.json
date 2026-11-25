@@ -1,0 +1,303 @@
+{
+  "title": "Generación de asientos resumen",
+  "moduleId": 6,
+  "paths": [
+    {
+      "title": "Process",
+      "name": "Api/Process",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"GeneracionAsientosResumenApiParams\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"properties\": {\r\n    \"SeleccionRango\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"FechaDesde\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FechaHasta\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"EJERCICIO_DESDE\": {\r\n      \"oneOf\": [\r\n        {\r\n          \"type\": \"null\"\r\n        },\r\n        {\r\n          \"$ref\": \"#/definitions/EJERCICIO\"\r\n        }\r\n      ]\r\n    },\r\n    \"EJERCICIO_HASTA\": {\r\n      \"oneOf\": [\r\n        {\r\n          \"type\": \"null\"\r\n        },\r\n        {\r\n          \"$ref\": \"#/definitions/EJERCICIO\"\r\n        }\r\n      ]\r\n    },\r\n    \"PERIODO_DESDE\": {\r\n      \"oneOf\": [\r\n        {\r\n          \"type\": \"null\"\r\n        },\r\n        {\r\n          \"$ref\": \"#/definitions/PERIODO\"\r\n        }\r\n      ]\r\n    },\r\n    \"PERIODO_HASTA\": {\r\n      \"oneOf\": [\r\n        {\r\n          \"type\": \"null\"\r\n        },\r\n        {\r\n          \"$ref\": \"#/definitions/PERIODO\"\r\n        }\r\n      ]\r\n    },\r\n    \"AsientosContables\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"AsientosExtracontables\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_MONEDA_INGRESO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ValidaApropiacionTotal\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"CalculaCotizacionPromedio\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"TipoGeneracion\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"Periodicidad\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"FechaAProcesar\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"PrincipioOFinSemanal\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"PrincipioOFinQuincenal\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"PrincipioOFinMensual\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"PrincipioOFinPeriodico\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ExcluyeFeriados\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ExcluyeSabados\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ExcluyeDomingos\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"NeteoMovimientos\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"AsociaLeyendasPorDefecto\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"Origenes\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/OrigenAsientoGrid\"\r\n      }\r\n    },\r\n    \"TiposDeAsiento\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TipoAsientoGrid\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"EJERCICIO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"NRO_EJERCICIO\",\r\n        \"DESFE_EJERCICIO\",\r\n        \"HASFE_EJERCICIO\",\r\n        \"ESTADO_EJERCICIO\",\r\n        \"HABILITADO\",\r\n        \"TIPO_NUMERACION_ASIENTOS\",\r\n        \"NRO_ASIENTO_DESDE\",\r\n        \"RESERVA_PRIMER_NUMERO\",\r\n        \"EDITA_NUMERACION_ASIENTO\"\r\n      ],\r\n      \"properties\": {\r\n        \"NRO_EJERCICIO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"DESFE_EJERCICIO\": {\r\n          \"type\": \"string\",\r\n          \"format\": \"date-time\",\r\n          \"minLength\": 1\r\n        },\r\n        \"HASFE_EJERCICIO\": {\r\n          \"type\": \"string\",\r\n          \"format\": \"date-time\",\r\n          \"minLength\": 1\r\n        },\r\n        \"ESTADO_EJERCICIO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        },\r\n        \"HABILITADO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"TIPO_NUMERACION_ASIENTOS\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        },\r\n        \"NRO_ASIENTO_DESDE\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"RESERVA_PRIMER_NUMERO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"EDITA_NUMERACION_ASIENTO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"OBSERVACIONES\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1000,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_EJERCICIO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"PERIODO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"DESFE_PERIODO\",\r\n        \"HASFE_PERIODO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_EJERCICIO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_PERIODO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"NRO_PERIODO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"DESC_PERIODO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 40,\r\n          \"minLength\": 0\r\n        },\r\n        \"DESFE_PERIODO\": {\r\n          \"type\": \"string\",\r\n          \"format\": \"date-time\",\r\n          \"minLength\": 1\r\n        },\r\n        \"HASFE_PERIODO\": {\r\n          \"type\": \"string\",\r\n          \"format\": \"date-time\",\r\n          \"minLength\": 1\r\n        },\r\n        \"DESFE_HABILITADO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"format\": \"date-time\"\r\n        },\r\n        \"HASFE_HABILITADO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"format\": \"date-time\"\r\n        },\r\n        \"OBSERVACIONES\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1000,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"OrigenAsientoGrid\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"Origen\",\r\n        \"ID_TIPO_ASIENTO\"\r\n      ],\r\n      \"properties\": {\r\n        \"Origen\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"ID_TIPO_ASIENTO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"TipoAsientoGrid\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_TIPO_ASIENTO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"Codigo\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"Descripcion\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"Agrupacion\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"CHECK\": {\r\n          \"type\": \"boolean\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class EJERCICIO\n    {\n        [Newtonsoft.Json.JsonProperty(\"NRO_EJERCICIO\", Required = Newtonsoft.Json.Required.Always)]\n        public int NRO_EJERCICIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESFE_EJERCICIO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public System.DateTimeOffset DESFE_EJERCICIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HASFE_EJERCICIO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public System.DateTimeOffset HASFE_EJERCICIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ESTADO_EJERCICIO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string ESTADO_EJERCICIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_NUMERACION_ASIENTOS\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string TIPO_NUMERACION_ASIENTOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_ASIENTO_DESDE\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal NRO_ASIENTO_DESDE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"RESERVA_PRIMER_NUMERO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string RESERVA_PRIMER_NUMERO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EDITA_NUMERACION_ASIENTO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string EDITA_NUMERACION_ASIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_EJERCICIO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_EJERCICIO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class PERIODO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_EJERCICIO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_EJERCICIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERIODO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERIODO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_PERIODO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int NRO_PERIODO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_PERIODO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_PERIODO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESFE_PERIODO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public System.DateTimeOffset DESFE_PERIODO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HASFE_PERIODO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public System.DateTimeOffset HASFE_PERIODO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESFE_HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? DESFE_HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HASFE_HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? HASFE_HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class OrigenAsientoGrid\n    {\n        [Newtonsoft.Json.JsonProperty(\"Origen\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string Origen { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_ASIENTO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_TIPO_ASIENTO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TipoAsientoGrid\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_ASIENTO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TIPO_ASIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Codigo\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Codigo { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Descripcion\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Descripcion { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Agrupacion\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Agrupacion { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CHECK\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool CHECK { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GeneracionAsientosResumenApiParams\n    {\n        [Newtonsoft.Json.JsonProperty(\"SeleccionRango\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string SeleccionRango { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FechaDesde\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FechaDesde { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FechaHasta\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FechaHasta { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EJERCICIO_DESDE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public EJERCICIO EJERCICIO_DESDE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EJERCICIO_HASTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public EJERCICIO EJERCICIO_HASTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERIODO_DESDE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public PERIODO PERIODO_DESDE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERIODO_HASTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public PERIODO PERIODO_HASTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AsientosContables\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool AsientosContables { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AsientosExtracontables\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool AsientosExtracontables { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA_INGRESO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MONEDA_INGRESO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ValidaApropiacionTotal\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ValidaApropiacionTotal { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CalculaCotizacionPromedio\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool CalculaCotizacionPromedio { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TipoGeneracion\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string TipoGeneracion { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Periodicidad\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Periodicidad { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FechaAProcesar\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FechaAProcesar { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrincipioOFinSemanal\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string PrincipioOFinSemanal { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrincipioOFinQuincenal\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string PrincipioOFinQuincenal { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrincipioOFinMensual\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string PrincipioOFinMensual { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrincipioOFinPeriodico\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string PrincipioOFinPeriodico { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ExcluyeFeriados\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ExcluyeFeriados { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ExcluyeSabados\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ExcluyeSabados { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ExcluyeDomingos\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ExcluyeDomingos { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NeteoMovimientos\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool NeteoMovimientos { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AsociaLeyendasPorDefecto\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool AsociaLeyendasPorDefecto { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Origenes\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<OrigenAsientoGrid> Origenes { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TiposDeAsiento\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TipoAsientoGrid> TiposDeAsiento { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface EJERCICIO {\n    NRO_EJERCICIO: number;\n    DESFE_EJERCICIO: Date;\n    HASFE_EJERCICIO: Date;\n    ESTADO_EJERCICIO: string;\n    HABILITADO: string;\n    TIPO_NUMERACION_ASIENTOS: string;\n    NRO_ASIENTO_DESDE: number;\n    RESERVA_PRIMER_NUMERO: string;\n    EDITA_NUMERACION_ASIENTO: string;\n    OBSERVACIONES: string | undefined;\n    ID_EJERCICIO: number;\n}\n\nexport interface PERIODO {\n    ID_EJERCICIO: number;\n    ID_PERIODO: number;\n    NRO_PERIODO: number;\n    DESC_PERIODO: string | undefined;\n    DESFE_PERIODO: Date;\n    HASFE_PERIODO: Date;\n    DESFE_HABILITADO: Date | undefined;\n    HASFE_HABILITADO: Date | undefined;\n    OBSERVACIONES: string | undefined;\n}\n\nexport interface OrigenAsientoGrid {\n    Origen: string;\n    ID_TIPO_ASIENTO: number;\n}\n\nexport interface TipoAsientoGrid {\n    ID_TIPO_ASIENTO: number;\n    Codigo: string | undefined;\n    Descripcion: string | undefined;\n    Agrupacion: string | undefined;\n    CHECK: boolean;\n}\n\nexport interface GeneracionAsientosResumenApiParams {\n    SeleccionRango: string | undefined;\n    FechaDesde: Date | undefined;\n    FechaHasta: Date | undefined;\n    EJERCICIO_DESDE: EJERCICIO | undefined;\n    EJERCICIO_HASTA: EJERCICIO | undefined;\n    PERIODO_DESDE: PERIODO | undefined;\n    PERIODO_HASTA: PERIODO | undefined;\n    AsientosContables: boolean;\n    AsientosExtracontables: boolean;\n    ID_MONEDA_INGRESO: number | undefined;\n    ValidaApropiacionTotal: boolean;\n    CalculaCotizacionPromedio: boolean;\n    TipoGeneracion: string | undefined;\n    Periodicidad: string | undefined;\n    FechaAProcesar: Date | undefined;\n    PrincipioOFinSemanal: string | undefined;\n    PrincipioOFinQuincenal: string | undefined;\n    PrincipioOFinMensual: string | undefined;\n    PrincipioOFinPeriodico: string | undefined;\n    ExcluyeFeriados: boolean;\n    ExcluyeSabados: boolean;\n    ExcluyeDomingos: boolean;\n    NeteoMovimientos: boolean;\n    AsociaLeyendasPorDefecto: boolean;\n    Origenes: OrigenAsientoGrid[] | undefined;\n    TiposDeAsiento: TipoAsientoGrid[] | undefined;\n}",
+          "example": {
+            "SeleccionRango": null,
+            "FechaDesde": "0001-01-01T00:00:00",
+            "FechaHasta": "0001-01-01T00:00:00",
+            "EJERCICIO_DESDE": {
+              "NRO_EJERCICIO": 0,
+              "DESFE_EJERCICIO": "0001-01-01T00:00:00",
+              "HASFE_EJERCICIO": "0001-01-01T00:00:00",
+              "ESTADO_EJERCICIO": null,
+              "HABILITADO": null,
+              "TIPO_NUMERACION_ASIENTOS": null,
+              "NRO_ASIENTO_DESDE": 0,
+              "RESERVA_PRIMER_NUMERO": null,
+              "EDITA_NUMERACION_ASIENTO": null,
+              "OBSERVACIONES": null,
+              "ID_EJERCICIO": 0
+            },
+            "EJERCICIO_HASTA": {
+              "NRO_EJERCICIO": 0,
+              "DESFE_EJERCICIO": "0001-01-01T00:00:00",
+              "HASFE_EJERCICIO": "0001-01-01T00:00:00",
+              "ESTADO_EJERCICIO": null,
+              "HABILITADO": null,
+              "TIPO_NUMERACION_ASIENTOS": null,
+              "NRO_ASIENTO_DESDE": 0,
+              "RESERVA_PRIMER_NUMERO": null,
+              "EDITA_NUMERACION_ASIENTO": null,
+              "OBSERVACIONES": null,
+              "ID_EJERCICIO": 0
+            },
+            "PERIODO_DESDE": {
+              "ID_EJERCICIO": 0,
+              "ID_PERIODO": 0,
+              "NRO_PERIODO": 0,
+              "DESC_PERIODO": null,
+              "DESFE_PERIODO": "0001-01-01T00:00:00",
+              "HASFE_PERIODO": "0001-01-01T00:00:00",
+              "DESFE_HABILITADO": "0001-01-01T00:00:00",
+              "HASFE_HABILITADO": "0001-01-01T00:00:00",
+              "OBSERVACIONES": null
+            },
+            "PERIODO_HASTA": {
+              "ID_EJERCICIO": 0,
+              "ID_PERIODO": 0,
+              "NRO_PERIODO": 0,
+              "DESC_PERIODO": null,
+              "DESFE_PERIODO": "0001-01-01T00:00:00",
+              "HASFE_PERIODO": "0001-01-01T00:00:00",
+              "DESFE_HABILITADO": "0001-01-01T00:00:00",
+              "HASFE_HABILITADO": "0001-01-01T00:00:00",
+              "OBSERVACIONES": null
+            },
+            "AsientosContables": false,
+            "AsientosExtracontables": false,
+            "ID_MONEDA_INGRESO": 0,
+            "ValidaApropiacionTotal": false,
+            "CalculaCotizacionPromedio": false,
+            "TipoGeneracion": null,
+            "Periodicidad": null,
+            "FechaAProcesar": "0001-01-01T00:00:00",
+            "PrincipioOFinSemanal": null,
+            "PrincipioOFinQuincenal": null,
+            "PrincipioOFinMensual": null,
+            "PrincipioOFinPeriodico": null,
+            "ExcluyeFeriados": false,
+            "ExcluyeSabados": false,
+            "ExcluyeDomingos": false,
+            "NeteoMovimientos": false,
+            "AsociaLeyendasPorDefecto": false,
+            "Origenes": [
+              {
+                "Origen": null,
+                "ID_TIPO_ASIENTO": 0
+              }
+            ],
+            "TiposDeAsiento": [
+              {
+                "ID_TIPO_ASIENTO": 0,
+                "Codigo": null,
+                "Descripcion": null,
+                "Agrupacion": null,
+                "CHECK": false
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Custom",
+      "name": "Api/Custom",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "method",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"GeneracionAsientosResumenApiParams\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"properties\": {\r\n    \"SeleccionRango\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"FechaDesde\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FechaHasta\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"EJERCICIO_DESDE\": {\r\n      \"oneOf\": [\r\n        {\r\n          \"type\": \"null\"\r\n        },\r\n        {\r\n          \"$ref\": \"#/definitions/EJERCICIO\"\r\n        }\r\n      ]\r\n    },\r\n    \"EJERCICIO_HASTA\": {\r\n      \"oneOf\": [\r\n        {\r\n          \"type\": \"null\"\r\n        },\r\n        {\r\n          \"$ref\": \"#/definitions/EJERCICIO\"\r\n        }\r\n      ]\r\n    },\r\n    \"PERIODO_DESDE\": {\r\n      \"oneOf\": [\r\n        {\r\n          \"type\": \"null\"\r\n        },\r\n        {\r\n          \"$ref\": \"#/definitions/PERIODO\"\r\n        }\r\n      ]\r\n    },\r\n    \"PERIODO_HASTA\": {\r\n      \"oneOf\": [\r\n        {\r\n          \"type\": \"null\"\r\n        },\r\n        {\r\n          \"$ref\": \"#/definitions/PERIODO\"\r\n        }\r\n      ]\r\n    },\r\n    \"AsientosContables\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"AsientosExtracontables\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_MONEDA_INGRESO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ValidaApropiacionTotal\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"CalculaCotizacionPromedio\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"TipoGeneracion\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"Periodicidad\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"FechaAProcesar\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"PrincipioOFinSemanal\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"PrincipioOFinQuincenal\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"PrincipioOFinMensual\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"PrincipioOFinPeriodico\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"ExcluyeFeriados\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ExcluyeSabados\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ExcluyeDomingos\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"NeteoMovimientos\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"AsociaLeyendasPorDefecto\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"Origenes\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/OrigenAsientoGrid\"\r\n      }\r\n    },\r\n    \"TiposDeAsiento\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TipoAsientoGrid\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"EJERCICIO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"NRO_EJERCICIO\",\r\n        \"DESFE_EJERCICIO\",\r\n        \"HASFE_EJERCICIO\",\r\n        \"ESTADO_EJERCICIO\",\r\n        \"HABILITADO\",\r\n        \"TIPO_NUMERACION_ASIENTOS\",\r\n        \"NRO_ASIENTO_DESDE\",\r\n        \"RESERVA_PRIMER_NUMERO\",\r\n        \"EDITA_NUMERACION_ASIENTO\"\r\n      ],\r\n      \"properties\": {\r\n        \"NRO_EJERCICIO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"DESFE_EJERCICIO\": {\r\n          \"type\": \"string\",\r\n          \"format\": \"date-time\",\r\n          \"minLength\": 1\r\n        },\r\n        \"HASFE_EJERCICIO\": {\r\n          \"type\": \"string\",\r\n          \"format\": \"date-time\",\r\n          \"minLength\": 1\r\n        },\r\n        \"ESTADO_EJERCICIO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        },\r\n        \"HABILITADO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"TIPO_NUMERACION_ASIENTOS\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        },\r\n        \"NRO_ASIENTO_DESDE\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"RESERVA_PRIMER_NUMERO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"EDITA_NUMERACION_ASIENTO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"OBSERVACIONES\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1000,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_EJERCICIO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"PERIODO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"DESFE_PERIODO\",\r\n        \"HASFE_PERIODO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_EJERCICIO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_PERIODO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"NRO_PERIODO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"DESC_PERIODO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 40,\r\n          \"minLength\": 0\r\n        },\r\n        \"DESFE_PERIODO\": {\r\n          \"type\": \"string\",\r\n          \"format\": \"date-time\",\r\n          \"minLength\": 1\r\n        },\r\n        \"HASFE_PERIODO\": {\r\n          \"type\": \"string\",\r\n          \"format\": \"date-time\",\r\n          \"minLength\": 1\r\n        },\r\n        \"DESFE_HABILITADO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"format\": \"date-time\"\r\n        },\r\n        \"HASFE_HABILITADO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"format\": \"date-time\"\r\n        },\r\n        \"OBSERVACIONES\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1000,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"OrigenAsientoGrid\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"Origen\",\r\n        \"ID_TIPO_ASIENTO\"\r\n      ],\r\n      \"properties\": {\r\n        \"Origen\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"ID_TIPO_ASIENTO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"TipoAsientoGrid\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_TIPO_ASIENTO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"Codigo\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"Descripcion\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"Agrupacion\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"CHECK\": {\r\n          \"type\": \"boolean\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class EJERCICIO\n    {\n        [Newtonsoft.Json.JsonProperty(\"NRO_EJERCICIO\", Required = Newtonsoft.Json.Required.Always)]\n        public int NRO_EJERCICIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESFE_EJERCICIO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public System.DateTimeOffset DESFE_EJERCICIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HASFE_EJERCICIO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public System.DateTimeOffset HASFE_EJERCICIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ESTADO_EJERCICIO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string ESTADO_EJERCICIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_NUMERACION_ASIENTOS\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string TIPO_NUMERACION_ASIENTOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_ASIENTO_DESDE\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal NRO_ASIENTO_DESDE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"RESERVA_PRIMER_NUMERO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string RESERVA_PRIMER_NUMERO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EDITA_NUMERACION_ASIENTO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string EDITA_NUMERACION_ASIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_EJERCICIO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_EJERCICIO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class PERIODO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_EJERCICIO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_EJERCICIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERIODO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERIODO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_PERIODO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int NRO_PERIODO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_PERIODO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_PERIODO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESFE_PERIODO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public System.DateTimeOffset DESFE_PERIODO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HASFE_PERIODO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public System.DateTimeOffset HASFE_PERIODO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESFE_HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? DESFE_HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HASFE_HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? HASFE_HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class OrigenAsientoGrid\n    {\n        [Newtonsoft.Json.JsonProperty(\"Origen\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string Origen { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_ASIENTO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_TIPO_ASIENTO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TipoAsientoGrid\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_ASIENTO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TIPO_ASIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Codigo\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Codigo { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Descripcion\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Descripcion { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Agrupacion\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Agrupacion { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CHECK\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool CHECK { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GeneracionAsientosResumenApiParams\n    {\n        [Newtonsoft.Json.JsonProperty(\"SeleccionRango\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string SeleccionRango { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FechaDesde\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FechaDesde { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FechaHasta\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FechaHasta { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EJERCICIO_DESDE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public EJERCICIO EJERCICIO_DESDE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EJERCICIO_HASTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public EJERCICIO EJERCICIO_HASTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERIODO_DESDE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public PERIODO PERIODO_DESDE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERIODO_HASTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public PERIODO PERIODO_HASTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AsientosContables\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool AsientosContables { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AsientosExtracontables\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool AsientosExtracontables { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA_INGRESO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MONEDA_INGRESO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ValidaApropiacionTotal\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ValidaApropiacionTotal { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CalculaCotizacionPromedio\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool CalculaCotizacionPromedio { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TipoGeneracion\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string TipoGeneracion { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Periodicidad\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Periodicidad { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FechaAProcesar\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FechaAProcesar { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrincipioOFinSemanal\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string PrincipioOFinSemanal { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrincipioOFinQuincenal\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string PrincipioOFinQuincenal { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrincipioOFinMensual\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string PrincipioOFinMensual { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrincipioOFinPeriodico\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string PrincipioOFinPeriodico { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ExcluyeFeriados\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ExcluyeFeriados { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ExcluyeSabados\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ExcluyeSabados { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ExcluyeDomingos\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ExcluyeDomingos { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NeteoMovimientos\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool NeteoMovimientos { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AsociaLeyendasPorDefecto\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool AsociaLeyendasPorDefecto { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Origenes\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<OrigenAsientoGrid> Origenes { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TiposDeAsiento\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TipoAsientoGrid> TiposDeAsiento { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface EJERCICIO {\n    NRO_EJERCICIO: number;\n    DESFE_EJERCICIO: Date;\n    HASFE_EJERCICIO: Date;\n    ESTADO_EJERCICIO: string;\n    HABILITADO: string;\n    TIPO_NUMERACION_ASIENTOS: string;\n    NRO_ASIENTO_DESDE: number;\n    RESERVA_PRIMER_NUMERO: string;\n    EDITA_NUMERACION_ASIENTO: string;\n    OBSERVACIONES: string | undefined;\n    ID_EJERCICIO: number;\n}\n\nexport interface PERIODO {\n    ID_EJERCICIO: number;\n    ID_PERIODO: number;\n    NRO_PERIODO: number;\n    DESC_PERIODO: string | undefined;\n    DESFE_PERIODO: Date;\n    HASFE_PERIODO: Date;\n    DESFE_HABILITADO: Date | undefined;\n    HASFE_HABILITADO: Date | undefined;\n    OBSERVACIONES: string | undefined;\n}\n\nexport interface OrigenAsientoGrid {\n    Origen: string;\n    ID_TIPO_ASIENTO: number;\n}\n\nexport interface TipoAsientoGrid {\n    ID_TIPO_ASIENTO: number;\n    Codigo: string | undefined;\n    Descripcion: string | undefined;\n    Agrupacion: string | undefined;\n    CHECK: boolean;\n}\n\nexport interface GeneracionAsientosResumenApiParams {\n    SeleccionRango: string | undefined;\n    FechaDesde: Date | undefined;\n    FechaHasta: Date | undefined;\n    EJERCICIO_DESDE: EJERCICIO | undefined;\n    EJERCICIO_HASTA: EJERCICIO | undefined;\n    PERIODO_DESDE: PERIODO | undefined;\n    PERIODO_HASTA: PERIODO | undefined;\n    AsientosContables: boolean;\n    AsientosExtracontables: boolean;\n    ID_MONEDA_INGRESO: number | undefined;\n    ValidaApropiacionTotal: boolean;\n    CalculaCotizacionPromedio: boolean;\n    TipoGeneracion: string | undefined;\n    Periodicidad: string | undefined;\n    FechaAProcesar: Date | undefined;\n    PrincipioOFinSemanal: string | undefined;\n    PrincipioOFinQuincenal: string | undefined;\n    PrincipioOFinMensual: string | undefined;\n    PrincipioOFinPeriodico: string | undefined;\n    ExcluyeFeriados: boolean;\n    ExcluyeSabados: boolean;\n    ExcluyeDomingos: boolean;\n    NeteoMovimientos: boolean;\n    AsociaLeyendasPorDefecto: boolean;\n    Origenes: OrigenAsientoGrid[] | undefined;\n    TiposDeAsiento: TipoAsientoGrid[] | undefined;\n}",
+          "example": {
+            "SeleccionRango": null,
+            "FechaDesde": "0001-01-01T00:00:00",
+            "FechaHasta": "0001-01-01T00:00:00",
+            "EJERCICIO_DESDE": {
+              "NRO_EJERCICIO": 0,
+              "DESFE_EJERCICIO": "0001-01-01T00:00:00",
+              "HASFE_EJERCICIO": "0001-01-01T00:00:00",
+              "ESTADO_EJERCICIO": null,
+              "HABILITADO": null,
+              "TIPO_NUMERACION_ASIENTOS": null,
+              "NRO_ASIENTO_DESDE": 0,
+              "RESERVA_PRIMER_NUMERO": null,
+              "EDITA_NUMERACION_ASIENTO": null,
+              "OBSERVACIONES": null,
+              "ID_EJERCICIO": 0
+            },
+            "EJERCICIO_HASTA": {
+              "NRO_EJERCICIO": 0,
+              "DESFE_EJERCICIO": "0001-01-01T00:00:00",
+              "HASFE_EJERCICIO": "0001-01-01T00:00:00",
+              "ESTADO_EJERCICIO": null,
+              "HABILITADO": null,
+              "TIPO_NUMERACION_ASIENTOS": null,
+              "NRO_ASIENTO_DESDE": 0,
+              "RESERVA_PRIMER_NUMERO": null,
+              "EDITA_NUMERACION_ASIENTO": null,
+              "OBSERVACIONES": null,
+              "ID_EJERCICIO": 0
+            },
+            "PERIODO_DESDE": {
+              "ID_EJERCICIO": 0,
+              "ID_PERIODO": 0,
+              "NRO_PERIODO": 0,
+              "DESC_PERIODO": null,
+              "DESFE_PERIODO": "0001-01-01T00:00:00",
+              "HASFE_PERIODO": "0001-01-01T00:00:00",
+              "DESFE_HABILITADO": "0001-01-01T00:00:00",
+              "HASFE_HABILITADO": "0001-01-01T00:00:00",
+              "OBSERVACIONES": null
+            },
+            "PERIODO_HASTA": {
+              "ID_EJERCICIO": 0,
+              "ID_PERIODO": 0,
+              "NRO_PERIODO": 0,
+              "DESC_PERIODO": null,
+              "DESFE_PERIODO": "0001-01-01T00:00:00",
+              "HASFE_PERIODO": "0001-01-01T00:00:00",
+              "DESFE_HABILITADO": "0001-01-01T00:00:00",
+              "HASFE_HABILITADO": "0001-01-01T00:00:00",
+              "OBSERVACIONES": null
+            },
+            "AsientosContables": false,
+            "AsientosExtracontables": false,
+            "ID_MONEDA_INGRESO": 0,
+            "ValidaApropiacionTotal": false,
+            "CalculaCotizacionPromedio": false,
+            "TipoGeneracion": null,
+            "Periodicidad": null,
+            "FechaAProcesar": "0001-01-01T00:00:00",
+            "PrincipioOFinSemanal": null,
+            "PrincipioOFinQuincenal": null,
+            "PrincipioOFinMensual": null,
+            "PrincipioOFinPeriodico": null,
+            "ExcluyeFeriados": false,
+            "ExcluyeSabados": false,
+            "ExcluyeDomingos": false,
+            "NeteoMovimientos": false,
+            "AsociaLeyendasPorDefecto": false,
+            "Origenes": [
+              {
+                "Origen": null,
+                "ID_TIPO_ASIENTO": 0
+              }
+            ],
+            "TiposDeAsiento": [
+              {
+                "ID_TIPO_ASIENTO": 0,
+                "Codigo": null,
+                "Descripcion": null,
+                "Agrupacion": null,
+                "CHECK": false
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "GeneracionAsientosResumenApiParams": [
+      "SeleccionRango",
+      "FechaDesde",
+      "FechaHasta",
+      "EJERCICIO_DESDE",
+      "EJERCICIO_HASTA",
+      "PERIODO_DESDE",
+      "PERIODO_HASTA",
+      "AsientosContables",
+      "AsientosExtracontables",
+      "ID_MONEDA_INGRESO",
+      "ValidaApropiacionTotal",
+      "CalculaCotizacionPromedio",
+      "TipoGeneracion",
+      "Origenes",
+      "TiposDeAsiento",
+      "Periodicidad",
+      "FechaAProcesar",
+      "PrincipioOFinSemanal",
+      "PrincipioOFinQuincenal",
+      "PrincipioOFinMensual",
+      "PrincipioOFinPeriodico",
+      "ExcluyeFeriados",
+      "ExcluyeSabados",
+      "ExcluyeDomingos",
+      "NeteoMovimientos",
+      "AsociaLeyendasPorDefecto"
+    ],
+    "EJERCICIO": [
+      "NRO_EJERCICIO",
+      "DESFE_EJERCICIO",
+      "HASFE_EJERCICIO",
+      "ESTADO_EJERCICIO",
+      "HABILITADO",
+      "TIPO_NUMERACION_ASIENTOS",
+      "NRO_ASIENTO_DESDE",
+      "RESERVA_PRIMER_NUMERO",
+      "EDITA_NUMERACION_ASIENTO",
+      "OBSERVACIONES"
+    ],
+    "PERIODO": [
+      "ID_EJERCICIO",
+      "NRO_PERIODO",
+      "DESC_PERIODO",
+      "DESFE_PERIODO",
+      "HASFE_PERIODO",
+      "DESFE_HABILITADO",
+      "HASFE_HABILITADO",
+      "OBSERVACIONES"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

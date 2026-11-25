@@ -1,0 +1,616 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_OBRA_SOCIAL_DGI": 1,
+        "coD_OBRA_SOCIAL_DGI": "000000",
+        "desC_OBRA_SOCIAL_DGI": "Ninguna",
+        "roW_VERSION": "AAAAAADPOy4="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 2,
+        "coD_OBRA_SOCIAL_DGI": "000109",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal Jerárquico de la Industria Gráfica de la R.A.",
+        "roW_VERSION": "AAAAAADPOy8="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 3,
+        "coD_OBRA_SOCIAL_DGI": "000208",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal Industria Grafica de la provincia de Córdoba",
+        "roW_VERSION": "AAAAAADPOzA="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 4,
+        "coD_OBRA_SOCIAL_DGI": "000307",
+        "desC_OBRA_SOCIAL_DGI": "OS Portuarios Argentinos de Mar del Plata",
+        "roW_VERSION": "AAAAAADPOzE="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 5,
+        "coD_OBRA_SOCIAL_DGI": "000406",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de Organismos de Control Externo",
+        "roW_VERSION": "AAAAAADPOzI="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 6,
+        "coD_OBRA_SOCIAL_DGI": "000505",
+        "desC_OBRA_SOCIAL_DGI": "OS de Capitanes, Pilotos y Patrones de Pesca",
+        "roW_VERSION": "AAAAAADPOzM="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 7,
+        "coD_OBRA_SOCIAL_DGI": "000604",
+        "desC_OBRA_SOCIAL_DGI": "OS de Agentes de Loterías y Afines de la R.A.",
+        "roW_VERSION": "AAAAAADPOzQ="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 8,
+        "coD_OBRA_SOCIAL_DGI": "000703",
+        "desC_OBRA_SOCIAL_DGI": "Mutual del Personal de Agua y Energía de Mendoza",
+        "roW_VERSION": "AAAAAADPOzU="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 9,
+        "coD_OBRA_SOCIAL_DGI": "000802",
+        "desC_OBRA_SOCIAL_DGI": "OS de Y.P.F.",
+        "roW_VERSION": "AAAAAADPOzY="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 10,
+        "coD_OBRA_SOCIAL_DGI": "000901",
+        "desC_OBRA_SOCIAL_DGI": "OS de la Actividad de Seguros, Reaseguros, Capitalización, Ahorro y Préstamo para la Vivienda",
+        "roW_VERSION": "AAAAAADPOzc="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 11,
+        "coD_OBRA_SOCIAL_DGI": "001003",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de Obras y Servicios Sanitarios",
+        "roW_VERSION": "AAAAAADPOzg="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 12,
+        "coD_OBRA_SOCIAL_DGI": "001102",
+        "desC_OBRA_SOCIAL_DGI": "OS para la Actividad Docente",
+        "roW_VERSION": "AAAAAADPOzk="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 13,
+        "coD_OBRA_SOCIAL_DGI": "001201",
+        "desC_OBRA_SOCIAL_DGI": "OS Personal Ministerio Economía y de Obras y Servicios Públicos",
+        "roW_VERSION": "AAAAAADPOzo="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 14,
+        "coD_OBRA_SOCIAL_DGI": "001300",
+        "desC_OBRA_SOCIAL_DGI": "OS Ferroviaria",
+        "roW_VERSION": "AAAAAADPOzs="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 15,
+        "coD_OBRA_SOCIAL_DGI": "001508",
+        "desC_OBRA_SOCIAL_DGI": "OS Asociación Civil Prosindicato de Amas de Casa de la R.A.",
+        "roW_VERSION": "AAAAAADPOzw="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 16,
+        "coD_OBRA_SOCIAL_DGI": "001607",
+        "desC_OBRA_SOCIAL_DGI": "OS Sindicato Unido Trabajadores Industria de Aguas Gaseosas de la provincia de Sta. Fe",
+        "roW_VERSION": "AAAAAADPOz0="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 17,
+        "coD_OBRA_SOCIAL_DGI": "001706",
+        "desC_OBRA_SOCIAL_DGI": "OS Personal Jerárquico Industria Gráfica y Personal de Agua y Energía de la R.A.",
+        "roW_VERSION": "AAAAAADPOz4="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 18,
+        "coD_OBRA_SOCIAL_DGI": "001805",
+        "desC_OBRA_SOCIAL_DGI": "OS de Legisladores de la Republica Argentina",
+        "roW_VERSION": "AAAAAADPOz8="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 19,
+        "coD_OBRA_SOCIAL_DGI": "001904",
+        "desC_OBRA_SOCIAL_DGI": "OS Federación de Cámaras y Centros Comerciales Zonales de la R.A.",
+        "roW_VERSION": "AAAAAADPO0A="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 20,
+        "coD_OBRA_SOCIAL_DGI": "002006",
+        "desC_OBRA_SOCIAL_DGI": "OS de Vialidad Nacional",
+        "roW_VERSION": "AAAAAADPO0E="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 21,
+        "coD_OBRA_SOCIAL_DGI": "002105",
+        "desC_OBRA_SOCIAL_DGI": "OS Profesionales del Turf de la R.A. (OSPROTURA)",
+        "roW_VERSION": "AAAAAADPO0I="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 22,
+        "coD_OBRA_SOCIAL_DGI": "002204",
+        "desC_OBRA_SOCIAL_DGI": "OS Empleados y Personal Jerárquico del Neumático Argentino G. Year",
+        "roW_VERSION": "AAAAAADPO0M="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 23,
+        "coD_OBRA_SOCIAL_DGI": "002303",
+        "desC_OBRA_SOCIAL_DGI": "OS Personal de Empresas de Limpieza, Servicios y Maestranza de Mendoza",
+        "roW_VERSION": "AAAAAADPO0Q="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 24,
+        "coD_OBRA_SOCIAL_DGI": "100106",
+        "desC_OBRA_SOCIAL_DGI": "OS Personal de la Industria Aceitera Desmotadoras y Afines",
+        "roW_VERSION": "AAAAAADPO0w="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 25,
+        "coD_OBRA_SOCIAL_DGI": "100205",
+        "desC_OBRA_SOCIAL_DGI": "OS de Actores",
+        "roW_VERSION": "AAAAAADPO00="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 26,
+        "coD_OBRA_SOCIAL_DGI": "100304",
+        "desC_OBRA_SOCIAL_DGI": "OS de Técnicos de Vuelo de Líneas Aéreas",
+        "roW_VERSION": "AAAAAADPO04="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 27,
+        "coD_OBRA_SOCIAL_DGI": "100403",
+        "desC_OBRA_SOCIAL_DGI": "OS Personal Superior y Profesional de Empresas Aerocomerciales",
+        "roW_VERSION": "AAAAAADPO08="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 28,
+        "coD_OBRA_SOCIAL_DGI": "100502",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal Aeronáutico",
+        "roW_VERSION": "AAAAAADPO1A="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 29,
+        "coD_OBRA_SOCIAL_DGI": "100601",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal Aeronavegación de Entes Privados",
+        "roW_VERSION": "AAAAAADPO1E="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 30,
+        "coD_OBRA_SOCIAL_DGI": "100700",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal Técnico Aeronáutico",
+        "roW_VERSION": "AAAAAADPO1I="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 31,
+        "coD_OBRA_SOCIAL_DGI": "100809",
+        "desC_OBRA_SOCIAL_DGI": "OS de Aeronavegantes",
+        "roW_VERSION": "AAAAAADPO1M="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 32,
+        "coD_OBRA_SOCIAL_DGI": "100908",
+        "desC_OBRA_SOCIAL_DGI": "OS de Empleados de Agencias de Informes (O.S.E.D.I.)",
+        "roW_VERSION": "AAAAAADPO1Q="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 33,
+        "coD_OBRA_SOCIAL_DGI": "101000",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de Aguas Gaseosas y Afines",
+        "roW_VERSION": "AAAAAADPO1U="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 34,
+        "coD_OBRA_SOCIAL_DGI": "101109",
+        "desC_OBRA_SOCIAL_DGI": "OS Alfajoreros, Reposteros, Pizzeros y Heladeros",
+        "roW_VERSION": "AAAAAADPO1Y="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 35,
+        "coD_OBRA_SOCIAL_DGI": "101208",
+        "desC_OBRA_SOCIAL_DGI": "OS Personal de la Industria de la Alimentación",
+        "roW_VERSION": "AAAAAADPO1c="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 36,
+        "coD_OBRA_SOCIAL_DGI": "101307",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de Artes Gráficas del Chaco",
+        "roW_VERSION": "AAAAAADPO1g="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 37,
+        "coD_OBRA_SOCIAL_DGI": "101406",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de Artes Gráficas de Santa Fe",
+        "roW_VERSION": "AAAAAADPO1k="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 38,
+        "coD_OBRA_SOCIAL_DGI": "101505",
+        "desC_OBRA_SOCIAL_DGI": "OS de Artistas de Variedades",
+        "roW_VERSION": "AAAAAADPO1o="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 39,
+        "coD_OBRA_SOCIAL_DGI": "101604",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal del Automóvil Club Argentino",
+        "roW_VERSION": "AAAAAADPO1s="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 40,
+        "coD_OBRA_SOCIAL_DGI": "101703",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal del Azúcar de Calilegua",
+        "roW_VERSION": "AAAAAADPO1w="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 41,
+        "coD_OBRA_SOCIAL_DGI": "101802",
+        "desC_OBRA_SOCIAL_DGI": "OS Personal del Azúcar del Ingenio La Esperanza",
+        "roW_VERSION": "AAAAAADPO10="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 42,
+        "coD_OBRA_SOCIAL_DGI": "101901",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal del Azúcar del Ingenio Ledesma",
+        "roW_VERSION": "AAAAAADPO14="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 43,
+        "coD_OBRA_SOCIAL_DGI": "102003",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal del Azúcar del Ingenio Las Toscas",
+        "roW_VERSION": "AAAAAADPO18="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 44,
+        "coD_OBRA_SOCIAL_DGI": "102102",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal del Azúcar del Ingenio Río Grande",
+        "roW_VERSION": "AAAAAADPO2A="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 45,
+        "coD_OBRA_SOCIAL_DGI": "102201",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal del Azúcar del Ingenio San Isidro",
+        "roW_VERSION": "AAAAAADPO2E="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 46,
+        "coD_OBRA_SOCIAL_DGI": "102300",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal del Azúcar del Ingenio San Martín",
+        "roW_VERSION": "AAAAAADPO2I="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 47,
+        "coD_OBRA_SOCIAL_DGI": "102409",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal del Azúcar de Villa Ocampo",
+        "roW_VERSION": "AAAAAADPO2M="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 48,
+        "coD_OBRA_SOCIAL_DGI": "102607",
+        "desC_OBRA_SOCIAL_DGI": "OS Personal de la Actividad Azucarera Tucumana",
+        "roW_VERSION": "AAAAAADPO2Q="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 49,
+        "coD_OBRA_SOCIAL_DGI": "102706",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de la Industria Azucarera",
+        "roW_VERSION": "AAAAAADPO2U="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 50,
+        "coD_OBRA_SOCIAL_DGI": "102805",
+        "desC_OBRA_SOCIAL_DGI": "OS Bancarios",
+        "roW_VERSION": "AAAAAADPO2Y="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 51,
+        "coD_OBRA_SOCIAL_DGI": "102904",
+        "desC_OBRA_SOCIAL_DGI": "OS Personal de Barracas de Lanas, Cueros y Anexos",
+        "roW_VERSION": "AAAAAADPO2c="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 52,
+        "coD_OBRA_SOCIAL_DGI": "103006",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de la Industria Botonera",
+        "roW_VERSION": "AAAAAADPO2g="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 53,
+        "coD_OBRA_SOCIAL_DGI": "103105",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de la Industria del Calzado",
+        "roW_VERSION": "AAAAAADPO2k="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 54,
+        "coD_OBRA_SOCIAL_DGI": "103204",
+        "desC_OBRA_SOCIAL_DGI": "OS Camioneros y Personal de Transporte Automotor de Cargas",
+        "roW_VERSION": "AAAAAADPO2o="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 55,
+        "coD_OBRA_SOCIAL_DGI": "103303",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de la Junta Nacional de Carnes",
+        "roW_VERSION": "AAAAAADPO2s="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 56,
+        "coD_OBRA_SOCIAL_DGI": "103402",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de Carga y Descarga",
+        "roW_VERSION": "AAAAAADPO2w="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 57,
+        "coD_OBRA_SOCIAL_DGI": "103600",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal Auxiliar de Casas Particulares",
+        "roW_VERSION": "AAAAAADPO20="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 58,
+        "coD_OBRA_SOCIAL_DGI": "103709",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de la Industria del Caucho",
+        "roW_VERSION": "AAAAAADPO24="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 59,
+        "coD_OBRA_SOCIAL_DGI": "103808",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal del Caucho",
+        "roW_VERSION": "AAAAAADPO28="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 60,
+        "coD_OBRA_SOCIAL_DGI": "103907",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal Industria del Caucho de Santa Fe",
+        "roW_VERSION": "AAAAAADPO3A="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 61,
+        "coD_OBRA_SOCIAL_DGI": "104009",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de Cementerios",
+        "roW_VERSION": "AAAAAADPO3E="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 62,
+        "coD_OBRA_SOCIAL_DGI": "104108",
+        "desC_OBRA_SOCIAL_DGI": "OS de Ceramistas",
+        "roW_VERSION": "AAAAAADPO3I="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 63,
+        "coD_OBRA_SOCIAL_DGI": "104207",
+        "desC_OBRA_SOCIAL_DGI": "OS Personal de la Cerámica, Sanitarios, Porcelanas de Mesa y Afín",
+        "roW_VERSION": "AAAAAADPO3M="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 64,
+        "coD_OBRA_SOCIAL_DGI": "104306",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de la Actividad Cervecera y Afín",
+        "roW_VERSION": "AAAAAADPO3Q="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 65,
+        "coD_OBRA_SOCIAL_DGI": "104405",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal Cinematográfico de Mar del Plata",
+        "roW_VERSION": "AAAAAADPO3U="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 66,
+        "coD_OBRA_SOCIAL_DGI": "104504",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de la Industria Cinematográfica",
+        "roW_VERSION": "AAAAAADPO3Y="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 67,
+        "coD_OBRA_SOCIAL_DGI": "104603",
+        "desC_OBRA_SOCIAL_DGI": "OS de Operadores Cinematográficos",
+        "roW_VERSION": "AAAAAADPO3c="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 68,
+        "coD_OBRA_SOCIAL_DGI": "104702",
+        "desC_OBRA_SOCIAL_DGI": "OS de Colchoneros",
+        "roW_VERSION": "AAAAAADPO3g="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 69,
+        "coD_OBRA_SOCIAL_DGI": "104801",
+        "desC_OBRA_SOCIAL_DGI": "OS Colocadores de Azulejos, Mosaicos, Graniteros, Lustradores y Porcelaneros",
+        "roW_VERSION": "AAAAAADPO3k="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 70,
+        "coD_OBRA_SOCIAL_DGI": "104900",
+        "desC_OBRA_SOCIAL_DGI": "OS de Empleados de Comercio",
+        "roW_VERSION": "AAAAAADPO3o="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 71,
+        "coD_OBRA_SOCIAL_DGI": "105002",
+        "desC_OBRA_SOCIAL_DGI": "OS Conductores Navales (Conductores Fusionados)",
+        "roW_VERSION": "AAAAAADPO3s="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 72,
+        "coD_OBRA_SOCIAL_DGI": "105101",
+        "desC_OBRA_SOCIAL_DGI": "Consignatarios del Mercado General de Hacienda de Avellaneda",
+        "roW_VERSION": "AAAAAADPO3w="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 73,
+        "coD_OBRA_SOCIAL_DGI": "105200",
+        "desC_OBRA_SOCIAL_DGI": "Instituto Servicios Sociales para el Personal Industria de la Construcción",
+        "roW_VERSION": "AAAAAADPO30="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 74,
+        "coD_OBRA_SOCIAL_DGI": "105309",
+        "desC_OBRA_SOCIAL_DGI": "OS Personal Administrativo y Técnico de la Construcción y Afines",
+        "roW_VERSION": "AAAAAADPO34="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 75,
+        "coD_OBRA_SOCIAL_DGI": "105408",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de la Construcción",
+        "roW_VERSION": "AAAAAADPO38="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 76,
+        "coD_OBRA_SOCIAL_DGI": "105507",
+        "desC_OBRA_SOCIAL_DGI": "OS de los Cortadores de la Indumentaria",
+        "roW_VERSION": "AAAAAADPO4A="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 77,
+        "coD_OBRA_SOCIAL_DGI": "105606",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de la Industria del Cuero y Afín",
+        "roW_VERSION": "AAAAAADPO4E="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 78,
+        "coD_OBRA_SOCIAL_DGI": "105705",
+        "desC_OBRA_SOCIAL_DGI": "OS Personal de la Industria del Chacinado y Afín",
+        "roW_VERSION": "AAAAAADPO4I="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 79,
+        "coD_OBRA_SOCIAL_DGI": "105804",
+        "desC_OBRA_SOCIAL_DGI": "OS de Choferes de Camiones",
+        "roW_VERSION": "AAAAAADPO4M="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 80,
+        "coD_OBRA_SOCIAL_DGI": "105903",
+        "desC_OBRA_SOCIAL_DGI": "OS de Choferes Particulares",
+        "roW_VERSION": "AAAAAADPO4Q="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 81,
+        "coD_OBRA_SOCIAL_DGI": "106005",
+        "desC_OBRA_SOCIAL_DGI": "OS Personal de Entidades Deportivas y Civiles",
+        "roW_VERSION": "AAAAAADPO4U="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 82,
+        "coD_OBRA_SOCIAL_DGI": "106104",
+        "desC_OBRA_SOCIAL_DGI": "OS Empleados de Despachantes de Aduana",
+        "roW_VERSION": "AAAAAADPO4Y="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 83,
+        "coD_OBRA_SOCIAL_DGI": "106203",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de Distribuidoras Cinematográfica",
+        "roW_VERSION": "AAAAAADPO4c="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 84,
+        "coD_OBRA_SOCIAL_DGI": "106302",
+        "desC_OBRA_SOCIAL_DGI": "OS de Docentes Particulares",
+        "roW_VERSION": "AAAAAADPO4g="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 85,
+        "coD_OBRA_SOCIAL_DGI": "106401",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de Edificios de Renta y Horizontal de la R.A.",
+        "roW_VERSION": "AAAAAADPO4k="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 86,
+        "coD_OBRA_SOCIAL_DGI": "106500",
+        "desC_OBRA_SOCIAL_DGI": "OS Edificios Rentas y Horizontal de Capital Federal y Gran Buenos Aires",
+        "roW_VERSION": "AAAAAADPO4o="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 87,
+        "coD_OBRA_SOCIAL_DGI": "106609",
+        "desC_OBRA_SOCIAL_DGI": "OS Electricistas Navales",
+        "roW_VERSION": "AAAAAADPO4s="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 88,
+        "coD_OBRA_SOCIAL_DGI": "106708",
+        "desC_OBRA_SOCIAL_DGI": "OS Obreros Empacadores de Fruta Río Negro y Neuquén",
+        "roW_VERSION": "AAAAAADPO4w="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 89,
+        "coD_OBRA_SOCIAL_DGI": "106807",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de la Enseñanza Privada",
+        "roW_VERSION": "AAAAAADPO40="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 90,
+        "coD_OBRA_SOCIAL_DGI": "106906",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de Escribanías Provincia de Buenos Aires",
+        "roW_VERSION": "AAAAAADPO44="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 91,
+        "coD_OBRA_SOCIAL_DGI": "107008",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de Escribanos",
+        "roW_VERSION": "AAAAAADPO48="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 92,
+        "coD_OBRA_SOCIAL_DGI": "107107",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal del Espectáculo Público",
+        "roW_VERSION": "AAAAAADPO5A="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 93,
+        "coD_OBRA_SOCIAL_DGI": "107206",
+        "desC_OBRA_SOCIAL_DGI": "OS Personal Estaciones de Servicio, Garages, Playas Estacionamiento y Lavaderos",
+        "roW_VERSION": "AAAAAADPO5E="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 94,
+        "coD_OBRA_SOCIAL_DGI": "107404",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de Farmacia",
+        "roW_VERSION": "AAAAAADPO5I="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 95,
+        "coD_OBRA_SOCIAL_DGI": "107503",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de la Feria Infantil",
+        "roW_VERSION": "AAAAAADPO5M="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 96,
+        "coD_OBRA_SOCIAL_DGI": "107602",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de Fermolac",
+        "roW_VERSION": "AAAAAADPO5Q="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 97,
+        "coD_OBRA_SOCIAL_DGI": "107701",
+        "desC_OBRA_SOCIAL_DGI": "OS de Ferroviarios",
+        "roW_VERSION": "AAAAAADPO5U="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 98,
+        "coD_OBRA_SOCIAL_DGI": "107800",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de la Industria del Fibrocemento",
+        "roW_VERSION": "AAAAAADPO5Y="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 99,
+        "coD_OBRA_SOCIAL_DGI": "107909",
+        "desC_OBRA_SOCIAL_DGI": "OS del Personal de la Industria Fideera",
+        "roW_VERSION": "AAAAAADPO5c="
+      },
+      {
+        "iD_OBRA_SOCIAL_DGI": 100,
+        "coD_OBRA_SOCIAL_DGI": "108001",
+        "desC_OBRA_SOCIAL_DGI": "OS Personal Industria Forestal de Santiago del Estero",
+        "roW_VERSION": "AAAAAADPO5g="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

@@ -1,0 +1,82 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_AGRUPACION_ASIENTO": 1,
+        "coD_AGRUPACION_ASIENTO": "01",
+        "desC_AGRUPACION_ASIENTO": "Ventas",
+        "roW_VERSION": "AAAAAADOzrg="
+      },
+      {
+        "iD_AGRUPACION_ASIENTO": 2,
+        "coD_AGRUPACION_ASIENTO": "02",
+        "desC_AGRUPACION_ASIENTO": "Fondos",
+        "roW_VERSION": "AAAAAADOzrk="
+      },
+      {
+        "iD_AGRUPACION_ASIENTO": 3,
+        "coD_AGRUPACION_ASIENTO": "03",
+        "desC_AGRUPACION_ASIENTO": "Compras",
+        "roW_VERSION": "AAAAAADOzro="
+      },
+      {
+        "iD_AGRUPACION_ASIENTO": 4,
+        "coD_AGRUPACION_ASIENTO": "04",
+        "desC_AGRUPACION_ASIENTO": "Sueldos",
+        "roW_VERSION": "AAAAAADOzrs="
+      },
+      {
+        "iD_AGRUPACION_ASIENTO": 5,
+        "coD_AGRUPACION_ASIENTO": "05",
+        "desC_AGRUPACION_ASIENTO": "Stock",
+        "roW_VERSION": "AAAAAADOzrw="
+      },
+      {
+        "iD_AGRUPACION_ASIENTO": 6,
+        "coD_AGRUPACION_ASIENTO": "06",
+        "desC_AGRUPACION_ASIENTO": "Resultado por tenencia",
+        "roW_VERSION": "AAAAAADOzr0="
+      },
+      {
+        "iD_AGRUPACION_ASIENTO": 7,
+        "coD_AGRUPACION_ASIENTO": "07",
+        "desC_AGRUPACION_ASIENTO": "Asiento de cierre",
+        "roW_VERSION": "AAAAAADOzr4="
+      },
+      {
+        "iD_AGRUPACION_ASIENTO": 8,
+        "coD_AGRUPACION_ASIENTO": "08",
+        "desC_AGRUPACION_ASIENTO": "Asiento de apertura",
+        "roW_VERSION": "AAAAAADOzr8="
+      },
+      {
+        "iD_AGRUPACION_ASIENTO": 9,
+        "coD_AGRUPACION_ASIENTO": "10",
+        "desC_AGRUPACION_ASIENTO": "Ajuste por inflación",
+        "roW_VERSION": "AAAAAADOzsA="
+      },
+      {
+        "iD_AGRUPACION_ASIENTO": 10,
+        "coD_AGRUPACION_ASIENTO": "11",
+        "desC_AGRUPACION_ASIENTO": "Conversión a moneda extranjera",
+        "roW_VERSION": "AAAAAADOzsE="
+      },
+      {
+        "iD_AGRUPACION_ASIENTO": 11,
+        "coD_AGRUPACION_ASIENTO": "12",
+        "desC_AGRUPACION_ASIENTO": "Resultados",
+        "roW_VERSION": "AAAAAADOzsI="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

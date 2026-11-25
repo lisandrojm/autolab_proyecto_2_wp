@@ -1,0 +1,127 @@
+{
+  "title": "Nómina de cuentas",
+  "moduleId": 10005,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "TesoreriaCuentasNominaDeCuentasModel": [
+      "COD_CUENTA",
+      "ID_CUENTA",
+      "CUENTA",
+      "TIPO_CUENTA",
+      "TIPO",
+      "CUENTA_BANCARIA",
+      "COD_BANCO",
+      "ID_BANCO",
+      "BANCO",
+      "SUCURSAL_BANCO",
+      "NRO_CUENTA_BANCARIA",
+      "CLAVE_BANCARIA_UNICA_CBU",
+      "DIGITO_VERIFICADOR",
+      "COD_TARJETA",
+      "TARJETA",
+      "CUENTA_ASOCIADA",
+      "CTA_CONTABLE",
+      "COD_OPERACION",
+      "OPERACION",
+      "ASOCIA_UNIDADES",
+      "COD_MONEDA",
+      "REPRESENTA_FONDOS",
+      "PORC_RECARGO",
+      "PORC_DE_BONIFICACION",
+      "AGRUPACION",
+      "DESCRIPCION",
+      "MONEDA",
+      "OBSERVACIONES",
+      "HABILITADO_VENTAS",
+      "HABILITADO_COMPRAS",
+      "HABILITADO_TESORERIA",
+      "CONCILIABLE",
+      "EXPORTA",
+      "ID_SBA01",
+      "CAMPOS_ADICIONALES_SBA01"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

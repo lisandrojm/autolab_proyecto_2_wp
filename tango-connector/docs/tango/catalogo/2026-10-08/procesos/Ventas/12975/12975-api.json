@@ -1,0 +1,109 @@
+{
+  "title": "Diferencias con cierres Z",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "VentasDiferenciasConCierresZModel": [
+      "CONTROLADOR_FISCAL",
+      "CIERRE_Z",
+      "FECHA_DE_CIERRE",
+      "HORA_DE_CIERRE",
+      "DIFERENCIA_EN",
+      "VENTAS_DE_LA_EMPRESA",
+      "VENTAS_EN_CIERRE_Z",
+      "CANT_VENTAS_EN_LA_EMPRESA",
+      "CANT_VENTAS_EN_CIERRE_Z",
+      "CREDITOS_EN_LA_EMPRESA",
+      "CREDITOS_EN_CIERRE_Z",
+      "CANT_CREDITOS_EN_LA_EMPRESA",
+      "CANT_CREDITOS_EN_CIERRE_Z",
+      "COD_CAJA",
+      "DESCRIPCION_CAJA",
+      "USUARIO",
+      "TERMINAL"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

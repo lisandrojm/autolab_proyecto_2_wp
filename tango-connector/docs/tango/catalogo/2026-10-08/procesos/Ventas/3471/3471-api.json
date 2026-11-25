@@ -1,0 +1,400 @@
+{
+  "title": "Parámetros de pedidos de Tango Tiendas",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"GVA_PARAMETROS_PEDIDOS_TIENDAS\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"ID_TIENDA\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_TIENDA\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIENDA_CUENTA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int64\"\r\n    },\r\n    \"ID_GVA43\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA23\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA24\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA24_RETIRO_LOCAL\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA01\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA10\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA18\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA81\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_STA22\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_STA11_RECARGO_FINANCIERO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ASIGNA_ARTICULO_DEFECTO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_STA11\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"REEMPLAZA_DESC_ITEM_NEXO_TIENDAS\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"COMPROMETE_STOCK_PEDIDO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"REVISAR_IMPORTE_ORDEN\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"IMPORTE_MAXIMO_ORDEN_SIN_REVISION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"REVISAR_CLIENTE_OCASIONAL_ORDEN\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"REVISA_OCASIONAL_CATEGORIA\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"BUSCAR_CLIENTE_HABITUAL\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"USA_FECHA_ORDEN_EN_FECHA_PEDIDO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"PROVINCIA_ENTREGA_ASUME_CLIENTE\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"PROVINCIA_ASUME_ENTREGA\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"PROVINCIA_ASUME_PARAMETROS_TIENDAS\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"PROVINCIA_ENTREGA_ASUME_PARAMETROS_TIENDAS\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"INCLUYE_CARGO_ENVIO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_STA11_ENVIO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"INCLUYE_PAGO_ADICIONAL\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_STA11_PAGO_ADICIONAL\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_ASIENTO_MODELO_GV\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"ESTADO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"VENDEDOR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"TRANSPORTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"CUENTAS_COBROS\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO\"\r\n      }\r\n    },\r\n    \"TALONARIO_FACTURA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA\"\r\n      }\r\n    },\r\n    \"GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_NEXO_MEDIOS_PAGO_TIENDA\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA01\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_GVA43\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"TIPO_FACTURA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        }\r\n      }\r\n    },\r\n    \"GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_CATEGORIA_IVA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_NEXO_MEDIOS_PAGO_TIENDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_NEXO_MEDIOS_PAGO_TIENDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01 { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA43\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA43 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_FACTURA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string TIPO_FACTURA { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CATEGORIA_IVA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CATEGORIA_IVA { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA_PARAMETROS_PEDIDOS_TIENDAS\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TIENDA\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_TIENDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIENDA_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public long? ID_TIENDA_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA43\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA43 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA23\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA23 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA24\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA24 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA24_RETIRO_LOCAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA24_RETIRO_LOCAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA01\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA01 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA10\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA10 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA18\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA18 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA81\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA81 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA22\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA11_RECARGO_FINANCIERO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA11_RECARGO_FINANCIERO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ASIGNA_ARTICULO_DEFECTO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ASIGNA_ARTICULO_DEFECTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA11\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA11 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"REEMPLAZA_DESC_ITEM_NEXO_TIENDAS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool REEMPLAZA_DESC_ITEM_NEXO_TIENDAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COMPROMETE_STOCK_PEDIDO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool COMPROMETE_STOCK_PEDIDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"REVISAR_IMPORTE_ORDEN\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool REVISAR_IMPORTE_ORDEN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE_MAXIMO_ORDEN_SIN_REVISION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE_MAXIMO_ORDEN_SIN_REVISION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"REVISAR_CLIENTE_OCASIONAL_ORDEN\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool REVISAR_CLIENTE_OCASIONAL_ORDEN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"REVISA_OCASIONAL_CATEGORIA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool REVISA_OCASIONAL_CATEGORIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"BUSCAR_CLIENTE_HABITUAL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool BUSCAR_CLIENTE_HABITUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_FECHA_ORDEN_EN_FECHA_PEDIDO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool USA_FECHA_ORDEN_EN_FECHA_PEDIDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROVINCIA_ENTREGA_ASUME_CLIENTE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PROVINCIA_ENTREGA_ASUME_CLIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROVINCIA_ASUME_ENTREGA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PROVINCIA_ASUME_ENTREGA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROVINCIA_ASUME_PARAMETROS_TIENDAS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PROVINCIA_ASUME_PARAMETROS_TIENDAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROVINCIA_ENTREGA_ASUME_PARAMETROS_TIENDAS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PROVINCIA_ENTREGA_ASUME_PARAMETROS_TIENDAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INCLUYE_CARGO_ENVIO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool INCLUYE_CARGO_ENVIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA11_ENVIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA11_ENVIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INCLUYE_PAGO_ADICIONAL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool INCLUYE_PAGO_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA11_PAGO_ADICIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA11_PAGO_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_MODELO_GV\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_ASIENTO_MODELO_GV { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ESTADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ESTADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VENDEDOR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string VENDEDOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TRANSPORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string TRANSPORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CUENTAS_COBROS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO> CUENTAS_COBROS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TALONARIO_FACTURA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA> TALONARIO_FACTURA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR> GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO {\n    ID_NEXO_MEDIOS_PAGO_TIENDA: number | undefined;\n    ID_SBA01: number | undefined;\n}\n\nexport interface GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA {\n    ID_GVA43: number | undefined;\n    TIPO_FACTURA: string | undefined;\n}\n\nexport interface GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR {\n    ID_CATEGORIA_IVA: number;\n}\n\nexport interface GVA_PARAMETROS_PEDIDOS_TIENDAS {\n    ID_TIENDA: number;\n    ID_TIENDA_CUENTA: number | undefined;\n    ID_GVA43: number | undefined;\n    ID_GVA23: number | undefined;\n    ID_GVA24: number | undefined;\n    ID_GVA24_RETIRO_LOCAL: number | undefined;\n    ID_GVA01: number | undefined;\n    ID_GVA10: number | undefined;\n    ID_GVA18: number | undefined;\n    ID_GVA81: number | undefined;\n    ID_STA22: number | undefined;\n    ID_STA11_RECARGO_FINANCIERO: number | undefined;\n    ASIGNA_ARTICULO_DEFECTO: boolean;\n    ID_STA11: number | undefined;\n    REEMPLAZA_DESC_ITEM_NEXO_TIENDAS: boolean;\n    COMPROMETE_STOCK_PEDIDO: boolean;\n    REVISAR_IMPORTE_ORDEN: boolean;\n    IMPORTE_MAXIMO_ORDEN_SIN_REVISION: number | undefined;\n    REVISAR_CLIENTE_OCASIONAL_ORDEN: boolean;\n    REVISA_OCASIONAL_CATEGORIA: boolean;\n    BUSCAR_CLIENTE_HABITUAL: boolean;\n    USA_FECHA_ORDEN_EN_FECHA_PEDIDO: boolean;\n    PROVINCIA_ENTREGA_ASUME_CLIENTE: boolean;\n    PROVINCIA_ASUME_ENTREGA: boolean;\n    PROVINCIA_ASUME_PARAMETROS_TIENDAS: boolean;\n    PROVINCIA_ENTREGA_ASUME_PARAMETROS_TIENDAS: boolean;\n    INCLUYE_CARGO_ENVIO: boolean;\n    ID_STA11_ENVIO: number | undefined;\n    INCLUYE_PAGO_ADICIONAL: boolean;\n    ID_STA11_PAGO_ADICIONAL: number | undefined;\n    ID_ASIENTO_MODELO_GV: number | undefined;\n    OBSERVACIONES: string | undefined;\n    ESTADO: string | undefined;\n    VENDEDOR: string | undefined;\n    TRANSPORTE: string | undefined;\n    CUENTAS_COBROS: GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO[] | undefined;\n    TALONARIO_FACTURA: GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA[] | undefined;\n    GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR: GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR[] | undefined;\n}",
+          "example": {
+            "ID_TIENDA": 0,
+            "ID_TIENDA_CUENTA": 0,
+            "ID_GVA43": 0,
+            "ESTADO": "A",
+            "VENDEDOR": "O",
+            "ID_GVA23": 0,
+            "TRANSPORTE": "O",
+            "ID_GVA24": 0,
+            "ID_GVA24_RETIRO_LOCAL": 0,
+            "ID_GVA01": 0,
+            "ID_GVA10": 0,
+            "ID_GVA18": 0,
+            "ID_GVA81": 0,
+            "ID_STA22": 0,
+            "ID_STA11_RECARGO_FINANCIERO": 0,
+            "ASIGNA_ARTICULO_DEFECTO": false,
+            "ID_STA11": 0,
+            "REEMPLAZA_DESC_ITEM_NEXO_TIENDAS": false,
+            "COMPROMETE_STOCK_PEDIDO": false,
+            "REVISAR_IMPORTE_ORDEN": false,
+            "IMPORTE_MAXIMO_ORDEN_SIN_REVISION": 0,
+            "REVISAR_CLIENTE_OCASIONAL_ORDEN": false,
+            "REVISA_OCASIONAL_CATEGORIA": false,
+            "BUSCAR_CLIENTE_HABITUAL": true,
+            "USA_FECHA_ORDEN_EN_FECHA_PEDIDO": false,
+            "PROVINCIA_ENTREGA_ASUME_CLIENTE": false,
+            "PROVINCIA_ASUME_ENTREGA": false,
+            "PROVINCIA_ASUME_PARAMETROS_TIENDAS": true,
+            "PROVINCIA_ENTREGA_ASUME_PARAMETROS_TIENDAS": true,
+            "INCLUYE_CARGO_ENVIO": true,
+            "ID_STA11_ENVIO": 0,
+            "INCLUYE_PAGO_ADICIONAL": true,
+            "ID_STA11_PAGO_ADICIONAL": 0,
+            "ID_ASIENTO_MODELO_GV": 0,
+            "OBSERVACIONES": null,
+            "CUENTAS_COBROS": [
+              {
+                "ID_NEXO_MEDIOS_PAGO_TIENDA": 0,
+                "ID_SBA01": 0
+              }
+            ],
+            "TALONARIO_FACTURA": [
+              {
+                "ID_GVA43": 0,
+                "TIPO_FACTURA": null
+              }
+            ],
+            "GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR": [
+              {
+                "ID_CATEGORIA_IVA": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"GVA_PARAMETROS_PEDIDOS_TIENDAS\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"ID_TIENDA\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_TIENDA\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIENDA_CUENTA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int64\"\r\n    },\r\n    \"ID_GVA43\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA23\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA24\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA24_RETIRO_LOCAL\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA01\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA10\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA18\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA81\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_STA22\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_STA11_RECARGO_FINANCIERO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ASIGNA_ARTICULO_DEFECTO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_STA11\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"REEMPLAZA_DESC_ITEM_NEXO_TIENDAS\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"COMPROMETE_STOCK_PEDIDO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"REVISAR_IMPORTE_ORDEN\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"IMPORTE_MAXIMO_ORDEN_SIN_REVISION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"REVISAR_CLIENTE_OCASIONAL_ORDEN\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"REVISA_OCASIONAL_CATEGORIA\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"BUSCAR_CLIENTE_HABITUAL\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"USA_FECHA_ORDEN_EN_FECHA_PEDIDO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"PROVINCIA_ENTREGA_ASUME_CLIENTE\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"PROVINCIA_ASUME_ENTREGA\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"PROVINCIA_ASUME_PARAMETROS_TIENDAS\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"PROVINCIA_ENTREGA_ASUME_PARAMETROS_TIENDAS\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"INCLUYE_CARGO_ENVIO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_STA11_ENVIO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"INCLUYE_PAGO_ADICIONAL\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_STA11_PAGO_ADICIONAL\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_ASIENTO_MODELO_GV\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA_PARAMETROS_PEDIDOS_TIENDAS\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"ESTADO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"VENDEDOR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"TRANSPORTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"CUENTAS_COBROS\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO\"\r\n      }\r\n    },\r\n    \"TALONARIO_FACTURA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA\"\r\n      }\r\n    },\r\n    \"GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_GVA_PARAMETROS_PEDIDOS_TIENDAS\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_GVA_PARAMETROS_PEDIDOS_TIENDAS\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_NEXO_MEDIOS_PAGO_TIENDA\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SBA01\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_GVA_PARAMETROS_PEDIDOS_TIENDAS\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_GVA43\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"TIPO_FACTURA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        }\r\n      }\r\n    },\r\n    \"GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_GVA_PARAMETROS_PEDIDOS_TIENDAS\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_CATEGORIA_IVA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA_PARAMETROS_PEDIDOS_TIENDAS\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_GVA_PARAMETROS_PEDIDOS_TIENDAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_NEXO_MEDIOS_PAGO_TIENDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_NEXO_MEDIOS_PAGO_TIENDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA01\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA01 { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA_PARAMETROS_PEDIDOS_TIENDAS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_GVA_PARAMETROS_PEDIDOS_TIENDAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA43\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA43 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_FACTURA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string TIPO_FACTURA { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA_PARAMETROS_PEDIDOS_TIENDAS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_GVA_PARAMETROS_PEDIDOS_TIENDAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CATEGORIA_IVA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CATEGORIA_IVA { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA_PARAMETROS_PEDIDOS_TIENDAS\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TIENDA\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_TIENDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIENDA_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public long? ID_TIENDA_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA43\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA43 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA23\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA23 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA24\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA24 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA24_RETIRO_LOCAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA24_RETIRO_LOCAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA01\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA01 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA10\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA10 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA18\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA18 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA81\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA81 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA22\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA11_RECARGO_FINANCIERO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA11_RECARGO_FINANCIERO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ASIGNA_ARTICULO_DEFECTO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ASIGNA_ARTICULO_DEFECTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA11\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA11 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"REEMPLAZA_DESC_ITEM_NEXO_TIENDAS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool REEMPLAZA_DESC_ITEM_NEXO_TIENDAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COMPROMETE_STOCK_PEDIDO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool COMPROMETE_STOCK_PEDIDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"REVISAR_IMPORTE_ORDEN\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool REVISAR_IMPORTE_ORDEN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE_MAXIMO_ORDEN_SIN_REVISION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE_MAXIMO_ORDEN_SIN_REVISION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"REVISAR_CLIENTE_OCASIONAL_ORDEN\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool REVISAR_CLIENTE_OCASIONAL_ORDEN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"REVISA_OCASIONAL_CATEGORIA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool REVISA_OCASIONAL_CATEGORIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"BUSCAR_CLIENTE_HABITUAL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool BUSCAR_CLIENTE_HABITUAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_FECHA_ORDEN_EN_FECHA_PEDIDO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool USA_FECHA_ORDEN_EN_FECHA_PEDIDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROVINCIA_ENTREGA_ASUME_CLIENTE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PROVINCIA_ENTREGA_ASUME_CLIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROVINCIA_ASUME_ENTREGA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PROVINCIA_ASUME_ENTREGA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROVINCIA_ASUME_PARAMETROS_TIENDAS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PROVINCIA_ASUME_PARAMETROS_TIENDAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROVINCIA_ENTREGA_ASUME_PARAMETROS_TIENDAS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PROVINCIA_ENTREGA_ASUME_PARAMETROS_TIENDAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INCLUYE_CARGO_ENVIO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool INCLUYE_CARGO_ENVIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA11_ENVIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA11_ENVIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INCLUYE_PAGO_ADICIONAL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool INCLUYE_PAGO_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA11_PAGO_ADICIONAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA11_PAGO_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_MODELO_GV\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_ASIENTO_MODELO_GV { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA_PARAMETROS_PEDIDOS_TIENDAS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_GVA_PARAMETROS_PEDIDOS_TIENDAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ESTADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ESTADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VENDEDOR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string VENDEDOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TRANSPORTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string TRANSPORTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CUENTAS_COBROS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO> CUENTAS_COBROS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TALONARIO_FACTURA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA> TALONARIO_FACTURA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR> GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO {\n    ID_GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO: number;\n    ID_GVA_PARAMETROS_PEDIDOS_TIENDAS: number;\n    ID_NEXO_MEDIOS_PAGO_TIENDA: number | undefined;\n    ID_SBA01: number | undefined;\n}\n\nexport interface GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA {\n    ID_GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA: number;\n    ID_GVA_PARAMETROS_PEDIDOS_TIENDAS: number;\n    ID_GVA43: number | undefined;\n    TIPO_FACTURA: string | undefined;\n}\n\nexport interface GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR {\n    ID_GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR: number;\n    ID_GVA_PARAMETROS_PEDIDOS_TIENDAS: number;\n    ID_CATEGORIA_IVA: number;\n}\n\nexport interface GVA_PARAMETROS_PEDIDOS_TIENDAS {\n    ID_TIENDA: number;\n    ID_TIENDA_CUENTA: number | undefined;\n    ID_GVA43: number | undefined;\n    ID_GVA23: number | undefined;\n    ID_GVA24: number | undefined;\n    ID_GVA24_RETIRO_LOCAL: number | undefined;\n    ID_GVA01: number | undefined;\n    ID_GVA10: number | undefined;\n    ID_GVA18: number | undefined;\n    ID_GVA81: number | undefined;\n    ID_STA22: number | undefined;\n    ID_STA11_RECARGO_FINANCIERO: number | undefined;\n    ASIGNA_ARTICULO_DEFECTO: boolean;\n    ID_STA11: number | undefined;\n    REEMPLAZA_DESC_ITEM_NEXO_TIENDAS: boolean;\n    COMPROMETE_STOCK_PEDIDO: boolean;\n    REVISAR_IMPORTE_ORDEN: boolean;\n    IMPORTE_MAXIMO_ORDEN_SIN_REVISION: number | undefined;\n    REVISAR_CLIENTE_OCASIONAL_ORDEN: boolean;\n    REVISA_OCASIONAL_CATEGORIA: boolean;\n    BUSCAR_CLIENTE_HABITUAL: boolean;\n    USA_FECHA_ORDEN_EN_FECHA_PEDIDO: boolean;\n    PROVINCIA_ENTREGA_ASUME_CLIENTE: boolean;\n    PROVINCIA_ASUME_ENTREGA: boolean;\n    PROVINCIA_ASUME_PARAMETROS_TIENDAS: boolean;\n    PROVINCIA_ENTREGA_ASUME_PARAMETROS_TIENDAS: boolean;\n    INCLUYE_CARGO_ENVIO: boolean;\n    ID_STA11_ENVIO: number | undefined;\n    INCLUYE_PAGO_ADICIONAL: boolean;\n    ID_STA11_PAGO_ADICIONAL: number | undefined;\n    ID_ASIENTO_MODELO_GV: number | undefined;\n    ID_GVA_PARAMETROS_PEDIDOS_TIENDAS: number;\n    OBSERVACIONES: string | undefined;\n    ESTADO: string | undefined;\n    VENDEDOR: string | undefined;\n    TRANSPORTE: string | undefined;\n    CUENTAS_COBROS: GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO[] | undefined;\n    TALONARIO_FACTURA: GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA[] | undefined;\n    GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR: GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR[] | undefined;\n}",
+          "example": {
+            "ID_TIENDA": 0,
+            "ID_TIENDA_CUENTA": 0,
+            "ID_GVA43": 0,
+            "ESTADO": "A",
+            "VENDEDOR": "O",
+            "ID_GVA23": 0,
+            "TRANSPORTE": "O",
+            "ID_GVA24": 0,
+            "ID_GVA24_RETIRO_LOCAL": 0,
+            "ID_GVA01": 0,
+            "ID_GVA10": 0,
+            "ID_GVA18": 0,
+            "ID_GVA81": 0,
+            "ID_STA22": 0,
+            "ID_STA11_RECARGO_FINANCIERO": 0,
+            "ASIGNA_ARTICULO_DEFECTO": false,
+            "ID_STA11": 0,
+            "REEMPLAZA_DESC_ITEM_NEXO_TIENDAS": false,
+            "COMPROMETE_STOCK_PEDIDO": false,
+            "REVISAR_IMPORTE_ORDEN": false,
+            "IMPORTE_MAXIMO_ORDEN_SIN_REVISION": 0,
+            "REVISAR_CLIENTE_OCASIONAL_ORDEN": false,
+            "REVISA_OCASIONAL_CATEGORIA": false,
+            "BUSCAR_CLIENTE_HABITUAL": true,
+            "USA_FECHA_ORDEN_EN_FECHA_PEDIDO": false,
+            "PROVINCIA_ENTREGA_ASUME_CLIENTE": false,
+            "PROVINCIA_ASUME_ENTREGA": false,
+            "PROVINCIA_ASUME_PARAMETROS_TIENDAS": true,
+            "PROVINCIA_ENTREGA_ASUME_PARAMETROS_TIENDAS": true,
+            "INCLUYE_CARGO_ENVIO": true,
+            "ID_STA11_ENVIO": 0,
+            "INCLUYE_PAGO_ADICIONAL": true,
+            "ID_STA11_PAGO_ADICIONAL": 0,
+            "ID_ASIENTO_MODELO_GV": 0,
+            "ID_GVA_PARAMETROS_PEDIDOS_TIENDAS": 0,
+            "OBSERVACIONES": null,
+            "CUENTAS_COBROS": [
+              {
+                "ID_GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO": 0,
+                "ID_GVA_PARAMETROS_PEDIDOS_TIENDAS": 0,
+                "ID_NEXO_MEDIOS_PAGO_TIENDA": 0,
+                "ID_SBA01": 0
+              }
+            ],
+            "TALONARIO_FACTURA": [
+              {
+                "ID_GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA": 0,
+                "ID_GVA_PARAMETROS_PEDIDOS_TIENDAS": 0,
+                "ID_GVA43": 0,
+                "TIPO_FACTURA": null
+              }
+            ],
+            "GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR": [
+              {
+                "ID_GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR": 0,
+                "ID_GVA_PARAMETROS_PEDIDOS_TIENDAS": 0,
+                "ID_CATEGORIA_IVA": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "GVA_PARAMETROS_PEDIDOS_TIENDAS": [
+      "CUENTAS_COBROS",
+      "TALONARIO_FACTURA",
+      "ESTADO",
+      "VENDEDOR",
+      "TRANSPORTE",
+      "GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR",
+      "ID_TIENDA",
+      "ID_TIENDA_CUENTA",
+      "ID_GVA43",
+      "ID_GVA23",
+      "ID_GVA24",
+      "ID_GVA24_RETIRO_LOCAL",
+      "ID_GVA01",
+      "ID_GVA10",
+      "ID_GVA18",
+      "ID_GVA81",
+      "ID_STA22",
+      "ID_STA11_RECARGO_FINANCIERO",
+      "ASIGNA_ARTICULO_DEFECTO",
+      "ID_STA11",
+      "REEMPLAZA_DESC_ITEM_NEXO_TIENDAS",
+      "COMPROMETE_STOCK_PEDIDO",
+      "REVISAR_IMPORTE_ORDEN",
+      "IMPORTE_MAXIMO_ORDEN_SIN_REVISION",
+      "REVISAR_CLIENTE_OCASIONAL_ORDEN",
+      "REVISA_OCASIONAL_CATEGORIA",
+      "BUSCAR_CLIENTE_HABITUAL",
+      "USA_FECHA_ORDEN_EN_FECHA_PEDIDO",
+      "PROVINCIA_ASUME_ENTREGA",
+      "PROVINCIA_ASUME_PARAMETROS_TIENDAS",
+      "PROVINCIA_ENTREGA_ASUME_CLIENTE",
+      "PROVINCIA_ENTREGA_ASUME_PARAMETROS_TIENDAS",
+      "INCLUYE_CARGO_ENVIO",
+      "ID_STA11_ENVIO",
+      "INCLUYE_PAGO_ADICIONAL",
+      "ID_STA11_PAGO_ADICIONAL",
+      "ID_ASIENTO_MODELO_GV",
+      "OBSERVACIONES"
+    ],
+    "GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO": [
+      "ID_GVA_PARAMETROS_PEDIDOS_TIENDAS",
+      "ID_NEXO_MEDIOS_PAGO_TIENDA",
+      "ID_SBA01"
+    ],
+    "GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA": [
+      "TIPO_FACTURA",
+      "ID_GVA_PARAMETROS_PEDIDOS_TIENDAS",
+      "ID_GVA43"
+    ],
+    "GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR": [
+      "ID_GVA_PARAMETROS_PEDIDOS_TIENDAS",
+      "ID_CATEGORIA_IVA"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

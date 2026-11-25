@@ -1,0 +1,30 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_TIPO_COTIZACION": 1,
+        "coD_TIPO_COTIZACION": "COTIZACIÓN",
+        "desC_TIPO_COTIZACION": "Cotización",
+        "coD_DESCRIP": "COTIZACIÓN - Cotización",
+        "roW_VERSION": "AAAAAADPR/I="
+      },
+      {
+        "iD_TIPO_COTIZACION": 2,
+        "coD_TIPO_COTIZACION": "RG5616",
+        "desC_TIPO_COTIZACION": "Cotización banco nación - RG5616",
+        "coD_DESCRIP": "RG5616 - Cotización banco nación - RG5616",
+        "roW_VERSION": "AAAAAADc5C8="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

@@ -1,0 +1,214 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_VARIABLE_GRUPO": 1,
+        "variablE_GRUPO1": "Afjp",
+        "numerO_DESCRIPCION_GRUPO": "1 - Afjp",
+        "roW_VERSION": "AAAAAADPSHE="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 2,
+        "variablE_GRUPO1": "Agrupaciones",
+        "numerO_DESCRIPCION_GRUPO": "2 - Agrupaciones",
+        "roW_VERSION": "AAAAAADPSHI="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 3,
+        "variablE_GRUPO1": "Art",
+        "numerO_DESCRIPCION_GRUPO": "3 - Art",
+        "roW_VERSION": "AAAAAADPSHQ="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 4,
+        "variablE_GRUPO1": "Categorías",
+        "numerO_DESCRIPCION_GRUPO": "4 - Categorías",
+        "roW_VERSION": "AAAAAADPSHU="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 5,
+        "variablE_GRUPO1": "Conceptos",
+        "numerO_DESCRIPCION_GRUPO": "5 - Conceptos",
+        "roW_VERSION": "AAAAAADPSHY="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 6,
+        "variablE_GRUPO1": "Conceptos de la liquidación",
+        "numerO_DESCRIPCION_GRUPO": "6 - Conceptos de la liquidación",
+        "roW_VERSION": "AAAAAADPSHc="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 7,
+        "variablE_GRUPO1": "Conceptos por período",
+        "numerO_DESCRIPCION_GRUPO": "7 - Conceptos por período",
+        "roW_VERSION": "AAAAAADPSHg="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 8,
+        "variablE_GRUPO1": "Contratos",
+        "numerO_DESCRIPCION_GRUPO": "8 - Contratos",
+        "roW_VERSION": "AAAAAADPSHk="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 9,
+        "variablE_GRUPO1": "Convenios",
+        "numerO_DESCRIPCION_GRUPO": "9 - Convenios",
+        "roW_VERSION": "AAAAAADPSHs="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 10,
+        "variablE_GRUPO1": "Dato Fijo de la liquidación",
+        "numerO_DESCRIPCION_GRUPO": "10 - Dato Fijo de la liquidación",
+        "roW_VERSION": "AAAAAADPSHw="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 11,
+        "variablE_GRUPO1": "Familiares",
+        "numerO_DESCRIPCION_GRUPO": "11 - Familiares",
+        "roW_VERSION": "AAAAAADPSH4="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 12,
+        "variablE_GRUPO1": "Variables de Cadena",
+        "numerO_DESCRIPCION_GRUPO": "12 - Variables de Cadena",
+        "roW_VERSION": "AAAAAADPSI4="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 13,
+        "variablE_GRUPO1": "Variables de Fecha",
+        "numerO_DESCRIPCION_GRUPO": "13 - Variables de Fecha",
+        "roW_VERSION": "AAAAAADPSI8="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 14,
+        "variablE_GRUPO1": "Variables Matemáticas",
+        "numerO_DESCRIPCION_GRUPO": "14 - Variables Matemáticas",
+        "roW_VERSION": "AAAAAADPSJE="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 15,
+        "variablE_GRUPO1": "Legajos",
+        "numerO_DESCRIPCION_GRUPO": "15 - Legajos",
+        "roW_VERSION": "AAAAAADPSIA="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 16,
+        "variablE_GRUPO1": "Matrices auxiliares",
+        "numerO_DESCRIPCION_GRUPO": "16 - Matrices auxiliares",
+        "roW_VERSION": "AAAAAADPSIE="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 17,
+        "variablE_GRUPO1": "Mopre",
+        "numerO_DESCRIPCION_GRUPO": "17 - Mopre",
+        "roW_VERSION": "AAAAAADPSII="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 18,
+        "variablE_GRUPO1": "Novedades",
+        "numerO_DESCRIPCION_GRUPO": "18 - Novedades",
+        "roW_VERSION": "AAAAAADPSIQ="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 19,
+        "variablE_GRUPO1": "Obras Sociales",
+        "numerO_DESCRIPCION_GRUPO": "19 - Obras Sociales",
+        "roW_VERSION": "AAAAAADPSIU="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 20,
+        "variablE_GRUPO1": "Parámetros",
+        "numerO_DESCRIPCION_GRUPO": "20 - Parámetros",
+        "roW_VERSION": "AAAAAADPSIY="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 21,
+        "variablE_GRUPO1": "Sijp",
+        "numerO_DESCRIPCION_GRUPO": "21 - Sijp",
+        "roW_VERSION": "AAAAAADPSIc="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 22,
+        "variablE_GRUPO1": "Sindicatos",
+        "numerO_DESCRIPCION_GRUPO": "22 - Sindicatos",
+        "roW_VERSION": "AAAAAADPSIg="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 23,
+        "variablE_GRUPO1": "Subtipos",
+        "numerO_DESCRIPCION_GRUPO": "23 - Subtipos",
+        "roW_VERSION": "AAAAAADPSIk="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 24,
+        "variablE_GRUPO1": "Tablas auxiliares",
+        "numerO_DESCRIPCION_GRUPO": "24 - Tablas auxiliares",
+        "roW_VERSION": "AAAAAADPSIo="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 25,
+        "variablE_GRUPO1": "Totales de la liquidación",
+        "numerO_DESCRIPCION_GRUPO": "25 - Totales de la liquidación",
+        "roW_VERSION": "AAAAAADPSIs="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 26,
+        "variablE_GRUPO1": "Totales por período",
+        "numerO_DESCRIPCION_GRUPO": "26 - Totales por período",
+        "roW_VERSION": "AAAAAADPSIw="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 27,
+        "variablE_GRUPO1": "Vacaciones",
+        "numerO_DESCRIPCION_GRUPO": "27 - Vacaciones",
+        "roW_VERSION": "AAAAAADPSI0="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 28,
+        "variablE_GRUPO1": "Variables Lógicas",
+        "numerO_DESCRIPCION_GRUPO": "28 - Variables Lógicas",
+        "roW_VERSION": "AAAAAADPSJA="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 29,
+        "variablE_GRUPO1": "Control de Personal",
+        "numerO_DESCRIPCION_GRUPO": "29 - Control de Personal",
+        "roW_VERSION": "AAAAAADPSHo="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 30,
+        "variablE_GRUPO1": "Multitablas auxiliares",
+        "numerO_DESCRIPCION_GRUPO": "30 - Multitablas auxiliares",
+        "roW_VERSION": "AAAAAADPSIM="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 31,
+        "variablE_GRUPO1": "Ajustes",
+        "numerO_DESCRIPCION_GRUPO": "31 - Ajustes",
+        "roW_VERSION": "AAAAAADPSHM="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 32,
+        "variablE_GRUPO1": "Ganancias",
+        "numerO_DESCRIPCION_GRUPO": "32 - Ganancias",
+        "roW_VERSION": "AAAAAADPSH8="
+      },
+      {
+        "iD_VARIABLE_GRUPO": 33,
+        "variablE_GRUPO1": "Embargos y obligaciones",
+        "numerO_DESCRIPCION_GRUPO": "33 - Embargos y obligaciones",
+        "roW_VERSION": "AAAAAADPSH0="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

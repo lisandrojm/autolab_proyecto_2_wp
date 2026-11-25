@@ -1,0 +1,25 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "tablaseleccionadaestamigrada": false,
+        "iD_VARIABLE_ADICIONAL": 1,
+        "coD_VARIABLE_ADICIONAL": "01",
+        "tablA_ADICIONAL": "STA11",
+        "tipO_BANDA": "R",
+        "campO_ADICIONAL": "CA_967_FAMILIA",
+        "roW_VERSION": "AAAAAADfrrI="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

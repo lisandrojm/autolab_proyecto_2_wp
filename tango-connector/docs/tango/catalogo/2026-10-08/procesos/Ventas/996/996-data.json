@@ -1,0 +1,31 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_PERFIL": 1,
+        "coD_GVA78": "01",
+        "coD_PERFIL": "01",
+        "desC_PERFIL": "PRECIOS Y SALDOS",
+        "perfiL_ART": "A",
+        "incL_INHAB": false,
+        "seL_LISTA": "T",
+        "control": "S",
+        "seL_DEPOS": "T",
+        "moneda": "L",
+        "seleccionA_DEPOSITO_SUCURSAL": "T",
+        "codigo": "01",
+        "roW_VERSION": "AAAAAADfrv4="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

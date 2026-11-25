@@ -1,0 +1,916 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_PARAMETRIZACION": 1,
+        "coD_ENTIDAD": "1010010102",
+        "coD_SBA01": 1010010102,
+        "iD_ENTIDAD": 1,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 187,
+        "roW_VERSION": "AAAAAADQARo="
+      },
+      {
+        "iD_PARAMETRIZACION": 2,
+        "coD_ENTIDAD": "1010010103",
+        "coD_SBA01": 1010010103,
+        "iD_ENTIDAD": 2,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 189,
+        "roW_VERSION": "AAAAAADQARs="
+      },
+      {
+        "iD_PARAMETRIZACION": 3,
+        "coD_ENTIDAD": "1010010104",
+        "coD_SBA01": 1010010104,
+        "iD_ENTIDAD": 3,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 190,
+        "roW_VERSION": "AAAAAADQARw="
+      },
+      {
+        "iD_PARAMETRIZACION": 4,
+        "coD_ENTIDAD": "1010010105",
+        "coD_SBA01": 1010010105,
+        "iD_ENTIDAD": 4,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 191,
+        "roW_VERSION": "AAAAAADQAR0="
+      },
+      {
+        "iD_PARAMETRIZACION": 6,
+        "coD_ENTIDAD": "1010010201",
+        "coD_SBA01": 1010010201,
+        "iD_ENTIDAD": 6,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 192,
+        "roW_VERSION": "AAAAAADQASo="
+      },
+      {
+        "iD_PARAMETRIZACION": 9,
+        "coD_ENTIDAD": "1010020101",
+        "coD_SBA01": 1010020101,
+        "iD_ENTIDAD": 9,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 194,
+        "roW_VERSION": "AAAAAADQATg="
+      },
+      {
+        "iD_PARAMETRIZACION": 10,
+        "coD_ENTIDAD": "1010020102",
+        "coD_SBA01": 1010020102,
+        "iD_ENTIDAD": 10,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 195,
+        "roW_VERSION": "AAAAAADQATk="
+      },
+      {
+        "iD_PARAMETRIZACION": 11,
+        "coD_ENTIDAD": "1010020103",
+        "coD_SBA01": 1010020103,
+        "iD_ENTIDAD": 11,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 196,
+        "roW_VERSION": "AAAAAADQATo="
+      },
+      {
+        "iD_PARAMETRIZACION": 12,
+        "coD_ENTIDAD": "1010020207",
+        "coD_SBA01": 1010020207,
+        "iD_ENTIDAD": 12,
+        "editA_CUENTA": "S",
+        "iD_CUENTA": 232,
+        "roW_VERSION": "AAAAAADQAT0="
+      },
+      {
+        "iD_PARAMETRIZACION": 13,
+        "coD_ENTIDAD": "1010020208",
+        "coD_SBA01": 1010020208,
+        "iD_ENTIDAD": 13,
+        "editA_CUENTA": "S",
+        "iD_CUENTA": 233,
+        "roW_VERSION": "AAAAAADQAT4="
+      },
+      {
+        "iD_PARAMETRIZACION": 14,
+        "coD_ENTIDAD": "1010020303",
+        "coD_SBA01": 1010020303,
+        "iD_ENTIDAD": 14,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 199,
+        "roW_VERSION": "AAAAAADQAUA="
+      },
+      {
+        "iD_PARAMETRIZACION": 15,
+        "coD_ENTIDAD": "1010020304",
+        "coD_SBA01": 1010020304,
+        "iD_ENTIDAD": 15,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 200,
+        "roW_VERSION": "AAAAAADQAUE="
+      },
+      {
+        "iD_PARAMETRIZACION": 16,
+        "coD_ENTIDAD": "1010020314",
+        "coD_SBA01": 1010020314,
+        "iD_ENTIDAD": 16,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 204,
+        "roW_VERSION": "AAAAAADQAUY="
+      },
+      {
+        "iD_PARAMETRIZACION": 17,
+        "coD_ENTIDAD": "1010020318",
+        "coD_SBA01": 1010020318,
+        "iD_ENTIDAD": 17,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 206,
+        "roW_VERSION": "AAAAAADQAUg="
+      },
+      {
+        "iD_PARAMETRIZACION": 19,
+        "coD_ENTIDAD": "2010010101",
+        "coD_SBA01": 2010010101,
+        "iD_ENTIDAD": 19,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 8,
+        "roW_VERSION": "AAAAAADQAWA="
+      },
+      {
+        "iD_PARAMETRIZACION": 20,
+        "coD_ENTIDAD": "2010010103",
+        "coD_SBA01": 2010010103,
+        "iD_ENTIDAD": 20,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 216,
+        "roW_VERSION": "AAAAAADQAWE="
+      },
+      {
+        "iD_PARAMETRIZACION": 21,
+        "coD_ENTIDAD": "2010030101",
+        "coD_SBA01": 2010030101,
+        "iD_ENTIDAD": 21,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 220,
+        "roW_VERSION": "AAAAAADQAW0="
+      },
+      {
+        "iD_PARAMETRIZACION": 22,
+        "coD_ENTIDAD": "2010030107",
+        "coD_SBA01": 2010030107,
+        "iD_ENTIDAD": 22,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 221,
+        "roW_VERSION": "AAAAAADQAXA="
+      },
+      {
+        "iD_PARAMETRIZACION": 23,
+        "coD_ENTIDAD": "2010040104",
+        "coD_SBA01": 2010040104,
+        "iD_ENTIDAD": 23,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 224,
+        "roW_VERSION": "AAAAAADQAXs="
+      },
+      {
+        "iD_PARAMETRIZACION": 24,
+        "coD_ENTIDAD": "5010010101",
+        "coD_SBA01": 5010010101,
+        "iD_ENTIDAD": 24,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 1,
+        "roW_VERSION": "AAAAAADQAYQ="
+      },
+      {
+        "iD_PARAMETRIZACION": 25,
+        "coD_ENTIDAD": "5010010102",
+        "coD_SBA01": 5010010102,
+        "iD_ENTIDAD": 25,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 2,
+        "roW_VERSION": "AAAAAADQAYU="
+      },
+      {
+        "iD_PARAMETRIZACION": 26,
+        "coD_ENTIDAD": "5010020301",
+        "coD_SBA01": 5010020301,
+        "iD_ENTIDAD": 26,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 13,
+        "roW_VERSION": "AAAAAADQAYc="
+      },
+      {
+        "iD_PARAMETRIZACION": 27,
+        "coD_ENTIDAD": "5010020302",
+        "coD_SBA01": 5010020302,
+        "iD_ENTIDAD": 27,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 14,
+        "roW_VERSION": "AAAAAADQAYg="
+      },
+      {
+        "iD_PARAMETRIZACION": 28,
+        "coD_ENTIDAD": "5010020501",
+        "coD_SBA01": 5010020501,
+        "iD_ENTIDAD": 28,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 17,
+        "roW_VERSION": "AAAAAADQAYo="
+      },
+      {
+        "iD_PARAMETRIZACION": 29,
+        "coD_ENTIDAD": "5010020502",
+        "coD_SBA01": 5010020502,
+        "iD_ENTIDAD": 29,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 180,
+        "roW_VERSION": "AAAAAADQAYs="
+      },
+      {
+        "iD_PARAMETRIZACION": 30,
+        "coD_ENTIDAD": "5010020602",
+        "coD_SBA01": 5010020602,
+        "iD_ENTIDAD": 30,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 19,
+        "roW_VERSION": "AAAAAADQAYw="
+      },
+      {
+        "iD_PARAMETRIZACION": 31,
+        "coD_ENTIDAD": "5010030101",
+        "coD_SBA01": 5010030101,
+        "iD_ENTIDAD": 31,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 20,
+        "roW_VERSION": "AAAAAADQAY0="
+      },
+      {
+        "iD_PARAMETRIZACION": 32,
+        "coD_ENTIDAD": "5010040101",
+        "coD_SBA01": 5010040101,
+        "iD_ENTIDAD": 32,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 21,
+        "roW_VERSION": "AAAAAADQAZU="
+      },
+      {
+        "iD_PARAMETRIZACION": 33,
+        "coD_ENTIDAD": "5010050101",
+        "coD_SBA01": 5010050101,
+        "iD_ENTIDAD": 33,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 22,
+        "roW_VERSION": "AAAAAADQAZg="
+      },
+      {
+        "iD_PARAMETRIZACION": 34,
+        "coD_ENTIDAD": "5010060101",
+        "coD_SBA01": 5010060101,
+        "iD_ENTIDAD": 34,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 23,
+        "roW_VERSION": "AAAAAADQAZk="
+      },
+      {
+        "iD_PARAMETRIZACION": 35,
+        "coD_ENTIDAD": "5010070101",
+        "coD_SBA01": 5010070101,
+        "iD_ENTIDAD": 35,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 24,
+        "roW_VERSION": "AAAAAADQAZo="
+      },
+      {
+        "iD_PARAMETRIZACION": 36,
+        "coD_ENTIDAD": "5010080101",
+        "coD_SBA01": 5010080101,
+        "iD_ENTIDAD": 36,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 25,
+        "roW_VERSION": "AAAAAADQAZ4="
+      },
+      {
+        "iD_PARAMETRIZACION": 37,
+        "coD_ENTIDAD": "5010090101",
+        "coD_SBA01": 5010090101,
+        "iD_ENTIDAD": 37,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 26,
+        "roW_VERSION": "AAAAAADQAZ8="
+      },
+      {
+        "iD_PARAMETRIZACION": 38,
+        "coD_ENTIDAD": "5010100101",
+        "coD_SBA01": 5010100101,
+        "iD_ENTIDAD": 38,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 27,
+        "roW_VERSION": "AAAAAADQAaA="
+      },
+      {
+        "iD_PARAMETRIZACION": 39,
+        "coD_ENTIDAD": "5010110101",
+        "coD_SBA01": 5010110101,
+        "iD_ENTIDAD": 39,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 28,
+        "roW_VERSION": "AAAAAADQAaI="
+      },
+      {
+        "iD_PARAMETRIZACION": 40,
+        "coD_ENTIDAD": "5010120101",
+        "coD_SBA01": 5010120101,
+        "iD_ENTIDAD": 40,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 29,
+        "roW_VERSION": "AAAAAADQAaM="
+      },
+      {
+        "iD_PARAMETRIZACION": 41,
+        "coD_ENTIDAD": "5010130101",
+        "coD_SBA01": 5010130101,
+        "iD_ENTIDAD": 41,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 30,
+        "roW_VERSION": "AAAAAADQAaQ="
+      },
+      {
+        "iD_PARAMETRIZACION": 42,
+        "coD_ENTIDAD": "5010140101",
+        "coD_SBA01": 5010140101,
+        "iD_ENTIDAD": 42,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 31,
+        "roW_VERSION": "AAAAAADQAaY="
+      },
+      {
+        "iD_PARAMETRIZACION": 43,
+        "coD_ENTIDAD": "5010150101",
+        "coD_SBA01": 5010150101,
+        "iD_ENTIDAD": 43,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 32,
+        "roW_VERSION": "AAAAAADQAac="
+      },
+      {
+        "iD_PARAMETRIZACION": 44,
+        "coD_ENTIDAD": "5010160101",
+        "coD_SBA01": 5010160101,
+        "iD_ENTIDAD": 44,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 33,
+        "roW_VERSION": "AAAAAADQAag="
+      },
+      {
+        "iD_PARAMETRIZACION": 45,
+        "coD_ENTIDAD": "5010170101",
+        "coD_SBA01": 5010170101,
+        "iD_ENTIDAD": 45,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 34,
+        "roW_VERSION": "AAAAAADQAak="
+      },
+      {
+        "iD_PARAMETRIZACION": 46,
+        "coD_ENTIDAD": "5010180101",
+        "coD_SBA01": 5010180101,
+        "iD_ENTIDAD": 46,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 35,
+        "roW_VERSION": "AAAAAADQAao="
+      },
+      {
+        "iD_PARAMETRIZACION": 47,
+        "coD_ENTIDAD": "5010190101",
+        "coD_SBA01": 5010190101,
+        "iD_ENTIDAD": 47,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 36,
+        "roW_VERSION": "AAAAAADQAas="
+      },
+      {
+        "iD_PARAMETRIZACION": 48,
+        "coD_ENTIDAD": "5010200101",
+        "coD_SBA01": 5010200101,
+        "iD_ENTIDAD": 48,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 37,
+        "roW_VERSION": "AAAAAADQAaw="
+      },
+      {
+        "iD_PARAMETRIZACION": 49,
+        "coD_ENTIDAD": "5010210101",
+        "coD_SBA01": 5010210101,
+        "iD_ENTIDAD": 49,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 183,
+        "roW_VERSION": "AAAAAADQAa0="
+      },
+      {
+        "iD_PARAMETRIZACION": 50,
+        "coD_ENTIDAD": "5010220101",
+        "coD_SBA01": 5010220101,
+        "iD_ENTIDAD": 50,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 184,
+        "roW_VERSION": "AAAAAADQAa8="
+      },
+      {
+        "iD_PARAMETRIZACION": 51,
+        "coD_ENTIDAD": "5020010101",
+        "coD_SBA01": 5020010101,
+        "iD_ENTIDAD": 51,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 38,
+        "roW_VERSION": "AAAAAADQAcg="
+      },
+      {
+        "iD_PARAMETRIZACION": 52,
+        "coD_ENTIDAD": "5020010201",
+        "coD_SBA01": 5020010201,
+        "iD_ENTIDAD": 52,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 39,
+        "roW_VERSION": "AAAAAADQAck="
+      },
+      {
+        "iD_PARAMETRIZACION": 53,
+        "coD_ENTIDAD": "5020010202",
+        "coD_SBA01": 5020010202,
+        "iD_ENTIDAD": 53,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 40,
+        "roW_VERSION": "AAAAAADQAco="
+      },
+      {
+        "iD_PARAMETRIZACION": 58,
+        "coD_ENTIDAD": "5020010401",
+        "coD_SBA01": 5020010401,
+        "iD_ENTIDAD": 58,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 45,
+        "roW_VERSION": "AAAAAADQAc8="
+      },
+      {
+        "iD_PARAMETRIZACION": 61,
+        "coD_ENTIDAD": "5020010501",
+        "coD_SBA01": 5020010501,
+        "iD_ENTIDAD": 61,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 48,
+        "roW_VERSION": "AAAAAADQAdI="
+      },
+      {
+        "iD_PARAMETRIZACION": 62,
+        "coD_ENTIDAD": "5020010601",
+        "coD_SBA01": 5020010601,
+        "iD_ENTIDAD": 62,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 49,
+        "roW_VERSION": "AAAAAADQAdM="
+      },
+      {
+        "iD_PARAMETRIZACION": 63,
+        "coD_ENTIDAD": "5020010701",
+        "coD_SBA01": 5020010701,
+        "iD_ENTIDAD": 63,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 50,
+        "roW_VERSION": "AAAAAADQAdY="
+      },
+      {
+        "iD_PARAMETRIZACION": 64,
+        "coD_ENTIDAD": "5020020101",
+        "coD_SBA01": 5020020101,
+        "iD_ENTIDAD": 64,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 51,
+        "roW_VERSION": "AAAAAADQAdg="
+      },
+      {
+        "iD_PARAMETRIZACION": 65,
+        "coD_ENTIDAD": "5020020201",
+        "coD_SBA01": 5020020201,
+        "iD_ENTIDAD": 65,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 52,
+        "roW_VERSION": "AAAAAADQAdk="
+      },
+      {
+        "iD_PARAMETRIZACION": 66,
+        "coD_ENTIDAD": "5020020301",
+        "coD_SBA01": 5020020301,
+        "iD_ENTIDAD": 66,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 53,
+        "roW_VERSION": "AAAAAADQAdo="
+      },
+      {
+        "iD_PARAMETRIZACION": 67,
+        "coD_ENTIDAD": "5020020401",
+        "coD_SBA01": 5020020401,
+        "iD_ENTIDAD": 67,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 54,
+        "roW_VERSION": "AAAAAADQAds="
+      },
+      {
+        "iD_PARAMETRIZACION": 68,
+        "coD_ENTIDAD": "5020020501",
+        "coD_SBA01": 5020020501,
+        "iD_ENTIDAD": 68,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 55,
+        "roW_VERSION": "AAAAAADQAd0="
+      },
+      {
+        "iD_PARAMETRIZACION": 69,
+        "coD_ENTIDAD": "5020020601",
+        "coD_SBA01": 5020020601,
+        "iD_ENTIDAD": 69,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 56,
+        "roW_VERSION": "AAAAAADQAd4="
+      },
+      {
+        "iD_PARAMETRIZACION": 70,
+        "coD_ENTIDAD": "5020020701",
+        "coD_SBA01": 5020020701,
+        "iD_ENTIDAD": 70,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 57,
+        "roW_VERSION": "AAAAAADQAeA="
+      },
+      {
+        "iD_PARAMETRIZACION": 71,
+        "coD_ENTIDAD": "5020020801",
+        "coD_SBA01": 5020020801,
+        "iD_ENTIDAD": 71,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 182,
+        "roW_VERSION": "AAAAAADQAeE="
+      },
+      {
+        "iD_PARAMETRIZACION": 72,
+        "coD_ENTIDAD": "5020030101",
+        "coD_SBA01": 5020030101,
+        "iD_ENTIDAD": 72,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 58,
+        "roW_VERSION": "AAAAAADQAeQ="
+      },
+      {
+        "iD_PARAMETRIZACION": 73,
+        "coD_ENTIDAD": "5020030201",
+        "coD_SBA01": 5020030201,
+        "iD_ENTIDAD": 73,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 59,
+        "roW_VERSION": "AAAAAADQAeU="
+      },
+      {
+        "iD_PARAMETRIZACION": 74,
+        "coD_ENTIDAD": "5020030301",
+        "coD_SBA01": 5020030301,
+        "iD_ENTIDAD": 74,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 60,
+        "roW_VERSION": "AAAAAADQAeY="
+      },
+      {
+        "iD_PARAMETRIZACION": 75,
+        "coD_ENTIDAD": "5020030401",
+        "coD_SBA01": 5020030401,
+        "iD_ENTIDAD": 75,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 61,
+        "roW_VERSION": "AAAAAADQAec="
+      },
+      {
+        "iD_PARAMETRIZACION": 76,
+        "coD_ENTIDAD": "5020030501",
+        "coD_SBA01": 5020030501,
+        "iD_ENTIDAD": 76,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 62,
+        "roW_VERSION": "AAAAAADQAeg="
+      },
+      {
+        "iD_PARAMETRIZACION": 77,
+        "coD_ENTIDAD": "5020030601",
+        "coD_SBA01": 5020030601,
+        "iD_ENTIDAD": 77,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 63,
+        "roW_VERSION": "AAAAAADQAeo="
+      },
+      {
+        "iD_PARAMETRIZACION": 78,
+        "coD_ENTIDAD": "5020030701",
+        "coD_SBA01": 5020030701,
+        "iD_ENTIDAD": 78,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 64,
+        "roW_VERSION": "AAAAAADQAes="
+      },
+      {
+        "iD_PARAMETRIZACION": 79,
+        "coD_ENTIDAD": "5020030801",
+        "coD_SBA01": 5020030801,
+        "iD_ENTIDAD": 79,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 65,
+        "roW_VERSION": "AAAAAADQAew="
+      },
+      {
+        "iD_PARAMETRIZACION": 80,
+        "coD_ENTIDAD": "5020030901",
+        "coD_SBA01": 5020030901,
+        "iD_ENTIDAD": 80,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 66,
+        "roW_VERSION": "AAAAAADQAe0="
+      },
+      {
+        "iD_PARAMETRIZACION": 81,
+        "coD_ENTIDAD": "5020031001",
+        "coD_SBA01": 5020031001,
+        "iD_ENTIDAD": 81,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 67,
+        "roW_VERSION": "AAAAAADQAe4="
+      },
+      {
+        "iD_PARAMETRIZACION": 82,
+        "coD_ENTIDAD": "5020040101",
+        "coD_SBA01": 5020040101,
+        "iD_ENTIDAD": 82,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 68,
+        "roW_VERSION": "AAAAAADQAfc="
+      },
+      {
+        "iD_PARAMETRIZACION": 83,
+        "coD_ENTIDAD": "5020040201",
+        "coD_SBA01": 5020040201,
+        "iD_ENTIDAD": 83,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 69,
+        "roW_VERSION": "AAAAAADQAfg="
+      },
+      {
+        "iD_PARAMETRIZACION": 89,
+        "coD_ENTIDAD": "1010010101",
+        "coD_SBA01": 1010010101,
+        "iD_ENTIDAD": 89,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 235,
+        "roW_VERSION": "AAAAAADQARk="
+      },
+      {
+        "iD_PARAMETRIZACION": 90,
+        "coD_ENTIDAD": "1010010110",
+        "coD_SBA01": 1010010110,
+        "iD_ENTIDAD": 90,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 236,
+        "roW_VERSION": "AAAAAADQASI="
+      },
+      {
+        "iD_PARAMETRIZACION": 91,
+        "coD_ENTIDAD": "5020040301",
+        "coD_SBA01": 5020040301,
+        "iD_ENTIDAD": 91,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 74,
+        "roW_VERSION": "AAAAAADQAf0="
+      },
+      {
+        "iD_PARAMETRIZACION": 92,
+        "coD_ENTIDAD": "5020040401",
+        "coD_SBA01": 5020040401,
+        "iD_ENTIDAD": 92,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 75,
+        "roW_VERSION": "AAAAAADQAf4="
+      },
+      {
+        "iD_PARAMETRIZACION": 93,
+        "coD_ENTIDAD": "5020040501",
+        "coD_SBA01": 5020040501,
+        "iD_ENTIDAD": 93,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 76,
+        "roW_VERSION": "AAAAAADQAf8="
+      },
+      {
+        "iD_PARAMETRIZACION": 94,
+        "coD_ENTIDAD": "5020050101",
+        "coD_SBA01": 5020050101,
+        "iD_ENTIDAD": 94,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 77,
+        "roW_VERSION": "AAAAAADQAgI="
+      },
+      {
+        "iD_PARAMETRIZACION": 95,
+        "coD_ENTIDAD": "5020050201",
+        "coD_SBA01": 5020050201,
+        "iD_ENTIDAD": 95,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 78,
+        "roW_VERSION": "AAAAAADQAgM="
+      },
+      {
+        "iD_PARAMETRIZACION": 96,
+        "coD_ENTIDAD": "5020050301",
+        "coD_SBA01": 5020050301,
+        "iD_ENTIDAD": 96,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 79,
+        "roW_VERSION": "AAAAAADQAgQ="
+      },
+      {
+        "iD_PARAMETRIZACION": 97,
+        "coD_ENTIDAD": "5020050401",
+        "coD_SBA01": 5020050401,
+        "iD_ENTIDAD": 97,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 80,
+        "roW_VERSION": "AAAAAADQAgU="
+      },
+      {
+        "iD_PARAMETRIZACION": 98,
+        "coD_ENTIDAD": "5020050501",
+        "coD_SBA01": 5020050501,
+        "iD_ENTIDAD": 98,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 81,
+        "roW_VERSION": "AAAAAADQAgY="
+      },
+      {
+        "iD_PARAMETRIZACION": 99,
+        "coD_ENTIDAD": "5020050601",
+        "coD_SBA01": 5020050601,
+        "iD_ENTIDAD": 99,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 82,
+        "roW_VERSION": "AAAAAADQAgc="
+      },
+      {
+        "iD_PARAMETRIZACION": 100,
+        "coD_ENTIDAD": "5020060101",
+        "coD_SBA01": 5020060101,
+        "iD_ENTIDAD": 100,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 83,
+        "roW_VERSION": "AAAAAADQAgg="
+      },
+      {
+        "iD_PARAMETRIZACION": 103,
+        "coD_ENTIDAD": "5020060301",
+        "coD_SBA01": 5020060301,
+        "iD_ENTIDAD": 103,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 87,
+        "roW_VERSION": "AAAAAADQAg4="
+      },
+      {
+        "iD_PARAMETRIZACION": 106,
+        "coD_ENTIDAD": "5020060201",
+        "coD_SBA01": 5020060201,
+        "iD_ENTIDAD": 106,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 86,
+        "roW_VERSION": "AAAAAADQAgs="
+      },
+      {
+        "iD_PARAMETRIZACION": 107,
+        "coD_ENTIDAD": "5020060401",
+        "coD_SBA01": 5020060401,
+        "iD_ENTIDAD": 107,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 90,
+        "roW_VERSION": "AAAAAADQAhE="
+      },
+      {
+        "iD_PARAMETRIZACION": 109,
+        "coD_ENTIDAD": "5020060601",
+        "coD_SBA01": 5020060601,
+        "iD_ENTIDAD": 109,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 92,
+        "roW_VERSION": "AAAAAADQAhM="
+      },
+      {
+        "iD_PARAMETRIZACION": 110,
+        "coD_ENTIDAD": "5020070101",
+        "coD_SBA01": 5020070101,
+        "iD_ENTIDAD": 110,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 93,
+        "roW_VERSION": "AAAAAADQAhQ="
+      },
+      {
+        "iD_PARAMETRIZACION": 113,
+        "coD_ENTIDAD": "5020070201",
+        "coD_SBA01": 5020070201,
+        "iD_ENTIDAD": 113,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 96,
+        "roW_VERSION": "AAAAAADQAhc="
+      },
+      {
+        "iD_PARAMETRIZACION": 116,
+        "coD_ENTIDAD": "5020070301",
+        "coD_SBA01": 5020070301,
+        "iD_ENTIDAD": 116,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 99,
+        "roW_VERSION": "AAAAAADQAho="
+      },
+      {
+        "iD_PARAMETRIZACION": 120,
+        "coD_ENTIDAD": "5020080101",
+        "coD_SBA01": 5020080101,
+        "iD_ENTIDAD": 120,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 103,
+        "roW_VERSION": "AAAAAADQAh8="
+      },
+      {
+        "iD_PARAMETRIZACION": 121,
+        "coD_ENTIDAD": "5020080201",
+        "coD_SBA01": 5020080201,
+        "iD_ENTIDAD": 121,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 104,
+        "roW_VERSION": "AAAAAADQAiA="
+      },
+      {
+        "iD_PARAMETRIZACION": 122,
+        "coD_ENTIDAD": "5020080301",
+        "coD_SBA01": 5020080301,
+        "iD_ENTIDAD": 122,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 105,
+        "roW_VERSION": "AAAAAADQAiE="
+      },
+      {
+        "iD_PARAMETRIZACION": 123,
+        "coD_ENTIDAD": "5020080401",
+        "coD_SBA01": 5020080401,
+        "iD_ENTIDAD": 123,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 106,
+        "roW_VERSION": "AAAAAADQAiI="
+      },
+      {
+        "iD_PARAMETRIZACION": 124,
+        "coD_ENTIDAD": "5020080501",
+        "coD_SBA01": 5020080501,
+        "iD_ENTIDAD": 124,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 107,
+        "roW_VERSION": "AAAAAADQAiM="
+      },
+      {
+        "iD_PARAMETRIZACION": 125,
+        "coD_ENTIDAD": "5020080601",
+        "coD_SBA01": 5020080601,
+        "iD_ENTIDAD": 125,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 108,
+        "roW_VERSION": "AAAAAADQAiQ="
+      },
+      {
+        "iD_PARAMETRIZACION": 126,
+        "coD_ENTIDAD": "5020080701",
+        "coD_SBA01": 5020080701,
+        "iD_ENTIDAD": 126,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 109,
+        "roW_VERSION": "AAAAAADQAiU="
+      },
+      {
+        "iD_PARAMETRIZACION": 127,
+        "coD_ENTIDAD": "5020080801",
+        "coD_SBA01": 5020080801,
+        "iD_ENTIDAD": 127,
+        "editA_CUENTA": "N",
+        "iD_CUENTA": 110,
+        "roW_VERSION": "AAAAAADQAiY="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

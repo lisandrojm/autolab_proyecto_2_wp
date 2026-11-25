@@ -1,0 +1,24 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_INDICE": 1,
+        "coD_INDICE": "01",
+        "desC_INDICE": "INDICES IPC ",
+        "tipO_INDICE": "Mensual",
+        "canT_DECIMAL_INDICE": 4,
+        "roW_VERSION": "AAAAAADPVW0="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

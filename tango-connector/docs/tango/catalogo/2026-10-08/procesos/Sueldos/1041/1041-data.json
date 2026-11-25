@@ -1,0 +1,42 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_CANTIDAD_FAMILIAR": 3,
+        "iD_LEGAJO": 12,
+        "peR_FAMILIARES": "2026-05-01T00:00:00",
+        "familiaR1": 0,
+        "familiaR2": 0,
+        "familiaR3": 0,
+        "familiaR4": 0,
+        "familiaR5": 0,
+        "familiaR6": 0,
+        "familiaR7": 0,
+        "familiaR8": 0,
+        "familiaR9": 0,
+        "familiaR10": 0,
+        "familiaR11": 0,
+        "familiaR12": 0,
+        "familiaR13": 0,
+        "familiaR14": 0,
+        "familiaR15": 0,
+        "nrO_LEGAJO": 1,
+        "apellidO_Y_NOMBRE": "DE FEO, PABLO NICOLAS",
+        "cuil": "20-25191082-1",
+        "habilitadO_SU": "S",
+        "condicion": "Mensualizado",
+        "roW_VERSION": "AAAAAADfsA0="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

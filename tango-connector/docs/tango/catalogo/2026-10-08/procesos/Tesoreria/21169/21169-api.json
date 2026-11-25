@@ -1,0 +1,112 @@
+{
+  "title": "Saldos por cuenta Tango Banking",
+  "moduleId": 10005,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "DetalleDeSaldosModel": [
+      "ID_SBA01",
+      "ID_CUENTA_BANKING",
+      "COD_DE_CUENTA",
+      "DESC_CUENTA",
+      "BANCO",
+      "COD_MONEDA",
+      "MONEDA",
+      "SALDO_CORRIENTE",
+      "SALDO_EXTRANJERA",
+      "SALDO_API_CORRIENTE",
+      "SALDO_API_EXTRANJERA",
+      "DIFERENCIA_CORRIENTE",
+      "DIFERENCIA_EXTRANJERA",
+      "DISPONIBLE",
+      "CUPO_CREDI",
+      "VINCULADA_BANKING",
+      "TIPO",
+      "OBSERVACIONES",
+      "FECHA_ACTUALIZACION",
+      "CAMPOS_ADICIONALES_SBA01"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

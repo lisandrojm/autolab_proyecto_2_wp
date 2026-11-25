@@ -1,0 +1,38 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "categoriA_TIENE_CONVENIO": false,
+        "iD_CONVENIO": 1,
+        "coD_CONVENIO": "SATSAID",
+        "desC_CONVENIO": "SINDICATO ARGENTINO DE TELEVISION",
+        "nrO_CONVENIO": 634,
+        "aniO_CONVENIO": 2011,
+        "metodO_SUELDO": "Sugerido",
+        "porC_CONVENIO": 0,
+        "porC_TOPE_TICKET": 0,
+        "imP_CONVENIO": 0,
+        "computA_ANTIGUEDAD": "Período",
+        "diaS_A_MES": 30,
+        "divisoR_VACACIONES": 25,
+        "cancelacioN_DIAS_VACACIONES": "Corridos",
+        "antiguedaD_MINIMA": 6,
+        "fraccioN_VACACIONES_MINIMO": 20,
+        "diA_PROPORCIONAL_MINIMO": 1,
+        "topE_MAX_INDEMNIZACION": 0,
+        "meseS_PERIODO_PRUEBA": 6,
+        "roW_VERSION": "AAAAAADgXos="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

@@ -1,0 +1,229 @@
+{
+  "data": {
+    "iD_CPA01": 4552,
+    "iD_CPA20": null,
+    "iD_SUCURSAL": 1,
+    "iD_SUCURSAL_DESTINO": null,
+    "proveedoR_RAZON_SOCI": "005275 - PICK UP ART S.R.L.",
+    "t_COMP": "N/C",
+    "n_COMP": "A0000100000011",
+    "razoN_SOCI": "PICK UP ART S.R.L.",
+    "proveedor": "005275",
+    "proveedoR_OCASIONAL": "000000 - ",
+    "sucursal": "1 - 2030 SRL",
+    "sucursaL_EXPLOSION": "1 - 2030 SRL",
+    "fecha": "2025-11-10T00:00:00",
+    "fechA_CONTABLE": "2025-11-10T00:00:00",
+    "condicioN_COMPRA": "2 - CUENTA CORRIENTE 30D",
+    "moneda": "CTE (Cotización: 1460.0000000)",
+    "concepto": " - ",
+    "sucursaL_DESTINO": " - ",
+    "sucursaL_DESTINO_EXPLOSION": " - ",
+    "exportado": false,
+    "diferencia": "N",
+    "sector": " - ",
+    "porcentajE_BONIFICACION": 0,
+    "observaciones": "",
+    "clasificacion": "2 - CUENTA CORRIENTE",
+    "nrO_INTERNO": 533,
+    "tipO_OPERACION": "Operación Gravada",
+    "clasificacioN_CITI": "Bienes y Servicios",
+    "incluyE_IVA_COMPRAS": "S",
+    "situacioN_IVA": "",
+    "codigO_NO_RECUPERABLE": "",
+    "estadO_CTE": "IMP",
+    "estadO_EXT": "IMP",
+    "tipO_OPERACION_RG_3685_4597": "0 - Operaciones gravadas",
+    "comprobantE_AFIP": "003 - Notas de crédito A",
+    "datoS_CONTABLES": "Asiento exportado",
+    "asiento": "02 - NOTAS DE CREDITO",
+    "nrO_ASIENTO": 152,
+    "tipO_TRANSACCION_VENTA": "",
+    "tipO_TRANSACCION_COMPRA": "",
+    "caI_CAE": "",
+    "fechA_VENCIMIENTO": null,
+    "creditO_FISCAL": "",
+    "fechA_INGRESO": "09/12/25 - 16:41",
+    "usuariO_INGRESO": "ESTHEFANY",
+    "terminaL_INGRESO": "SRVRDP",
+    "fechA_ULTIMA_MODIFICACION": "",
+    "usuA_ULTIMA_MODIFICACION": "",
+    "terM_ULTIMA_MODIFICACION": "",
+    "subtotaL_VALUE": 150000,
+    "otroS_IMPUESTOS": 0,
+    "ivA_VALUE": 31500,
+    "bonificacioN_VALUE": 0,
+    "fletE_VALUE": 0,
+    "intereseS_VALUE": 0,
+    "anticipo": 0,
+    "netO_GRAVADO": 150000,
+    "netO_NO_GRAVADO": 0,
+    "totaL_CTE_VALUE": 181500,
+    "totaL_EXT_VALUE": 124.32,
+    "totaL_VALUE": 181500,
+    "totaL_VALUE_HEADER": 181500,
+    "datoS_ADJUNTOS_FAC_COMPRAS": [],
+    "articulos": [
+      {
+        "iD_RENGLONES": 0,
+        "iD_CPA04": 1005,
+        "iD_STA11": 376,
+        "iD_STA22": 1,
+        "coD_ARTICULO": "CO5001300000",
+        "descripcion": "LOGISTICA Y MOVILIDAD",
+        "deposito": "01",
+        "descripcioN_DEPOSITO": "DEPOSITOS",
+        "uM_RENGLON": "***",
+        "cantidaD_RENGLON": 1,
+        "precio": 150000,
+        "porcentajE_DESCUENTO": 0,
+        "importE_FLETE": 0,
+        "importe": 150000,
+        "uM_STOCK": "***",
+        "cantidad": 1,
+        "uM_STOCK_2": null,
+        "cantidaD_2": 0,
+        "clasificacion": "2 - CUENTA CORRIENTE"
+      }
+    ],
+    "conceptos": [],
+    "vencimientos": [],
+    "imputacioN_CONTABLE": [
+      {
+        "iD_IMPUTACION_CONTABLE": 0,
+        "iD_CPA04": 0,
+        "iD_ASIENTO": 1390,
+        "coD_CUENTA": "2010010101",
+        "desC_CUENTA": "PROVEEDORES",
+        "debe": 181500,
+        "haber": null,
+        "tcomP_IN_C": "CP",
+        "ncomP_IN_C": 533,
+        "auxiliares": "Ver detalle"
+      },
+      {
+        "iD_IMPUTACION_CONTABLE": 0,
+        "iD_CPA04": 0,
+        "iD_ASIENTO": 1391,
+        "coD_CUENTA": "1010020309",
+        "desC_CUENTA": "CREDITO FISCAL IVA",
+        "debe": null,
+        "haber": 31500,
+        "tcomP_IN_C": "CP",
+        "ncomP_IN_C": 533,
+        "auxiliares": "Ver detalle"
+      },
+      {
+        "iD_IMPUTACION_CONTABLE": 0,
+        "iD_CPA04": 0,
+        "iD_ASIENTO": 1392,
+        "coD_CUENTA": "5001300000",
+        "desC_CUENTA": "LOGISTICA Y MOVILIDAD",
+        "debe": null,
+        "haber": 150000,
+        "tcomP_IN_C": "CP",
+        "ncomP_IN_C": 533,
+        "auxiliares": "Ver detalle"
+      }
+    ],
+    "valores": [],
+    "clasificacioN_AFIP": [
+      {
+        "iD_CLASIFICACION_AFIP": 0,
+        "iD_CPA04": 0,
+        "alicuota": 21,
+        "clasificacion": "C2",
+        "descripcion": "C2",
+        "importe": 31500
+      }
+    ],
+    "diferencias": [],
+    "comprobanteS_RELACIONADOS": [
+      {
+        "tipo": "Factura",
+        "fecha": "2025-11-10T00:00:00",
+        "numero": "FAC - A0000100000066",
+        "sucursal": "1 - 2030 SRL",
+        "iD_CPA35": null,
+        "iD_CPA110": null,
+        "iD_STA14": null,
+        "iD_CPA04_FACCREDEB": 1004,
+        "iD_CPA04_OP": null
+      }
+    ],
+    "totales": [
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Subtotal",
+        "importe": 150000,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Bonificación",
+        "importe": 0,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Flete",
+        "importe": 0,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Intereses",
+        "importe": 0,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "IVA",
+        "importe": 31500,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Otros impuestos",
+        "importe": 0,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Anticipo",
+        "importe": 0,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Neto gravado",
+        "importe": 150000,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Neto no gravado",
+        "importe": 0,
+        "importE_EXT": null
+      },
+      {
+        "iD_TOTALES": 0,
+        "iD_CPA04": 0,
+        "concepto": "Total",
+        "importe": 181500,
+        "importE_EXT": 124.32
+      }
+    ],
+    "triggerToExecuteGetData": true
+  },
+  "succeeded": true
+}

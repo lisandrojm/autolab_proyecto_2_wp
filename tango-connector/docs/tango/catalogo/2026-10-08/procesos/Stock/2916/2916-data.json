@@ -1,0 +1,170 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_STA29": 1,
+        "coD_AGR": "401",
+        "coD_STA29": "401",
+        "noM_AGR": "SERVICIOS DE PRODUCCION",
+        "observaciones": "",
+        "codigo": "401",
+        "roW_VERSION": "AAAAAADPR0g="
+      },
+      {
+        "iD_STA29": 2,
+        "coD_AGR": "402",
+        "coD_STA29": "402",
+        "noM_AGR": "RODAJE",
+        "observaciones": "",
+        "codigo": "402",
+        "roW_VERSION": "AAAAAADPR0c="
+      },
+      {
+        "iD_STA29": 3,
+        "coD_AGR": "403",
+        "coD_STA29": "403",
+        "noM_AGR": "POST PRODUCCION",
+        "observaciones": "",
+        "codigo": "403",
+        "roW_VERSION": "AAAAAADPR0Y="
+      },
+      {
+        "iD_STA29": 4,
+        "coD_AGR": "CO",
+        "coD_STA29": "CO",
+        "codigo": "CO",
+        "roW_VERSION": "AAAAAADT2dw="
+      },
+      {
+        "iD_STA29": 5,
+        "coD_AGR": "CO50001",
+        "coD_STA29": "CO50001",
+        "noM_AGR": "ACTORES Y CASTING",
+        "codigo": "CO50001",
+        "roW_VERSION": "AAAAAADT2d0="
+      },
+      {
+        "iD_STA29": 6,
+        "coD_AGR": "CO50002",
+        "coD_STA29": "CO50002",
+        "noM_AGR": "GUION",
+        "codigo": "CO50002",
+        "roW_VERSION": "AAAAAADT2hk="
+      },
+      {
+        "iD_STA29": 7,
+        "coD_AGR": "CO50003",
+        "coD_STA29": "CO50003",
+        "noM_AGR": "EQUIPO PRODUCCION",
+        "codigo": "CO50003",
+        "roW_VERSION": "AAAAAADT2io="
+      },
+      {
+        "iD_STA29": 8,
+        "coD_AGR": "CO50004",
+        "coD_STA29": "CO50004",
+        "noM_AGR": "EQUIPO DIRECCION",
+        "codigo": "CO50004",
+        "roW_VERSION": "AAAAAADT2j0="
+      },
+      {
+        "iD_STA29": 9,
+        "coD_AGR": "CO50005",
+        "coD_STA29": "CO50005",
+        "noM_AGR": "EQUIPO TECNICO",
+        "codigo": "CO50005",
+        "roW_VERSION": "AAAAAADT2k8="
+      },
+      {
+        "iD_STA29": 10,
+        "coD_AGR": "CO50006",
+        "coD_STA29": "CO50006",
+        "noM_AGR": "LOCACION Y ESCENOGRAFIA",
+        "codigo": "CO50006",
+        "roW_VERSION": "AAAAAADT2mA="
+      },
+      {
+        "iD_STA29": 11,
+        "coD_AGR": "CO50007",
+        "coD_STA29": "CO50007",
+        "noM_AGR": "ARTE Y UTILERIA",
+        "codigo": "CO50007",
+        "roW_VERSION": "AAAAAADT2nI="
+      },
+      {
+        "iD_STA29": 12,
+        "coD_AGR": "CO50008",
+        "coD_STA29": "CO50008",
+        "noM_AGR": "VESTUARIO Y MAKE UP",
+        "codigo": "CO50008",
+        "roW_VERSION": "AAAAAADT2oM="
+      },
+      {
+        "iD_STA29": 13,
+        "coD_AGR": "CO50009",
+        "coD_STA29": "CO50009",
+        "noM_AGR": "EQUIPAMIENTO",
+        "codigo": "CO50009",
+        "roW_VERSION": "AAAAAADT2pQ="
+      },
+      {
+        "iD_STA29": 14,
+        "coD_AGR": "CO50010",
+        "coD_STA29": "CO50010",
+        "noM_AGR": "POST PRODUCCION RRHH",
+        "codigo": "CO50010",
+        "roW_VERSION": "AAAAAADT2qc="
+      },
+      {
+        "iD_STA29": 15,
+        "coD_AGR": "CO50011",
+        "coD_STA29": "CO50011",
+        "noM_AGR": "EQUIP Y SERV POST VIDEO/GFX",
+        "codigo": "CO50011",
+        "roW_VERSION": "AAAAAADT2rg="
+      },
+      {
+        "iD_STA29": 16,
+        "coD_AGR": "CO50012",
+        "coD_STA29": "CO50012",
+        "noM_AGR": "MUSICOS/SADAIC/SADEM",
+        "codigo": "CO50012",
+        "roW_VERSION": "AAAAAADT2sk="
+      },
+      {
+        "iD_STA29": 17,
+        "coD_AGR": "CO50013",
+        "coD_STA29": "CO50013",
+        "noM_AGR": "LOGISTICA Y MOVILIDAD",
+        "codigo": "CO50013",
+        "roW_VERSION": "AAAAAADT2ts="
+      },
+      {
+        "iD_STA29": 18,
+        "coD_AGR": "CO50014",
+        "coD_STA29": "CO50014",
+        "noM_AGR": "COMIDAS Y ALOJAMIENTO",
+        "codigo": "CO50014",
+        "roW_VERSION": "AAAAAADT2uw="
+      },
+      {
+        "iD_STA29": 19,
+        "coD_AGR": "CO50015",
+        "coD_STA29": "CO50015",
+        "noM_AGR": "ADMINISTRACION Y GASTOS DE OFI",
+        "codigo": "CO50015",
+        "roW_VERSION": "AAAAAADT2v4="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

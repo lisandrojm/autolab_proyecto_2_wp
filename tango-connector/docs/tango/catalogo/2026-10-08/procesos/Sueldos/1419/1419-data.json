@@ -1,0 +1,76 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_CONDICION_LEGAJO_DGI": 1,
+        "coD_CONDICION_LEGAJO_DGI": "1",
+        "desC_CONDICION_LEGAJO_DGI": "Servicios Comunes Mayor de 18 años",
+        "roW_VERSION": "AAAAAADO0v8="
+      },
+      {
+        "iD_CONDICION_LEGAJO_DGI": 2,
+        "coD_CONDICION_LEGAJO_DGI": "2",
+        "desC_CONDICION_LEGAJO_DGI": "Jubilado",
+        "roW_VERSION": "AAAAAADO0wE="
+      },
+      {
+        "iD_CONDICION_LEGAJO_DGI": 3,
+        "coD_CONDICION_LEGAJO_DGI": "3",
+        "desC_CONDICION_LEGAJO_DGI": "Menor",
+        "roW_VERSION": "AAAAAADO0wI="
+      },
+      {
+        "iD_CONDICION_LEGAJO_DGI": 4,
+        "coD_CONDICION_LEGAJO_DGI": "4",
+        "desC_CONDICION_LEGAJO_DGI": "Menor Anterior",
+        "roW_VERSION": "AAAAAADO0wM="
+      },
+      {
+        "iD_CONDICION_LEGAJO_DGI": 5,
+        "coD_CONDICION_LEGAJO_DGI": "5",
+        "desC_CONDICION_LEGAJO_DGI": "Servicios Diferenciados Mayor de 18 años",
+        "roW_VERSION": "AAAAAADO0wQ="
+      },
+      {
+        "iD_CONDICION_LEGAJO_DGI": 6,
+        "coD_CONDICION_LEGAJO_DGI": "6",
+        "desC_CONDICION_LEGAJO_DGI": "Sin relación de dependencia. Sin Servicios Reales (prejubilables)",
+        "roW_VERSION": "AAAAAADO0wU="
+      },
+      {
+        "iD_CONDICION_LEGAJO_DGI": 7,
+        "coD_CONDICION_LEGAJO_DGI": "7",
+        "desC_CONDICION_LEGAJO_DGI": "Medida de no innovar. Servicios Comunes",
+        "roW_VERSION": "AAAAAADO0wY="
+      },
+      {
+        "iD_CONDICION_LEGAJO_DGI": 8,
+        "coD_CONDICION_LEGAJO_DGI": "8",
+        "desC_CONDICION_LEGAJO_DGI": "Medida de no innovar. Servicios Diferenciados",
+        "roW_VERSION": "AAAAAADO0wc="
+      },
+      {
+        "iD_CONDICION_LEGAJO_DGI": 9,
+        "coD_CONDICION_LEGAJO_DGI": "9",
+        "desC_CONDICION_LEGAJO_DGI": "Jubilado Decreto 206/00 y/o Decreto 894/01",
+        "roW_VERSION": "AAAAAADO0wg="
+      },
+      {
+        "iD_CONDICION_LEGAJO_DGI": 10,
+        "coD_CONDICION_LEGAJO_DGI": "0",
+        "desC_CONDICION_LEGAJO_DGI": "Jubilado Decreto 894/01 y/o Decreto 2288/02",
+        "roW_VERSION": "AAAAAADO0v4="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

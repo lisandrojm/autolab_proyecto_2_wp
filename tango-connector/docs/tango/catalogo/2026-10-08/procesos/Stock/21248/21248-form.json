@@ -1,0 +1,8 @@
+{
+  "redirectToMenu": true,
+  "linkLabel": null,
+  "linkURL": null,
+  "message": "Debe habilitar el parámetro de Stock \"Permite fraccionar artículos desde procesos\".",
+  "exceptionInfo": null,
+  "succeeded": false
+}

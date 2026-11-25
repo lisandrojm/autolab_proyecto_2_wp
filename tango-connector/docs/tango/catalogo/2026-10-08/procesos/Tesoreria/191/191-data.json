@@ -1,0 +1,32 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "registroS_POS_EN_SBA31": false,
+        "importaR_DATOS_MONEDA_NOT_MAPPED": false,
+        "puertO_COM_VALIDO": false,
+        "iD_TERMINAL_POS": 1,
+        "terM_ID": "99999999",
+        "desC_TERMINAL_POS": "LMB",
+        "tipO_GENERACION_LOTE": "A",
+        "tipO_GENERACION_CUPON": "A",
+        "tipO_TERMINAL": "L",
+        "habilitado": "S",
+        "puertO_SERVICIO_TARJETA": 9101,
+        "versioN_POS": "30629",
+        "permitE_PAGOS_QR": false,
+        "roW_VERSION": "AAAAAADfsDg="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

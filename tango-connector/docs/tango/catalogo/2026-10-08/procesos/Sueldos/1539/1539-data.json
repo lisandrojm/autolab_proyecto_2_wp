@@ -1,0 +1,94 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_INCAPACIDAD_LEGAJO_DGI": 1,
+        "coD_INCAPACIDAD_LEGAJO_DGI": "00",
+        "desC_INCAPACIDAD_LEGAJO_DGI": "No incapacitado",
+        "roW_VERSION": "AAAAAADO2zY="
+      },
+      {
+        "iD_INCAPACIDAD_LEGAJO_DGI": 2,
+        "coD_INCAPACIDAD_LEGAJO_DGI": "01",
+        "desC_INCAPACIDAD_LEGAJO_DGI": "ILT Incapacidad Laboral Temporaria",
+        "roW_VERSION": "AAAAAADO2zc="
+      },
+      {
+        "iD_INCAPACIDAD_LEGAJO_DGI": 3,
+        "coD_INCAPACIDAD_LEGAJO_DGI": "02",
+        "desC_INCAPACIDAD_LEGAJO_DGI": "ILPPP Incapacidad Laboral Permanente Parcial Provisoria",
+        "roW_VERSION": "AAAAAADO2zg="
+      },
+      {
+        "iD_INCAPACIDAD_LEGAJO_DGI": 4,
+        "coD_INCAPACIDAD_LEGAJO_DGI": "03",
+        "desC_INCAPACIDAD_LEGAJO_DGI": "ILPPD Incapacidad Laboral Permanente Parcial Definitiva",
+        "roW_VERSION": "AAAAAADO2zk="
+      },
+      {
+        "iD_INCAPACIDAD_LEGAJO_DGI": 5,
+        "coD_INCAPACIDAD_LEGAJO_DGI": "04",
+        "desC_INCAPACIDAD_LEGAJO_DGI": "ILPTP Incapacidad Laboral Permanente Total Provisoria",
+        "roW_VERSION": "AAAAAADO2zo="
+      },
+      {
+        "iD_INCAPACIDAD_LEGAJO_DGI": 6,
+        "coD_INCAPACIDAD_LEGAJO_DGI": "05",
+        "desC_INCAPACIDAD_LEGAJO_DGI": "Capital de recomposición Art. 15, ap. 3, Ley 24.557",
+        "roW_VERSION": "AAAAAADO2zs="
+      },
+      {
+        "iD_INCAPACIDAD_LEGAJO_DGI": 7,
+        "coD_INCAPACIDAD_LEGAJO_DGI": "06",
+        "desC_INCAPACIDAD_LEGAJO_DGI": "Ajuste Definitivo ILPPD de pago mensual ",
+        "roW_VERSION": "AAAAAADO2zw="
+      },
+      {
+        "iD_INCAPACIDAD_LEGAJO_DGI": 8,
+        "coD_INCAPACIDAD_LEGAJO_DGI": "07",
+        "desC_INCAPACIDAD_LEGAJO_DGI": "RENTA PERIODICA ILPPD Inc. Lab. Perm. Parc. Def. >50%<66%",
+        "roW_VERSION": "AAAAAADO2z0="
+      },
+      {
+        "iD_INCAPACIDAD_LEGAJO_DGI": 9,
+        "coD_INCAPACIDAD_LEGAJO_DGI": "08",
+        "desC_INCAPACIDAD_LEGAJO_DGI": "SRT/SSN F.Garantía/F Reserva ILT Incapacidad Laboral Temporaria",
+        "roW_VERSION": "AAAAAADO2z4="
+      },
+      {
+        "iD_INCAPACIDAD_LEGAJO_DGI": 10,
+        "coD_INCAPACIDAD_LEGAJO_DGI": "09",
+        "desC_INCAPACIDAD_LEGAJO_DGI": "SRT/SSN F.Garantía/F Reserva ILPPP Incapacidad Laboral Permanente Parcial Provisoria",
+        "roW_VERSION": "AAAAAADO2z8="
+      },
+      {
+        "iD_INCAPACIDAD_LEGAJO_DGI": 11,
+        "coD_INCAPACIDAD_LEGAJO_DGI": "10",
+        "desC_INCAPACIDAD_LEGAJO_DGI": "SRT/SSN F.Garantía/F Reserva ILPTP Incapacidad Laboral Permanente Total Provisoria",
+        "roW_VERSION": "AAAAAADO20A="
+      },
+      {
+        "iD_INCAPACIDAD_LEGAJO_DGI": 12,
+        "coD_INCAPACIDAD_LEGAJO_DGI": "11",
+        "desC_INCAPACIDAD_LEGAJO_DGI": "SRT/SSN F.Garantía/F Reserva ILPPD Incapacidad Laboral Permanente Parcial Definitiva",
+        "roW_VERSION": "AAAAAADO20E="
+      },
+      {
+        "iD_INCAPACIDAD_LEGAJO_DGI": 13,
+        "coD_INCAPACIDAD_LEGAJO_DGI": "12",
+        "desC_INCAPACIDAD_LEGAJO_DGI": "ILPPD Beneficios devengados Art. 11, punto 4 de la Ley N° 24.557",
+        "roW_VERSION": "AAAAAADO20I="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

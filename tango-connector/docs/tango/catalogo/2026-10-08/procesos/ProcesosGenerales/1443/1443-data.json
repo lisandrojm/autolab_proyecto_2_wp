@@ -1,0 +1,54 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_MEDIDA": 1,
+        "coD_MEDIDA": "MESES",
+        "desC_MEDIDA": "Meses",
+        "canT_DECIMAL_MEDIDA": 0,
+        "siglA_MEDIDA": "MS",
+        "tipO_UNIDAD": "Tiempo",
+        "coD_DESCRIP": "MESES - Meses",
+        "roW_VERSION": "AAAAAADPOKk="
+      },
+      {
+        "iD_MEDIDA": 2,
+        "coD_MEDIDA": "AÑOS",
+        "desC_MEDIDA": "Años",
+        "canT_DECIMAL_MEDIDA": 0,
+        "siglA_MEDIDA": "AS",
+        "tipO_UNIDAD": "Tiempo",
+        "coD_DESCRIP": "AÑOS - Años",
+        "roW_VERSION": "AAAAAADPOKo="
+      },
+      {
+        "iD_MEDIDA": 3,
+        "coD_MEDIDA": "SINUNIDAD",
+        "desC_MEDIDA": "Sin unidad de medida asignada",
+        "canT_DECIMAL_MEDIDA": 2,
+        "siglA_MEDIDA": "***",
+        "coD_DESCRIP": "SINUNIDAD - Sin unidad de medida asignada",
+        "roW_VERSION": "AAAAAADPOKs="
+      },
+      {
+        "iD_MEDIDA": 5,
+        "coD_MEDIDA": "UC1",
+        "desC_MEDIDA": "",
+        "canT_DECIMAL_MEDIDA": 2,
+        "siglA_MEDIDA": "UC",
+        "coD_DESCRIP": "UC1",
+        "roW_VERSION": "AAAAAADPOKw="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

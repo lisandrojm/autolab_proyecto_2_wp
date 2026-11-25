@@ -1,0 +1,349 @@
+{
+  "title": "Monedas contables",
+  "moduleId": 11,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"MONEDA\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_MONEDA\",\r\n    \"TIPO_MONEDA\",\r\n    \"SIMBOLO_MONEDA\",\r\n    \"CANT_DECIMAL_MONEDA\",\r\n    \"EDITA_TIPO_COTIZACION\",\r\n    \"EDITA_COTIZACION\",\r\n    \"CANT_DECIMAL_COTIZACION\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_MONEDA\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_MONEDA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO_MONEDA\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 20,\r\n      \"minLength\": 0\r\n    },\r\n    \"SIMBOLO_MONEDA\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"CANT_DECIMAL_MONEDA\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA43\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_MONEDA_AFIP\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_EJERCICIO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_TENENCIA_POSITIVO_MDA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_TENENCIA_NEGATIVO_MDA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_TRASLACION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_ASIENTO_TENENCIA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_ASIENTO_CONVERSION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_COTIZACION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"EDITA_TIPO_COTIZACION\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"EDITA_COTIZACION\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"CANT_DECIMAL_COTIZACION\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_AFIP_EX\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_AFIP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_DESCRIP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"SBA37\": {\r\n      \"oneOf\": [\r\n        {\r\n          \"type\": \"null\"\r\n        },\r\n        {\r\n          \"$ref\": \"#/definitions/SBA37\"\r\n        }\r\n      ]\r\n    },\r\n    \"MONEDA_CONTABLE\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/MONEDA_CONTABLE\"\r\n      }\r\n    },\r\n    \"MONEDA_ALTERNATIVA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/MONEDA_ALTERNATIVA\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"SBA37\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_SBA37\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COTIZ_MONE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"FECHA_ACT\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"format\": \"date-time\"\r\n        },\r\n        \"HORA_ACT\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 4,\r\n          \"minLength\": 0\r\n        },\r\n        \"SIGLA_MON\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 3,\r\n          \"minLength\": 0\r\n        },\r\n        \"TIPO_MONE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 3,\r\n          \"minLength\": 0\r\n        },\r\n        \"FILLER\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"MONEDA_CONTABLE\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false\r\n    },\r\n    \"MONEDA_ALTERNATIVA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class SBA37\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA37\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA37 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COTIZ_MONE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? COTIZ_MONE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_ACT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_ACT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HORA_ACT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(4)]\n        public string HORA_ACT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIGLA_MON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string SIGLA_MON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_MONE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string TIPO_MONE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FILLER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string FILLER { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class MONEDA_CONTABLE\n    {\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class MONEDA_ALTERNATIVA\n    {\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class MONEDA\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_MONEDA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_MONEDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_MONEDA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string TIPO_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOLO_MONEDA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string SIMBOLO_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_DECIMAL_MONEDA\", Required = Newtonsoft.Json.Required.Always)]\n        public int CANT_DECIMAL_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA43\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA43 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_MONEDA_AFIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_MONEDA_AFIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_EJERCICIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_EJERCICIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_TENENCIA_POSITIVO_MDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_TENENCIA_POSITIVO_MDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_TENENCIA_NEGATIVO_MDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_TENENCIA_NEGATIVO_MDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_TRASLACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_TRASLACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_ASIENTO_TENENCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_ASIENTO_TENENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_ASIENTO_CONVERSION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_ASIENTO_CONVERSION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_COTIZACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_COTIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EDITA_TIPO_COTIZACION\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string EDITA_TIPO_COTIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EDITA_COTIZACION\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string EDITA_COTIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_DECIMAL_COTIZACION\", Required = Newtonsoft.Json.Required.Always)]\n        public int CANT_DECIMAL_COTIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_AFIP_EX\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_AFIP_EX { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_AFIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_AFIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_DESCRIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string COD_DESCRIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SBA37\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public SBA37 SBA37 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MONEDA_CONTABLE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<MONEDA_CONTABLE> MONEDA_CONTABLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MONEDA_ALTERNATIVA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<MONEDA_ALTERNATIVA> MONEDA_ALTERNATIVA { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface SBA37 {\n    ID_SBA37: number;\n    COTIZ_MONE: number | undefined;\n    FECHA_ACT: Date | undefined;\n    HORA_ACT: string | undefined;\n    SIGLA_MON: string | undefined;\n    TIPO_MONE: string | undefined;\n    FILLER: string | undefined;\n}\n\nexport interface MONEDA_CONTABLE {\n}\n\nexport interface MONEDA_ALTERNATIVA {\n}\n\nexport interface MONEDA {\n    COD_MONEDA: string;\n    DESC_MONEDA: string | undefined;\n    TIPO_MONEDA: string;\n    SIMBOLO_MONEDA: string;\n    CANT_DECIMAL_MONEDA: number;\n    ID_SBA43: number | undefined;\n    ID_TIPO_MONEDA_AFIP: number | undefined;\n    ID_EJERCICIO: number | undefined;\n    ID_CUENTA_TENENCIA_POSITIVO_MDA: number | undefined;\n    ID_CUENTA_TENENCIA_NEGATIVO_MDA: number | undefined;\n    ID_CUENTA_TRASLACION: number | undefined;\n    ID_TIPO_ASIENTO_TENENCIA: number | undefined;\n    ID_TIPO_ASIENTO_CONVERSION: number | undefined;\n    ID_TIPO_COTIZACION: number | undefined;\n    EDITA_TIPO_COTIZACION: string;\n    EDITA_COTIZACION: string;\n    CANT_DECIMAL_COTIZACION: number;\n    COD_AFIP_EX: string | undefined;\n    COD_AFIP: string | undefined;\n    OBSERVACIONES: string | undefined;\n    COD_DESCRIP: string | undefined;\n    SBA37: SBA37 | undefined;\n    MONEDA_CONTABLE: MONEDA_CONTABLE[] | undefined;\n    MONEDA_ALTERNATIVA: MONEDA_ALTERNATIVA[] | undefined;\n}",
+          "example": {
+            "COD_MONEDA": null,
+            "DESC_MONEDA": null,
+            "TIPO_MONEDA": "Otra moneda",
+            "SIMBOLO_MONEDA": null,
+            "CANT_DECIMAL_MONEDA": 2,
+            "ID_SBA43": 0,
+            "ID_TIPO_MONEDA_AFIP": 0,
+            "ID_EJERCICIO": 0,
+            "ID_CUENTA_TENENCIA_POSITIVO_MDA": 0,
+            "ID_CUENTA_TENENCIA_NEGATIVO_MDA": 0,
+            "ID_CUENTA_TRASLACION": 0,
+            "ID_TIPO_ASIENTO_TENENCIA": 0,
+            "ID_TIPO_ASIENTO_CONVERSION": 0,
+            "ID_TIPO_COTIZACION": 0,
+            "EDITA_TIPO_COTIZACION": "S",
+            "EDITA_COTIZACION": "S",
+            "CANT_DECIMAL_COTIZACION": 4,
+            "COD_AFIP_EX": null,
+            "COD_AFIP": null,
+            "OBSERVACIONES": null,
+            "COD_DESCRIP": "",
+            "SBA37": {
+              "ID_SBA37": 0,
+              "COTIZ_MONE": 0,
+              "FECHA_ACT": "0001-01-01T00:00:00",
+              "HORA_ACT": null,
+              "SIGLA_MON": null,
+              "TIPO_MONE": null,
+              "FILLER": null
+            },
+            "MONEDA_CONTABLE": [
+              {}
+            ],
+            "MONEDA_ALTERNATIVA": [
+              {}
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"MONEDA\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_MONEDA\",\r\n    \"TIPO_MONEDA\",\r\n    \"SIMBOLO_MONEDA\",\r\n    \"CANT_DECIMAL_MONEDA\",\r\n    \"EDITA_TIPO_COTIZACION\",\r\n    \"EDITA_COTIZACION\",\r\n    \"CANT_DECIMAL_COTIZACION\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_MONEDA\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_MONEDA\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_MONEDA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO_MONEDA\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 20,\r\n      \"minLength\": 0\r\n    },\r\n    \"SIMBOLO_MONEDA\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"CANT_DECIMAL_MONEDA\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_SBA43\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_MONEDA_AFIP\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_EJERCICIO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_TENENCIA_POSITIVO_MDA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_TENENCIA_NEGATIVO_MDA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CUENTA_TRASLACION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_ASIENTO_TENENCIA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_ASIENTO_CONVERSION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TIPO_COTIZACION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"EDITA_TIPO_COTIZACION\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"EDITA_COTIZACION\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"CANT_DECIMAL_COTIZACION\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_AFIP_EX\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_AFIP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_DESCRIP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"SBA37\": {\r\n      \"oneOf\": [\r\n        {\r\n          \"type\": \"null\"\r\n        },\r\n        {\r\n          \"$ref\": \"#/definitions/SBA37\"\r\n        }\r\n      ]\r\n    },\r\n    \"MONEDA_CONTABLE\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/MONEDA_CONTABLE\"\r\n      }\r\n    },\r\n    \"MONEDA_ALTERNATIVA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/MONEDA_ALTERNATIVA\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"SBA37\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_SBA37\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COTIZ_MONE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"FECHA_ACT\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"format\": \"date-time\"\r\n        },\r\n        \"HORA_ACT\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 4,\r\n          \"minLength\": 0\r\n        },\r\n        \"SIGLA_MON\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 3,\r\n          \"minLength\": 0\r\n        },\r\n        \"TIPO_MONE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 3,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_MONEDA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"FILLER\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"MONEDA_CONTABLE\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_MONEDA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"MONEDA_ALTERNATIVA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_MONEDA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class SBA37\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA37\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SBA37 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COTIZ_MONE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? COTIZ_MONE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_ACT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_ACT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HORA_ACT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(4)]\n        public string HORA_ACT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIGLA_MON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string SIGLA_MON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_MONE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string TIPO_MONE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FILLER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string FILLER { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class MONEDA_CONTABLE\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_MONEDA { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class MONEDA_ALTERNATIVA\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_MONEDA { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class MONEDA\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_MONEDA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_MONEDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_MONEDA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string TIPO_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOLO_MONEDA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string SIMBOLO_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_DECIMAL_MONEDA\", Required = Newtonsoft.Json.Required.Always)]\n        public int CANT_DECIMAL_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA43\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_SBA43 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_MONEDA_AFIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_MONEDA_AFIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_EJERCICIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_EJERCICIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_TENENCIA_POSITIVO_MDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_TENENCIA_POSITIVO_MDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_TENENCIA_NEGATIVO_MDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_TENENCIA_NEGATIVO_MDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_TRASLACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA_TRASLACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_ASIENTO_TENENCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_ASIENTO_TENENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_ASIENTO_CONVERSION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_ASIENTO_CONVERSION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_COTIZACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_COTIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EDITA_TIPO_COTIZACION\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string EDITA_TIPO_COTIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EDITA_COTIZACION\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string EDITA_COTIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_DECIMAL_COTIZACION\", Required = Newtonsoft.Json.Required.Always)]\n        public int CANT_DECIMAL_COTIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_AFIP_EX\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_AFIP_EX { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_AFIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string COD_AFIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_DESCRIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string COD_DESCRIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SBA37\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public SBA37 SBA37 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MONEDA_CONTABLE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<MONEDA_CONTABLE> MONEDA_CONTABLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MONEDA_ALTERNATIVA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<MONEDA_ALTERNATIVA> MONEDA_ALTERNATIVA { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface SBA37 {\n    ID_SBA37: number;\n    COTIZ_MONE: number | undefined;\n    FECHA_ACT: Date | undefined;\n    HORA_ACT: string | undefined;\n    SIGLA_MON: string | undefined;\n    TIPO_MONE: string | undefined;\n    ID_MONEDA: number;\n    FILLER: string | undefined;\n}\n\nexport interface MONEDA_CONTABLE {\n    ID_MONEDA: number;\n}\n\nexport interface MONEDA_ALTERNATIVA {\n    ID_MONEDA: number;\n}\n\nexport interface MONEDA {\n    ID_MONEDA: number;\n    COD_MONEDA: string;\n    DESC_MONEDA: string | undefined;\n    TIPO_MONEDA: string;\n    SIMBOLO_MONEDA: string;\n    CANT_DECIMAL_MONEDA: number;\n    ID_SBA43: number | undefined;\n    ID_TIPO_MONEDA_AFIP: number | undefined;\n    ID_EJERCICIO: number | undefined;\n    ID_CUENTA_TENENCIA_POSITIVO_MDA: number | undefined;\n    ID_CUENTA_TENENCIA_NEGATIVO_MDA: number | undefined;\n    ID_CUENTA_TRASLACION: number | undefined;\n    ID_TIPO_ASIENTO_TENENCIA: number | undefined;\n    ID_TIPO_ASIENTO_CONVERSION: number | undefined;\n    ID_TIPO_COTIZACION: number | undefined;\n    EDITA_TIPO_COTIZACION: string;\n    EDITA_COTIZACION: string;\n    CANT_DECIMAL_COTIZACION: number;\n    COD_AFIP_EX: string | undefined;\n    COD_AFIP: string | undefined;\n    OBSERVACIONES: string | undefined;\n    COD_DESCRIP: string | undefined;\n    SBA37: SBA37 | undefined;\n    MONEDA_CONTABLE: MONEDA_CONTABLE[] | undefined;\n    MONEDA_ALTERNATIVA: MONEDA_ALTERNATIVA[] | undefined;\n}",
+          "example": {
+            "ID_MONEDA": 0,
+            "COD_MONEDA": null,
+            "DESC_MONEDA": null,
+            "TIPO_MONEDA": "Otra moneda",
+            "SIMBOLO_MONEDA": null,
+            "CANT_DECIMAL_MONEDA": 2,
+            "ID_SBA43": 0,
+            "ID_TIPO_MONEDA_AFIP": 0,
+            "ID_EJERCICIO": 0,
+            "ID_CUENTA_TENENCIA_POSITIVO_MDA": 0,
+            "ID_CUENTA_TENENCIA_NEGATIVO_MDA": 0,
+            "ID_CUENTA_TRASLACION": 0,
+            "ID_TIPO_ASIENTO_TENENCIA": 0,
+            "ID_TIPO_ASIENTO_CONVERSION": 0,
+            "ID_TIPO_COTIZACION": 0,
+            "EDITA_TIPO_COTIZACION": "S",
+            "EDITA_COTIZACION": "S",
+            "CANT_DECIMAL_COTIZACION": 4,
+            "COD_AFIP_EX": null,
+            "COD_AFIP": null,
+            "OBSERVACIONES": null,
+            "COD_DESCRIP": "",
+            "SBA37": {
+              "ID_SBA37": 0,
+              "COTIZ_MONE": 0,
+              "FECHA_ACT": "0001-01-01T00:00:00",
+              "HORA_ACT": null,
+              "SIGLA_MON": null,
+              "TIPO_MONE": null,
+              "ID_MONEDA": 0,
+              "FILLER": null
+            },
+            "MONEDA_CONTABLE": [
+              {
+                "ID_MONEDA": 0
+              }
+            ],
+            "MONEDA_ALTERNATIVA": [
+              {
+                "ID_MONEDA": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "MONEDA": [
+      "SBA37",
+      "MONEDA_CONTABLE",
+      "MONEDA_ALTERNATIVA",
+      "COD_MONEDA",
+      "DESC_MONEDA",
+      "TIPO_MONEDA",
+      "SIMBOLO_MONEDA",
+      "CANT_DECIMAL_MONEDA",
+      "ID_SBA43",
+      "ID_TIPO_MONEDA_AFIP",
+      "ID_EJERCICIO",
+      "ID_CUENTA_TENENCIA_POSITIVO_MDA",
+      "ID_CUENTA_TENENCIA_NEGATIVO_MDA",
+      "ID_CUENTA_TRASLACION",
+      "ID_TIPO_ASIENTO_TENENCIA",
+      "ID_TIPO_ASIENTO_CONVERSION",
+      "ID_TIPO_COTIZACION",
+      "EDITA_TIPO_COTIZACION",
+      "EDITA_COTIZACION",
+      "CANT_DECIMAL_COTIZACION",
+      "COD_AFIP_EX",
+      "COD_AFIP",
+      "OBSERVACIONES"
+    ],
+    "SBA37": [
+      "COTIZ_MONE",
+      "FECHA_ACT",
+      "HORA_ACT",
+      "SIGLA_MON",
+      "TIPO_MONE",
+      "ID_MONEDA",
+      "FILLER"
+    ],
+    "MONEDA_CONTABLE": [],
+    "MONEDA_ALTERNATIVA": []
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

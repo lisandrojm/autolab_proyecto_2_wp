@@ -1,0 +1,116 @@
+{
+  "title": "Cuentas no asignadas",
+  "moduleId": 6,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "ContabilidadCuentasNoAsignadasModel": [
+      "JERARQUIA",
+      "COD_JERARQUIA",
+      "DESC_JERARQUIA",
+      "ID_CUENTA",
+      "CUENTA",
+      "COD_CUENTA",
+      "DESC_CUENTA",
+      "COD_ALTERNATIVO",
+      "CLASE_DE_CUENTA",
+      "COD_CLASE_CUENTA",
+      "DESC_CLASE_CUENTA",
+      "SALDO_HABITUAL",
+      "TIPO_DE_CUENTA",
+      "USA_AUXILIARES_CONTABLES",
+      "HABILITADO",
+      "INHABILITACION_DESDE",
+      "INHABILITACION_HASTA",
+      "USA_EN_PROCESOS_AUTOMATICOS",
+      "AFECTA_AJUSTA_INFLACION",
+      "USA_UNIDAD_ADICIONAL",
+      "AFECTA_CONVERSION",
+      "LEYENDAS",
+      "MODULOS",
+      "AUXILIARES"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

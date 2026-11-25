@@ -1,0 +1,43 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_STA32": 3,
+        "coD_STA32": "LM",
+        "coD_ESCALA": "LM",
+        "descriP_ES": "LUMBA TEST",
+        "nrO_ESCALA": 1,
+        "codigo": "LM",
+        "roW_VERSION": "AAAAAADfv2g="
+      },
+      {
+        "iD_STA32": 4,
+        "coD_STA32": "L2",
+        "coD_ESCALA": "L2",
+        "descriP_ES": "LUMBA",
+        "nrO_ESCALA": 2,
+        "codigo": "L2",
+        "roW_VERSION": "AAAAAADfv2o="
+      },
+      {
+        "iD_STA32": 6,
+        "coD_STA32": "AA",
+        "coD_ESCALA": "AA",
+        "descriP_ES": "LMB2TESTE",
+        "nrO_ESCALA": 2,
+        "codigo": "AA",
+        "roW_VERSION": "AAAAAADf5IY="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

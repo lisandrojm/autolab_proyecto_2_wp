@@ -1,0 +1,506 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 1,
+        "iD_STA11": 7,
+        "roW_VERSION": "AAAAAADQhrI="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 2,
+        "iD_STA11": 14,
+        "roW_VERSION": "AAAAAADQhrM="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 3,
+        "iD_STA11": 22,
+        "roW_VERSION": "AAAAAADQhrQ="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 4,
+        "iD_STA11": 103,
+        "roW_VERSION": "AAAAAADQhrU="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 5,
+        "iD_STA11": 231,
+        "roW_VERSION": "AAAAAADQhrY="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 6,
+        "iD_STA11": 232,
+        "roW_VERSION": "AAAAAADQhrc="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 7,
+        "iD_STA11": 233,
+        "roW_VERSION": "AAAAAADQhrg="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 8,
+        "iD_STA11": 234,
+        "roW_VERSION": "AAAAAADQhrk="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 9,
+        "iD_STA11": 235,
+        "roW_VERSION": "AAAAAADQhro="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 10,
+        "iD_STA11": 236,
+        "roW_VERSION": "AAAAAADQhrs="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 11,
+        "iD_STA11": 237,
+        "roW_VERSION": "AAAAAADQhrw="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 12,
+        "iD_STA11": 238,
+        "roW_VERSION": "AAAAAADQhr0="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 13,
+        "iD_STA11": 239,
+        "roW_VERSION": "AAAAAADQhr4="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 14,
+        "iD_STA11": 240,
+        "roW_VERSION": "AAAAAADQhr8="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 15,
+        "iD_STA11": 241,
+        "roW_VERSION": "AAAAAADQhsA="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 16,
+        "iD_STA11": 242,
+        "roW_VERSION": "AAAAAADQhsE="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 17,
+        "iD_STA11": 243,
+        "roW_VERSION": "AAAAAADQhsI="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 18,
+        "iD_STA11": 244,
+        "roW_VERSION": "AAAAAADQhsM="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 19,
+        "iD_STA11": 245,
+        "roW_VERSION": "AAAAAADQhsQ="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 20,
+        "iD_STA11": 246,
+        "roW_VERSION": "AAAAAADQhsU="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 21,
+        "iD_STA11": 247,
+        "roW_VERSION": "AAAAAADQhsY="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 22,
+        "iD_STA11": 248,
+        "roW_VERSION": "AAAAAADQhsc="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 23,
+        "iD_STA11": 249,
+        "roW_VERSION": "AAAAAADQhsg="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 24,
+        "iD_STA11": 250,
+        "roW_VERSION": "AAAAAADQhsk="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 25,
+        "iD_STA11": 251,
+        "roW_VERSION": "AAAAAADQhso="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 26,
+        "iD_STA11": 252,
+        "roW_VERSION": "AAAAAADQhss="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 27,
+        "iD_STA11": 253,
+        "roW_VERSION": "AAAAAADQhsw="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 28,
+        "iD_STA11": 254,
+        "roW_VERSION": "AAAAAADQhs0="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 29,
+        "iD_STA11": 255,
+        "roW_VERSION": "AAAAAADQhs4="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 30,
+        "iD_STA11": 256,
+        "roW_VERSION": "AAAAAADQhs8="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 31,
+        "iD_STA11": 257,
+        "roW_VERSION": "AAAAAADQhtA="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 32,
+        "iD_STA11": 258,
+        "roW_VERSION": "AAAAAADQhtE="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 33,
+        "iD_STA11": 259,
+        "roW_VERSION": "AAAAAADQhtI="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 34,
+        "iD_STA11": 260,
+        "roW_VERSION": "AAAAAADQhtM="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 35,
+        "iD_STA11": 261,
+        "roW_VERSION": "AAAAAADQhtQ="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 36,
+        "iD_STA11": 262,
+        "roW_VERSION": "AAAAAADQhtU="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 37,
+        "iD_STA11": 263,
+        "roW_VERSION": "AAAAAADQhtY="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 38,
+        "iD_STA11": 264,
+        "roW_VERSION": "AAAAAADQhtc="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 39,
+        "iD_STA11": 265,
+        "roW_VERSION": "AAAAAADQhtg="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 40,
+        "iD_STA11": 266,
+        "roW_VERSION": "AAAAAADQhtk="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 41,
+        "iD_STA11": 267,
+        "roW_VERSION": "AAAAAADQhto="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 42,
+        "iD_STA11": 268,
+        "roW_VERSION": "AAAAAADQhts="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 43,
+        "iD_STA11": 269,
+        "roW_VERSION": "AAAAAADQhtw="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 44,
+        "iD_STA11": 270,
+        "roW_VERSION": "AAAAAADQht0="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 45,
+        "iD_STA11": 271,
+        "roW_VERSION": "AAAAAADQht4="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 46,
+        "iD_STA11": 272,
+        "roW_VERSION": "AAAAAADQht8="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 47,
+        "iD_STA11": 273,
+        "roW_VERSION": "AAAAAADQhuA="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 48,
+        "iD_STA11": 274,
+        "roW_VERSION": "AAAAAADQhuE="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 49,
+        "iD_STA11": 275,
+        "roW_VERSION": "AAAAAADQhuI="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 50,
+        "iD_STA11": 276,
+        "roW_VERSION": "AAAAAADQhuM="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 51,
+        "iD_STA11": 277,
+        "roW_VERSION": "AAAAAADQhuQ="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 52,
+        "iD_STA11": 278,
+        "roW_VERSION": "AAAAAADQhuU="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 53,
+        "iD_STA11": 279,
+        "roW_VERSION": "AAAAAADQhuY="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 54,
+        "iD_STA11": 280,
+        "roW_VERSION": "AAAAAADQhuc="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 55,
+        "iD_STA11": 281,
+        "roW_VERSION": "AAAAAADQhug="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 56,
+        "iD_STA11": 282,
+        "roW_VERSION": "AAAAAADQhuk="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 57,
+        "iD_STA11": 283,
+        "roW_VERSION": "AAAAAADQhuo="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 58,
+        "iD_STA11": 287,
+        "roW_VERSION": "AAAAAADQhus="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 59,
+        "iD_STA11": 314,
+        "roW_VERSION": "AAAAAADQhuw="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 60,
+        "iD_STA11": 315,
+        "roW_VERSION": "AAAAAADQhu0="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 61,
+        "iD_STA11": 316,
+        "roW_VERSION": "AAAAAADQhu4="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 62,
+        "iD_STA11": 317,
+        "roW_VERSION": "AAAAAADQhu8="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 63,
+        "iD_STA11": 318,
+        "roW_VERSION": "AAAAAADQhvA="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 64,
+        "iD_STA11": 319,
+        "roW_VERSION": "AAAAAADQhvE="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 65,
+        "iD_STA11": 320,
+        "roW_VERSION": "AAAAAADQhvI="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 66,
+        "iD_STA11": 324,
+        "roW_VERSION": "AAAAAADQhvM="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 67,
+        "iD_STA11": 326,
+        "roW_VERSION": "AAAAAADQhvQ="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 68,
+        "iD_STA11": 329,
+        "roW_VERSION": "AAAAAADQhvU="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 69,
+        "iD_STA11": 350,
+        "roW_VERSION": "AAAAAADQhvY="
+      },
+      {
+        "preciO_MODIFICADO": false,
+        "actualizaR_PRECIOS_COMBINACIONES": false,
+        "iD_MAESTRO_GVA17": 70,
+        "iD_STA11": 351,
+        "roW_VERSION": "AAAAAADQhvc="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

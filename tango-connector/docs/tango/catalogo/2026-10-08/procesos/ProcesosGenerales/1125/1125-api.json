@@ -1,0 +1,336 @@
+{
+  "title": "Bancos",
+  "moduleId": 11,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"BANCO\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_BANCO\",\r\n    \"HABILITADO\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_BANCO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_BANCO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"CUIT\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 13,\r\n      \"minLength\": 0\r\n    },\r\n    \"NRO_BANCO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_EMPRESA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"HABILITADO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"CALLE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 30,\r\n      \"minLength\": 0\r\n    },\r\n    \"NRO_DOMIC\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"PISO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DEPARTAMENTO_DOMIC\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"TORRE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 5,\r\n      \"minLength\": 0\r\n    },\r\n    \"BLOQUE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 5,\r\n      \"minLength\": 0\r\n    },\r\n    \"LOCALIDAD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"CODIGO_POSTAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_PROVINCIA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CONTACTO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO_TELEFONO1\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 15,\r\n      \"minLength\": 0\r\n    },\r\n    \"TELEFONO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 25,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO_TELEFONO2\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 15,\r\n      \"minLength\": 0\r\n    },\r\n    \"TELEFONO2\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 25,\r\n      \"minLength\": 0\r\n    },\r\n    \"EMAIL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 80,\r\n      \"minLength\": 0\r\n    },\r\n    \"WEB_SITE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 80,\r\n      \"minLength\": 0\r\n    },\r\n    \"CUENTA_BANCARIA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CUENTA_BANCARIA\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"CUENTA_BANCARIA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"TIPO_CUENTA\",\r\n        \"NRO_CUENTA\"\r\n      ],\r\n      \"properties\": {\r\n        \"TIPO_CUENTA\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 2,\r\n          \"minLength\": 0\r\n        },\r\n        \"SUCURSAL_CUENTA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 4,\r\n          \"minLength\": 0\r\n        },\r\n        \"NRO_CUENTA\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 15,\r\n          \"minLength\": 0\r\n        },\r\n        \"DIGITO_CUENTA\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"byte\"\r\n        },\r\n        \"CBU\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 22,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CUENTA_BANCARIA\n    {\n        [Newtonsoft.Json.JsonProperty(\"TIPO_CUENTA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string TIPO_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SUCURSAL_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(4)]\n        public string SUCURSAL_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_CUENTA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string NRO_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIGITO_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public byte? DIGITO_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CBU\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(22)]\n        public string CBU { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class BANCO\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_BANCO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_BANCO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CUIT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(13)]\n        public string CUIT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_BANCO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string NRO_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_EMPRESA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_EMPRESA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CALLE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string CALLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_DOMIC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string NRO_DOMIC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PISO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string PISO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DEPARTAMENTO_DOMIC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string DEPARTAMENTO_DOMIC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TORRE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(5)]\n        public string TORRE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"BLOQUE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(5)]\n        public string BLOQUE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LOCALIDAD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string LOCALIDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CODIGO_POSTAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8)]\n        public string CODIGO_POSTAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PROVINCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_PROVINCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CONTACTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string CONTACTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_TELEFONO1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string TIPO_TELEFONO1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TELEFONO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(25)]\n        public string TELEFONO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_TELEFONO2\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string TIPO_TELEFONO2 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TELEFONO2\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(25)]\n        public string TELEFONO2 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EMAIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(80)]\n        public string EMAIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"WEB_SITE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(80)]\n        public string WEB_SITE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CUENTA_BANCARIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CUENTA_BANCARIA> CUENTA_BANCARIA { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface CUENTA_BANCARIA {\n    TIPO_CUENTA: string;\n    SUCURSAL_CUENTA: string | undefined;\n    NRO_CUENTA: string;\n    DIGITO_CUENTA: number | undefined;\n    CBU: string | undefined;\n}\n\nexport interface BANCO {\n    COD_BANCO: string;\n    DESC_BANCO: string | undefined;\n    CUIT: string | undefined;\n    NRO_BANCO: string | undefined;\n    COD_EMPRESA: string | undefined;\n    HABILITADO: string;\n    OBSERVACIONES: string | undefined;\n    CALLE: string | undefined;\n    NRO_DOMIC: string | undefined;\n    PISO: string | undefined;\n    DEPARTAMENTO_DOMIC: string | undefined;\n    TORRE: string | undefined;\n    BLOQUE: string | undefined;\n    LOCALIDAD: string | undefined;\n    CODIGO_POSTAL: string | undefined;\n    ID_PROVINCIA: number | undefined;\n    CONTACTO: string | undefined;\n    TIPO_TELEFONO1: string | undefined;\n    TELEFONO: string | undefined;\n    TIPO_TELEFONO2: string | undefined;\n    TELEFONO2: string | undefined;\n    EMAIL: string | undefined;\n    WEB_SITE: string | undefined;\n    CUENTA_BANCARIA: CUENTA_BANCARIA[] | undefined;\n}",
+          "example": {
+            "COD_BANCO": null,
+            "DESC_BANCO": null,
+            "CUIT": null,
+            "NRO_BANCO": null,
+            "COD_EMPRESA": null,
+            "HABILITADO": "S",
+            "CALLE": null,
+            "NRO_DOMIC": null,
+            "PISO": null,
+            "DEPARTAMENTO_DOMIC": null,
+            "TORRE": null,
+            "BLOQUE": null,
+            "LOCALIDAD": null,
+            "CODIGO_POSTAL": null,
+            "ID_PROVINCIA": 0,
+            "CONTACTO": null,
+            "TIPO_TELEFONO1": "Trabajo",
+            "TELEFONO": null,
+            "TIPO_TELEFONO2": "Móvil",
+            "TELEFONO2": null,
+            "EMAIL": null,
+            "WEB_SITE": null,
+            "OBSERVACIONES": null,
+            "CUENTA_BANCARIA": [
+              {
+                "TIPO_CUENTA": null,
+                "SUCURSAL_CUENTA": null,
+                "NRO_CUENTA": null,
+                "DIGITO_CUENTA": 0,
+                "CBU": null
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"BANCO\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_BANCO\",\r\n    \"HABILITADO\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_BANCO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_BANCO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"CUIT\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 13,\r\n      \"minLength\": 0\r\n    },\r\n    \"NRO_BANCO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 3,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_EMPRESA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"HABILITADO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_BANCO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CALLE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 30,\r\n      \"minLength\": 0\r\n    },\r\n    \"NRO_DOMIC\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"PISO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DEPARTAMENTO_DOMIC\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"TORRE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 5,\r\n      \"minLength\": 0\r\n    },\r\n    \"BLOQUE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 5,\r\n      \"minLength\": 0\r\n    },\r\n    \"LOCALIDAD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"CODIGO_POSTAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_PROVINCIA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CONTACTO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO_TELEFONO1\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 15,\r\n      \"minLength\": 0\r\n    },\r\n    \"TELEFONO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 25,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO_TELEFONO2\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 15,\r\n      \"minLength\": 0\r\n    },\r\n    \"TELEFONO2\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 25,\r\n      \"minLength\": 0\r\n    },\r\n    \"EMAIL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 80,\r\n      \"minLength\": 0\r\n    },\r\n    \"WEB_SITE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 80,\r\n      \"minLength\": 0\r\n    },\r\n    \"CUENTA_BANCARIA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CUENTA_BANCARIA\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"CUENTA_BANCARIA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"TIPO_CUENTA\",\r\n        \"NRO_CUENTA\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_CUENTA_BANCARIA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_BANCO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"TIPO_CUENTA\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 2,\r\n          \"minLength\": 0\r\n        },\r\n        \"SUCURSAL_CUENTA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 4,\r\n          \"minLength\": 0\r\n        },\r\n        \"NRO_CUENTA\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 15,\r\n          \"minLength\": 0\r\n        },\r\n        \"DIGITO_CUENTA\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"byte\"\r\n        },\r\n        \"CBU\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 22,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CUENTA_BANCARIA\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA_BANCARIA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CUENTA_BANCARIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_BANCO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_CUENTA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string TIPO_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SUCURSAL_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(4)]\n        public string SUCURSAL_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_CUENTA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string NRO_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIGITO_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public byte? DIGITO_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CBU\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(22)]\n        public string CBU { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class BANCO\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_BANCO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_BANCO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CUIT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(13)]\n        public string CUIT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_BANCO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string NRO_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_EMPRESA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_EMPRESA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_BANCO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_BANCO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CALLE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string CALLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_DOMIC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string NRO_DOMIC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PISO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string PISO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DEPARTAMENTO_DOMIC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string DEPARTAMENTO_DOMIC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TORRE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(5)]\n        public string TORRE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"BLOQUE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(5)]\n        public string BLOQUE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LOCALIDAD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string LOCALIDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CODIGO_POSTAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8)]\n        public string CODIGO_POSTAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PROVINCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_PROVINCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CONTACTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string CONTACTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_TELEFONO1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string TIPO_TELEFONO1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TELEFONO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(25)]\n        public string TELEFONO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_TELEFONO2\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string TIPO_TELEFONO2 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TELEFONO2\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(25)]\n        public string TELEFONO2 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EMAIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(80)]\n        public string EMAIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"WEB_SITE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(80)]\n        public string WEB_SITE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CUENTA_BANCARIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CUENTA_BANCARIA> CUENTA_BANCARIA { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface CUENTA_BANCARIA {\n    ID_CUENTA_BANCARIA: number;\n    ID_BANCO: number;\n    TIPO_CUENTA: string;\n    SUCURSAL_CUENTA: string | undefined;\n    NRO_CUENTA: string;\n    DIGITO_CUENTA: number | undefined;\n    CBU: string | undefined;\n}\n\nexport interface BANCO {\n    COD_BANCO: string;\n    DESC_BANCO: string | undefined;\n    CUIT: string | undefined;\n    NRO_BANCO: string | undefined;\n    COD_EMPRESA: string | undefined;\n    HABILITADO: string;\n    OBSERVACIONES: string | undefined;\n    ID_BANCO: number;\n    CALLE: string | undefined;\n    NRO_DOMIC: string | undefined;\n    PISO: string | undefined;\n    DEPARTAMENTO_DOMIC: string | undefined;\n    TORRE: string | undefined;\n    BLOQUE: string | undefined;\n    LOCALIDAD: string | undefined;\n    CODIGO_POSTAL: string | undefined;\n    ID_PROVINCIA: number | undefined;\n    CONTACTO: string | undefined;\n    TIPO_TELEFONO1: string | undefined;\n    TELEFONO: string | undefined;\n    TIPO_TELEFONO2: string | undefined;\n    TELEFONO2: string | undefined;\n    EMAIL: string | undefined;\n    WEB_SITE: string | undefined;\n    CUENTA_BANCARIA: CUENTA_BANCARIA[] | undefined;\n}",
+          "example": {
+            "COD_BANCO": null,
+            "DESC_BANCO": null,
+            "CUIT": null,
+            "NRO_BANCO": null,
+            "COD_EMPRESA": null,
+            "HABILITADO": "S",
+            "CALLE": null,
+            "NRO_DOMIC": null,
+            "PISO": null,
+            "DEPARTAMENTO_DOMIC": null,
+            "TORRE": null,
+            "BLOQUE": null,
+            "LOCALIDAD": null,
+            "CODIGO_POSTAL": null,
+            "ID_PROVINCIA": 0,
+            "CONTACTO": null,
+            "TIPO_TELEFONO1": "Trabajo",
+            "TELEFONO": null,
+            "TIPO_TELEFONO2": "Móvil",
+            "TELEFONO2": null,
+            "EMAIL": null,
+            "WEB_SITE": null,
+            "OBSERVACIONES": null,
+            "ID_BANCO": 0,
+            "CUENTA_BANCARIA": [
+              {
+                "ID_CUENTA_BANCARIA": 0,
+                "ID_BANCO": 0,
+                "TIPO_CUENTA": null,
+                "SUCURSAL_CUENTA": null,
+                "NRO_CUENTA": null,
+                "DIGITO_CUENTA": 0,
+                "CBU": null
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "BANCO": [
+      "CUENTA_BANCARIA",
+      "COD_BANCO",
+      "DESC_BANCO",
+      "CUIT",
+      "NRO_BANCO",
+      "COD_EMPRESA",
+      "HABILITADO",
+      "OBSERVACIONES",
+      "CALLE",
+      "NRO_DOMIC",
+      "PISO",
+      "DEPARTAMENTO_DOMIC",
+      "TORRE",
+      "BLOQUE",
+      "LOCALIDAD",
+      "CODIGO_POSTAL",
+      "ID_PROVINCIA",
+      "CONTACTO",
+      "TIPO_TELEFONO1",
+      "TELEFONO",
+      "TIPO_TELEFONO2",
+      "TELEFONO2",
+      "EMAIL",
+      "WEB_SITE"
+    ],
+    "CUENTA_BANCARIA": [
+      "ID_BANCO",
+      "TIPO_CUENTA",
+      "SUCURSAL_CUENTA",
+      "NRO_CUENTA",
+      "DIGITO_CUENTA",
+      "CBU"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

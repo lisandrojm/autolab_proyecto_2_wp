@@ -1,0 +1,34 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_TIPO_DOCUMENTACION_EXT_DGI": 1,
+        "coD_TIPO_DOCUMENTACION_EXT_DGI": "01",
+        "desC_TIPO_DOCUMENTACION_EXT_DGI": "Partida en el exterior",
+        "roW_VERSION": "AAAAAADPSB0="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_EXT_DGI": 2,
+        "coD_TIPO_DOCUMENTACION_EXT_DGI": "02",
+        "desC_TIPO_DOCUMENTACION_EXT_DGI": "Certificado en el exterior",
+        "roW_VERSION": "AAAAAADPSB4="
+      },
+      {
+        "iD_TIPO_DOCUMENTACION_EXT_DGI": 3,
+        "coD_TIPO_DOCUMENTACION_EXT_DGI": "03",
+        "desC_TIPO_DOCUMENTACION_EXT_DGI": "Acta en el exterior",
+        "roW_VERSION": "AAAAAADPSB8="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

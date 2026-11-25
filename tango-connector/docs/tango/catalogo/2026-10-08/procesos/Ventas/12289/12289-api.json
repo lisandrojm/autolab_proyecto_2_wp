@@ -1,0 +1,458 @@
+{
+  "title": "Modelos de pedidos",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"MODELO_PEDIDO\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_MODELO_PEDIDO\",\r\n    \"USA_FRECUENCIA\",\r\n    \"UTILIZA_BONIFICACION_CLIENTE\",\r\n    \"UTILIZA_BONIFICACION_ARTICULO\",\r\n    \"UTILIZA_LISTA_PRECIO_ARTICULO\",\r\n    \"UTILIZA_CONDICION_VENTA_CLIENTE\",\r\n    \"UTILIZA_TRANSPORTE_CLIENTE\",\r\n    \"UTILIZA_VENDEDOR_CLIENTE\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_MODELO_PEDIDO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESCRIPCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 100,\r\n      \"minLength\": 0\r\n    },\r\n    \"HABILITADO\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"DESFE_APLICACION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"HASFE_APLICACION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"USA_FRECUENCIA\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"FRECUENCIA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ASIGNACION_FECHA_PEDIDO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_GVA43_PEDIDO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_MONEDA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"UTILIZA_BONIFICACION_CLIENTE\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"PORC_BONIFICACION\": {\r\n      \"type\": \"number\",\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"UTILIZA_BONIFICACION_ARTICULO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"CANT_DIAS_PLAN_ENTREGA\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"UTILIZA_LISTA_PRECIO_ARTICULO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_GVA10\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"UTILIZA_CONDICION_VENTA_CLIENTE\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_GVA01\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"UTILIZA_TRANSPORTE_CLIENTE\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_GVA24\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"UTILIZA_VENDEDOR_CLIENTE\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_GVA23\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_STA22\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_ASIENTO_MODELO_GV\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_ACTIVIDAD_EMPRESA_AFIP\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ACTIVIDAD_COMPROBANTE_AFIP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_GVA81\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA43_FAC_A\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA43_FAC_B\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"LEYENDA_1\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"LEYENDA_2\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"LEYENDA_3\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"LEYENDA_4\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"LEYENDA_5\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8000,\r\n      \"minLength\": 0\r\n    },\r\n    \"MODELO_PEDIDO_RENGLON\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/MODELO_PEDIDO_RENGLON\"\r\n      }\r\n    },\r\n    \"MODELO_PEDIDO_CLIENTE\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/MODELO_PEDIDO_CLIENTE\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"MODELO_PEDIDO_RENGLON\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"NRO_RENGLON\"\r\n      ],\r\n      \"properties\": {\r\n        \"NRO_RENGLON\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_STA11\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_STA22\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"CANTIDAD_PEDIDA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"CANT_A_FACTURAR\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"PRECIO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"PORC_BONIFICACION\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"DESCRIPCION_ARTICULO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 30,\r\n          \"minLength\": 0\r\n        },\r\n        \"DESCRIPCION_ADICIONAL_ARTICULO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        },\r\n        \"DESCRIPCIONES_ADICIONALES\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/MODELO_PEDIDO_DESCRIPCION_ADICIONAL\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"MODELO_PEDIDO_DESCRIPCION_ADICIONAL\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"NRO_ORDEN\"\r\n      ],\r\n      \"properties\": {\r\n        \"NRO_ORDEN\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"DESC_ARTICULO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 50,\r\n          \"minLength\": 0\r\n        },\r\n        \"DESC_ADICIONAL_ARTICULO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"MODELO_PEDIDO_CLIENTE\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_GVA14\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_GVA14\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_DIRECCION_ENTREGA\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"FECHA_INICIO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"format\": \"date-time\"\r\n        },\r\n        \"FECHA_FINALIZACION\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"format\": \"date-time\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class MODELO_PEDIDO_RENGLON\n    {\n        [Newtonsoft.Json.JsonProperty(\"NRO_RENGLON\", Required = Newtonsoft.Json.Required.Always)]\n        public int NRO_RENGLON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA11\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA11 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA22\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANTIDAD_PEDIDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CANTIDAD_PEDIDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_A_FACTURAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CANT_A_FACTURAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PRECIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PRECIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_BONIFICACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORC_BONIFICACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESCRIPCION_ARTICULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string DESCRIPCION_ARTICULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESCRIPCION_ADICIONAL_ARTICULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string DESCRIPCION_ADICIONAL_ARTICULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESCRIPCIONES_ADICIONALES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<MODELO_PEDIDO_DESCRIPCION_ADICIONAL> DESCRIPCIONES_ADICIONALES { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class MODELO_PEDIDO_DESCRIPCION_ADICIONAL\n    {\n        [Newtonsoft.Json.JsonProperty(\"NRO_ORDEN\", Required = Newtonsoft.Json.Required.Always)]\n        public int NRO_ORDEN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_ARTICULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(50)]\n        public string DESC_ARTICULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_ADICIONAL_ARTICULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string DESC_ADICIONAL_ARTICULO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class MODELO_PEDIDO_CLIENTE\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA14\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_GVA14 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_DIRECCION_ENTREGA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_DIRECCION_ENTREGA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_INICIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_INICIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_FINALIZACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_FINALIZACION { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class MODELO_PEDIDO\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_MODELO_PEDIDO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_MODELO_PEDIDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESCRIPCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string DESCRIPCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESFE_APLICACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? DESFE_APLICACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HASFE_APLICACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? HASFE_APLICACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_FRECUENCIA\", Required = Newtonsoft.Json.Required.Always)]\n        public bool USA_FRECUENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FRECUENCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string FRECUENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ASIGNACION_FECHA_PEDIDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string ASIGNACION_FECHA_PEDIDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA43_PEDIDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA43_PEDIDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"UTILIZA_BONIFICACION_CLIENTE\", Required = Newtonsoft.Json.Required.Always)]\n        public bool UTILIZA_BONIFICACION_CLIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_BONIFICACION\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal PORC_BONIFICACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"UTILIZA_BONIFICACION_ARTICULO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string UTILIZA_BONIFICACION_ARTICULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_DIAS_PLAN_ENTREGA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int CANT_DIAS_PLAN_ENTREGA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"UTILIZA_LISTA_PRECIO_ARTICULO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string UTILIZA_LISTA_PRECIO_ARTICULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA10\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA10 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"UTILIZA_CONDICION_VENTA_CLIENTE\", Required = Newtonsoft.Json.Required.Always)]\n        public bool UTILIZA_CONDICION_VENTA_CLIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA01\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA01 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"UTILIZA_TRANSPORTE_CLIENTE\", Required = Newtonsoft.Json.Required.Always)]\n        public bool UTILIZA_TRANSPORTE_CLIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA24\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA24 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"UTILIZA_VENDEDOR_CLIENTE\", Required = Newtonsoft.Json.Required.Always)]\n        public bool UTILIZA_VENDEDOR_CLIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA23\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA23 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA22\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_MODELO_GV\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_ASIENTO_MODELO_GV { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ACTIVIDAD_EMPRESA_AFIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_ACTIVIDAD_EMPRESA_AFIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACTIVIDAD_COMPROBANTE_AFIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string ACTIVIDAD_COMPROBANTE_AFIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA81\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA81 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA43_FAC_A\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA43_FAC_A { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA43_FAC_B\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA43_FAC_B { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA_1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string LEYENDA_1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA_2\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string LEYENDA_2 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA_3\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string LEYENDA_3 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA_4\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string LEYENDA_4 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA_5\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string LEYENDA_5 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MODELO_PEDIDO_RENGLON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<MODELO_PEDIDO_RENGLON> MODELO_PEDIDO_RENGLON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MODELO_PEDIDO_CLIENTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<MODELO_PEDIDO_CLIENTE> MODELO_PEDIDO_CLIENTE { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface MODELO_PEDIDO_RENGLON {\n    NRO_RENGLON: number;\n    ID_STA11: number | undefined;\n    ID_STA22: number | undefined;\n    CANTIDAD_PEDIDA: number | undefined;\n    CANT_A_FACTURAR: number | undefined;\n    PRECIO: number | undefined;\n    PORC_BONIFICACION: number | undefined;\n    DESCRIPCION_ARTICULO: string | undefined;\n    DESCRIPCION_ADICIONAL_ARTICULO: string | undefined;\n    DESCRIPCIONES_ADICIONALES: MODELO_PEDIDO_DESCRIPCION_ADICIONAL[] | undefined;\n}\n\nexport interface MODELO_PEDIDO_DESCRIPCION_ADICIONAL {\n    NRO_ORDEN: number;\n    DESC_ARTICULO: string | undefined;\n    DESC_ADICIONAL_ARTICULO: string | undefined;\n}\n\nexport interface MODELO_PEDIDO_CLIENTE {\n    ID_GVA14: number;\n    ID_DIRECCION_ENTREGA: number | undefined;\n    FECHA_INICIO: Date | undefined;\n    FECHA_FINALIZACION: Date | undefined;\n}\n\nexport interface MODELO_PEDIDO {\n    COD_MODELO_PEDIDO: string;\n    DESCRIPCION: string | undefined;\n    HABILITADO: boolean | undefined;\n    DESFE_APLICACION: Date | undefined;\n    HASFE_APLICACION: Date | undefined;\n    USA_FRECUENCIA: boolean;\n    FRECUENCIA: string | undefined;\n    ASIGNACION_FECHA_PEDIDO: string | undefined;\n    ID_GVA43_PEDIDO: number | undefined;\n    ID_MONEDA: number | undefined;\n    UTILIZA_BONIFICACION_CLIENTE: boolean;\n    PORC_BONIFICACION: number;\n    UTILIZA_BONIFICACION_ARTICULO: string;\n    CANT_DIAS_PLAN_ENTREGA: number;\n    UTILIZA_LISTA_PRECIO_ARTICULO: string;\n    ID_GVA10: number | undefined;\n    UTILIZA_CONDICION_VENTA_CLIENTE: boolean;\n    ID_GVA01: number | undefined;\n    UTILIZA_TRANSPORTE_CLIENTE: boolean;\n    ID_GVA24: number | undefined;\n    UTILIZA_VENDEDOR_CLIENTE: boolean;\n    ID_GVA23: number | undefined;\n    ID_STA22: number | undefined;\n    ID_ASIENTO_MODELO_GV: number | undefined;\n    ID_ACTIVIDAD_EMPRESA_AFIP: number | undefined;\n    ACTIVIDAD_COMPROBANTE_AFIP: string | undefined;\n    ID_GVA81: number | undefined;\n    ID_GVA43_FAC_A: number | undefined;\n    ID_GVA43_FAC_B: number | undefined;\n    LEYENDA_1: string | undefined;\n    LEYENDA_2: string | undefined;\n    LEYENDA_3: string | undefined;\n    LEYENDA_4: string | undefined;\n    LEYENDA_5: string | undefined;\n    OBSERVACIONES: string | undefined;\n    MODELO_PEDIDO_RENGLON: MODELO_PEDIDO_RENGLON[] | undefined;\n    MODELO_PEDIDO_CLIENTE: MODELO_PEDIDO_CLIENTE[] | undefined;\n}",
+          "example": {
+            "COD_MODELO_PEDIDO": null,
+            "DESCRIPCION": null,
+            "HABILITADO": true,
+            "DESFE_APLICACION": "0001-01-01T00:00:00",
+            "HASFE_APLICACION": "0001-01-01T00:00:00",
+            "USA_FRECUENCIA": false,
+            "FRECUENCIA": null,
+            "ASIGNACION_FECHA_PEDIDO": null,
+            "ID_GVA43_PEDIDO": 0,
+            "ID_MONEDA": 1,
+            "UTILIZA_BONIFICACION_CLIENTE": true,
+            "PORC_BONIFICACION": 0,
+            "UTILIZA_BONIFICACION_ARTICULO": "S",
+            "CANT_DIAS_PLAN_ENTREGA": 0,
+            "UTILIZA_LISTA_PRECIO_ARTICULO": "S",
+            "ID_GVA10": 0,
+            "UTILIZA_CONDICION_VENTA_CLIENTE": true,
+            "ID_GVA01": 0,
+            "UTILIZA_TRANSPORTE_CLIENTE": true,
+            "ID_GVA24": 0,
+            "UTILIZA_VENDEDOR_CLIENTE": true,
+            "ID_GVA23": 0,
+            "ID_STA22": 0,
+            "ID_ASIENTO_MODELO_GV": 0,
+            "ID_ACTIVIDAD_EMPRESA_AFIP": 0,
+            "ACTIVIDAD_COMPROBANTE_AFIP": null,
+            "ID_GVA81": 0,
+            "ID_GVA43_FAC_A": 0,
+            "ID_GVA43_FAC_B": 0,
+            "LEYENDA_1": null,
+            "LEYENDA_2": null,
+            "LEYENDA_3": null,
+            "LEYENDA_4": null,
+            "LEYENDA_5": null,
+            "OBSERVACIONES": null,
+            "MODELO_PEDIDO_RENGLON": [
+              {
+                "NRO_RENGLON": 0,
+                "ID_STA11": 0,
+                "DESCRIPCION_ARTICULO": null,
+                "DESCRIPCION_ADICIONAL_ARTICULO": null,
+                "ID_STA22": 0,
+                "CANTIDAD_PEDIDA": 0,
+                "CANT_A_FACTURAR": 0,
+                "PRECIO": 0,
+                "PORC_BONIFICACION": 0,
+                "DESCRIPCIONES_ADICIONALES": [
+                  {
+                    "NRO_ORDEN": 0,
+                    "DESC_ARTICULO": null,
+                    "DESC_ADICIONAL_ARTICULO": null
+                  }
+                ]
+              }
+            ],
+            "MODELO_PEDIDO_CLIENTE": [
+              {
+                "ID_GVA14": 0,
+                "ID_DIRECCION_ENTREGA": 0,
+                "FECHA_INICIO": "0001-01-01T00:00:00",
+                "FECHA_FINALIZACION": "0001-01-01T00:00:00"
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"MODELO_PEDIDO\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_MODELO_PEDIDO\",\r\n    \"USA_FRECUENCIA\",\r\n    \"UTILIZA_BONIFICACION_CLIENTE\",\r\n    \"UTILIZA_BONIFICACION_ARTICULO\",\r\n    \"UTILIZA_LISTA_PRECIO_ARTICULO\",\r\n    \"UTILIZA_CONDICION_VENTA_CLIENTE\",\r\n    \"UTILIZA_TRANSPORTE_CLIENTE\",\r\n    \"UTILIZA_VENDEDOR_CLIENTE\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_MODELO_PEDIDO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_MODELO_PEDIDO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESCRIPCION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 100,\r\n      \"minLength\": 0\r\n    },\r\n    \"HABILITADO\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"DESFE_APLICACION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"HASFE_APLICACION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"USA_FRECUENCIA\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"FRECUENCIA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ASIGNACION_FECHA_PEDIDO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_GVA43_PEDIDO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_MONEDA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"UTILIZA_BONIFICACION_CLIENTE\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"PORC_BONIFICACION\": {\r\n      \"type\": \"number\",\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"UTILIZA_BONIFICACION_ARTICULO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"CANT_DIAS_PLAN_ENTREGA\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"UTILIZA_LISTA_PRECIO_ARTICULO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_GVA10\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"UTILIZA_CONDICION_VENTA_CLIENTE\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_GVA01\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"UTILIZA_TRANSPORTE_CLIENTE\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_GVA24\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"UTILIZA_VENDEDOR_CLIENTE\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_GVA23\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_STA22\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_ASIENTO_MODELO_GV\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_ACTIVIDAD_EMPRESA_AFIP\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ACTIVIDAD_COMPROBANTE_AFIP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_GVA81\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA43_FAC_A\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_GVA43_FAC_B\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"LEYENDA_1\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"LEYENDA_2\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"LEYENDA_3\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"LEYENDA_4\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"LEYENDA_5\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8000,\r\n      \"minLength\": 0\r\n    },\r\n    \"MODELO_PEDIDO_RENGLON\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/MODELO_PEDIDO_RENGLON\"\r\n      }\r\n    },\r\n    \"MODELO_PEDIDO_CLIENTE\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/MODELO_PEDIDO_CLIENTE\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"MODELO_PEDIDO_RENGLON\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"NRO_RENGLON\"\r\n      ],\r\n      \"properties\": {\r\n        \"NRO_RENGLON\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_STA11\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_STA22\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"CANTIDAD_PEDIDA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"CANT_A_FACTURAR\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"PRECIO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"PORC_BONIFICACION\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"ID_MODELO_PEDIDO_RENGLON\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_MODELO_PEDIDO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"DESCRIPCION_ARTICULO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 30,\r\n          \"minLength\": 0\r\n        },\r\n        \"DESCRIPCION_ADICIONAL_ARTICULO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        },\r\n        \"DESCRIPCIONES_ADICIONALES\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/MODELO_PEDIDO_DESCRIPCION_ADICIONAL\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"MODELO_PEDIDO_DESCRIPCION_ADICIONAL\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"NRO_ORDEN\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_DESCRIPCION_ADICIONAL\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_MODELO_PEDIDO_RENGLON\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"NRO_ORDEN\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"DESC_ARTICULO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 50,\r\n          \"minLength\": 0\r\n        },\r\n        \"DESC_ADICIONAL_ARTICULO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"MODELO_PEDIDO_CLIENTE\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_GVA14\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_GVA14\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_DIRECCION_ENTREGA\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"FECHA_INICIO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"format\": \"date-time\"\r\n        },\r\n        \"FECHA_FINALIZACION\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"format\": \"date-time\"\r\n        },\r\n        \"ID_MODELO_PEDIDO_CLIENTE\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_MODELO_PEDIDO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class MODELO_PEDIDO_RENGLON\n    {\n        [Newtonsoft.Json.JsonProperty(\"NRO_RENGLON\", Required = Newtonsoft.Json.Required.Always)]\n        public int NRO_RENGLON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA11\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA11 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA22\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANTIDAD_PEDIDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CANTIDAD_PEDIDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_A_FACTURAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CANT_A_FACTURAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PRECIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PRECIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_BONIFICACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORC_BONIFICACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MODELO_PEDIDO_RENGLON\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_MODELO_PEDIDO_RENGLON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MODELO_PEDIDO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_MODELO_PEDIDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESCRIPCION_ARTICULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string DESCRIPCION_ARTICULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESCRIPCION_ADICIONAL_ARTICULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string DESCRIPCION_ADICIONAL_ARTICULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESCRIPCIONES_ADICIONALES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<MODELO_PEDIDO_DESCRIPCION_ADICIONAL> DESCRIPCIONES_ADICIONALES { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class MODELO_PEDIDO_DESCRIPCION_ADICIONAL\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_DESCRIPCION_ADICIONAL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_DESCRIPCION_ADICIONAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MODELO_PEDIDO_RENGLON\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_MODELO_PEDIDO_RENGLON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_ORDEN\", Required = Newtonsoft.Json.Required.Always)]\n        public int NRO_ORDEN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_ARTICULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(50)]\n        public string DESC_ARTICULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_ADICIONAL_ARTICULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string DESC_ADICIONAL_ARTICULO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class MODELO_PEDIDO_CLIENTE\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA14\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_GVA14 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_DIRECCION_ENTREGA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_DIRECCION_ENTREGA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_INICIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_INICIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_FINALIZACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_FINALIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MODELO_PEDIDO_CLIENTE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_MODELO_PEDIDO_CLIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MODELO_PEDIDO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_MODELO_PEDIDO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class MODELO_PEDIDO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_MODELO_PEDIDO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_MODELO_PEDIDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_MODELO_PEDIDO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_MODELO_PEDIDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESCRIPCION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string DESCRIPCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESFE_APLICACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? DESFE_APLICACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HASFE_APLICACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? HASFE_APLICACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_FRECUENCIA\", Required = Newtonsoft.Json.Required.Always)]\n        public bool USA_FRECUENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FRECUENCIA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string FRECUENCIA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ASIGNACION_FECHA_PEDIDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string ASIGNACION_FECHA_PEDIDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA43_PEDIDO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA43_PEDIDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MONEDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"UTILIZA_BONIFICACION_CLIENTE\", Required = Newtonsoft.Json.Required.Always)]\n        public bool UTILIZA_BONIFICACION_CLIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_BONIFICACION\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal PORC_BONIFICACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"UTILIZA_BONIFICACION_ARTICULO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string UTILIZA_BONIFICACION_ARTICULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_DIAS_PLAN_ENTREGA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int CANT_DIAS_PLAN_ENTREGA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"UTILIZA_LISTA_PRECIO_ARTICULO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string UTILIZA_LISTA_PRECIO_ARTICULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA10\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA10 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"UTILIZA_CONDICION_VENTA_CLIENTE\", Required = Newtonsoft.Json.Required.Always)]\n        public bool UTILIZA_CONDICION_VENTA_CLIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA01\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA01 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"UTILIZA_TRANSPORTE_CLIENTE\", Required = Newtonsoft.Json.Required.Always)]\n        public bool UTILIZA_TRANSPORTE_CLIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA24\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA24 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"UTILIZA_VENDEDOR_CLIENTE\", Required = Newtonsoft.Json.Required.Always)]\n        public bool UTILIZA_VENDEDOR_CLIENTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA23\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA23 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_STA22\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_STA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ASIENTO_MODELO_GV\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_ASIENTO_MODELO_GV { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ACTIVIDAD_EMPRESA_AFIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_ACTIVIDAD_EMPRESA_AFIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACTIVIDAD_COMPROBANTE_AFIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string ACTIVIDAD_COMPROBANTE_AFIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA81\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA81 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA43_FAC_A\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA43_FAC_A { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA43_FAC_B\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA43_FAC_B { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA_1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string LEYENDA_1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA_2\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string LEYENDA_2 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA_3\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string LEYENDA_3 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA_4\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string LEYENDA_4 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA_5\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string LEYENDA_5 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MODELO_PEDIDO_RENGLON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<MODELO_PEDIDO_RENGLON> MODELO_PEDIDO_RENGLON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MODELO_PEDIDO_CLIENTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<MODELO_PEDIDO_CLIENTE> MODELO_PEDIDO_CLIENTE { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface MODELO_PEDIDO_RENGLON {\n    NRO_RENGLON: number;\n    ID_STA11: number | undefined;\n    ID_STA22: number | undefined;\n    CANTIDAD_PEDIDA: number | undefined;\n    CANT_A_FACTURAR: number | undefined;\n    PRECIO: number | undefined;\n    PORC_BONIFICACION: number | undefined;\n    ID_MODELO_PEDIDO_RENGLON: number;\n    ID_MODELO_PEDIDO: number;\n    DESCRIPCION_ARTICULO: string | undefined;\n    DESCRIPCION_ADICIONAL_ARTICULO: string | undefined;\n    DESCRIPCIONES_ADICIONALES: MODELO_PEDIDO_DESCRIPCION_ADICIONAL[] | undefined;\n}\n\nexport interface MODELO_PEDIDO_DESCRIPCION_ADICIONAL {\n    ID_DESCRIPCION_ADICIONAL: number;\n    ID_MODELO_PEDIDO_RENGLON: number;\n    NRO_ORDEN: number;\n    DESC_ARTICULO: string | undefined;\n    DESC_ADICIONAL_ARTICULO: string | undefined;\n}\n\nexport interface MODELO_PEDIDO_CLIENTE {\n    ID_GVA14: number;\n    ID_DIRECCION_ENTREGA: number | undefined;\n    FECHA_INICIO: Date | undefined;\n    FECHA_FINALIZACION: Date | undefined;\n    ID_MODELO_PEDIDO_CLIENTE: number;\n    ID_MODELO_PEDIDO: number;\n}\n\nexport interface MODELO_PEDIDO {\n    ID_MODELO_PEDIDO: number;\n    COD_MODELO_PEDIDO: string;\n    DESCRIPCION: string | undefined;\n    HABILITADO: boolean | undefined;\n    DESFE_APLICACION: Date | undefined;\n    HASFE_APLICACION: Date | undefined;\n    USA_FRECUENCIA: boolean;\n    FRECUENCIA: string | undefined;\n    ASIGNACION_FECHA_PEDIDO: string | undefined;\n    ID_GVA43_PEDIDO: number | undefined;\n    ID_MONEDA: number | undefined;\n    UTILIZA_BONIFICACION_CLIENTE: boolean;\n    PORC_BONIFICACION: number;\n    UTILIZA_BONIFICACION_ARTICULO: string;\n    CANT_DIAS_PLAN_ENTREGA: number;\n    UTILIZA_LISTA_PRECIO_ARTICULO: string;\n    ID_GVA10: number | undefined;\n    UTILIZA_CONDICION_VENTA_CLIENTE: boolean;\n    ID_GVA01: number | undefined;\n    UTILIZA_TRANSPORTE_CLIENTE: boolean;\n    ID_GVA24: number | undefined;\n    UTILIZA_VENDEDOR_CLIENTE: boolean;\n    ID_GVA23: number | undefined;\n    ID_STA22: number | undefined;\n    ID_ASIENTO_MODELO_GV: number | undefined;\n    ID_ACTIVIDAD_EMPRESA_AFIP: number | undefined;\n    ACTIVIDAD_COMPROBANTE_AFIP: string | undefined;\n    ID_GVA81: number | undefined;\n    ID_GVA43_FAC_A: number | undefined;\n    ID_GVA43_FAC_B: number | undefined;\n    LEYENDA_1: string | undefined;\n    LEYENDA_2: string | undefined;\n    LEYENDA_3: string | undefined;\n    LEYENDA_4: string | undefined;\n    LEYENDA_5: string | undefined;\n    OBSERVACIONES: string | undefined;\n    MODELO_PEDIDO_RENGLON: MODELO_PEDIDO_RENGLON[] | undefined;\n    MODELO_PEDIDO_CLIENTE: MODELO_PEDIDO_CLIENTE[] | undefined;\n}",
+          "example": {
+            "ID_MODELO_PEDIDO": 0,
+            "COD_MODELO_PEDIDO": null,
+            "DESCRIPCION": null,
+            "HABILITADO": true,
+            "DESFE_APLICACION": "0001-01-01T00:00:00",
+            "HASFE_APLICACION": "0001-01-01T00:00:00",
+            "USA_FRECUENCIA": false,
+            "FRECUENCIA": null,
+            "ASIGNACION_FECHA_PEDIDO": null,
+            "ID_GVA43_PEDIDO": 0,
+            "ID_MONEDA": 1,
+            "UTILIZA_BONIFICACION_CLIENTE": true,
+            "PORC_BONIFICACION": 0,
+            "UTILIZA_BONIFICACION_ARTICULO": "S",
+            "CANT_DIAS_PLAN_ENTREGA": 0,
+            "UTILIZA_LISTA_PRECIO_ARTICULO": "S",
+            "ID_GVA10": 0,
+            "UTILIZA_CONDICION_VENTA_CLIENTE": true,
+            "ID_GVA01": 0,
+            "UTILIZA_TRANSPORTE_CLIENTE": true,
+            "ID_GVA24": 0,
+            "UTILIZA_VENDEDOR_CLIENTE": true,
+            "ID_GVA23": 0,
+            "ID_STA22": 0,
+            "ID_ASIENTO_MODELO_GV": 0,
+            "ID_ACTIVIDAD_EMPRESA_AFIP": 0,
+            "ACTIVIDAD_COMPROBANTE_AFIP": null,
+            "ID_GVA81": 0,
+            "ID_GVA43_FAC_A": 0,
+            "ID_GVA43_FAC_B": 0,
+            "LEYENDA_1": null,
+            "LEYENDA_2": null,
+            "LEYENDA_3": null,
+            "LEYENDA_4": null,
+            "LEYENDA_5": null,
+            "OBSERVACIONES": null,
+            "MODELO_PEDIDO_RENGLON": [
+              {
+                "NRO_RENGLON": 0,
+                "ID_STA11": 0,
+                "DESCRIPCION_ARTICULO": null,
+                "DESCRIPCION_ADICIONAL_ARTICULO": null,
+                "ID_STA22": 0,
+                "CANTIDAD_PEDIDA": 0,
+                "CANT_A_FACTURAR": 0,
+                "PRECIO": 0,
+                "PORC_BONIFICACION": 0,
+                "ID_MODELO_PEDIDO_RENGLON": 0,
+                "ID_MODELO_PEDIDO": 0,
+                "DESCRIPCIONES_ADICIONALES": [
+                  {
+                    "ID_DESCRIPCION_ADICIONAL": 0,
+                    "ID_MODELO_PEDIDO_RENGLON": 0,
+                    "NRO_ORDEN": 0,
+                    "DESC_ARTICULO": null,
+                    "DESC_ADICIONAL_ARTICULO": null
+                  }
+                ]
+              }
+            ],
+            "MODELO_PEDIDO_CLIENTE": [
+              {
+                "ID_GVA14": 0,
+                "ID_DIRECCION_ENTREGA": 0,
+                "FECHA_INICIO": "0001-01-01T00:00:00",
+                "FECHA_FINALIZACION": "0001-01-01T00:00:00",
+                "ID_MODELO_PEDIDO_CLIENTE": 0,
+                "ID_MODELO_PEDIDO": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "MODELO_PEDIDO": [
+      "MODELO_PEDIDO_RENGLON",
+      "MODELO_PEDIDO_CLIENTE",
+      "COD_MODELO_PEDIDO",
+      "DESCRIPCION",
+      "HABILITADO",
+      "DESFE_APLICACION",
+      "HASFE_APLICACION",
+      "USA_FRECUENCIA",
+      "FRECUENCIA",
+      "ASIGNACION_FECHA_PEDIDO",
+      "ID_GVA43_PEDIDO",
+      "ID_MONEDA",
+      "UTILIZA_BONIFICACION_CLIENTE",
+      "PORC_BONIFICACION",
+      "UTILIZA_BONIFICACION_ARTICULO",
+      "CANT_DIAS_PLAN_ENTREGA",
+      "UTILIZA_LISTA_PRECIO_ARTICULO",
+      "ID_GVA10",
+      "UTILIZA_CONDICION_VENTA_CLIENTE",
+      "ID_GVA01",
+      "UTILIZA_TRANSPORTE_CLIENTE",
+      "ID_GVA24",
+      "UTILIZA_VENDEDOR_CLIENTE",
+      "ID_GVA23",
+      "ID_STA22",
+      "ID_ASIENTO_MODELO_GV",
+      "ID_ACTIVIDAD_EMPRESA_AFIP",
+      "ACTIVIDAD_COMPROBANTE_AFIP",
+      "ID_GVA81",
+      "ID_GVA43_FAC_A",
+      "ID_GVA43_FAC_B",
+      "LEYENDA_1",
+      "LEYENDA_2",
+      "LEYENDA_3",
+      "LEYENDA_4",
+      "LEYENDA_5",
+      "OBSERVACIONES"
+    ],
+    "KitVariableSelectorDto": [
+      "CodigoCategoria",
+      "InfoCategoria",
+      "OrdenCategoria",
+      "ControlaCategoria",
+      "TopeMinimoCategoria",
+      "TopeMaximoCategoria",
+      "IdSta11Componente",
+      "CodigoDescArticulo",
+      "DescripcionAdicionalArticulo",
+      "CantidadDisponibleOriginal",
+      "CantidadDisponible",
+      "CantidadSolicitado",
+      "CodigoUnidadMedida",
+      "PrecioAdicional",
+      "Importe"
+    ],
+    "KitVariableDetailDto": [
+      "IdSta11",
+      "CodigoCategoria",
+      "CodigoDescArticulo",
+      "DescAdicionalArticulo",
+      "CantidadSolicitado",
+      "TotalAdicional"
+    ],
+    "MODELO_PEDIDO_RENGLON": [
+      "DESCRIPCIONES_ADICIONALES",
+      "DESCRIPCION_ARTICULO",
+      "DESCRIPCION_ADICIONAL_ARTICULO",
+      "ID_MODELO_PEDIDO",
+      "NRO_RENGLON",
+      "ID_STA11",
+      "CANT_PEDIDA",
+      "CANT_A_FACTURAR",
+      "PRECIO",
+      "PORC_BONIFICACION",
+      "ID_STA22"
+    ],
+    "MODELO_PEDIDO_DESCRIPCION_ADICIONAL": [
+      "ID_MODELO_PEDIDO_RENGLON",
+      "NRO_ORDEN",
+      "DESC_ARTICULO",
+      "DESC_ADICIONAL_ARTICULO"
+    ],
+    "MODELO_PEDIDO_CLIENTE": [
+      "ID_MODELO_PEDIDO",
+      "ID_GVA14",
+      "ID_DIRECCION_ENTREGA",
+      "FECHA_INICIO",
+      "FECHA_FINALIZACION"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

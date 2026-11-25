@@ -1,0 +1,84 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_TIPO_COMPROBANTE_CP": 1,
+        "iD_CPA21": 1,
+        "coD_CPA21": "FAC",
+        "generA_ASIENTO": "S",
+        "iD_ASIENTO_MODELO_HABITUAL": 1,
+        "editA_ASIENTO_MODELO": "S",
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADPVP4="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_CP": 2,
+        "iD_CPA21": 2,
+        "coD_CPA21": "N/C",
+        "generA_ASIENTO": "S",
+        "iD_ASIENTO_MODELO_HABITUAL": 2,
+        "editA_ASIENTO_MODELO": "S",
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADPVP8="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_CP": 3,
+        "iD_CPA21": 3,
+        "coD_CPA21": "N/D",
+        "generA_ASIENTO": "S",
+        "iD_ASIENTO_MODELO_HABITUAL": 1,
+        "editA_ASIENTO_MODELO": "S",
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADPVQE="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_CP": 4,
+        "iD_CPA21": 4,
+        "coD_CPA21": "NCI",
+        "generA_ASIENTO": "S",
+        "iD_ASIENTO_MODELO_HABITUAL": 2,
+        "editA_ASIENTO_MODELO": "S",
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADPVQM="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_CP": 5,
+        "iD_CPA21": 5,
+        "coD_CPA21": "NDI",
+        "generA_ASIENTO": "S",
+        "iD_ASIENTO_MODELO_HABITUAL": 1,
+        "editA_ASIENTO_MODELO": "S",
+        "editA_ASIENTO": "S",
+        "roW_VERSION": "AAAAAADPVQU="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_CP": 7,
+        "iD_CPA21": 7,
+        "coD_CPA21": "NDA",
+        "generA_ASIENTO": "N",
+        "editA_ASIENTO_MODELO": "N",
+        "editA_ASIENTO": "N",
+        "roW_VERSION": "AAAAAADPVQQ="
+      },
+      {
+        "iD_TIPO_COMPROBANTE_CP": 8,
+        "iD_CPA21": 8,
+        "coD_CPA21": "NCA",
+        "generA_ASIENTO": "N",
+        "editA_ASIENTO_MODELO": "N",
+        "editA_ASIENTO": "N",
+        "roW_VERSION": "AAAAAADPVQI="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

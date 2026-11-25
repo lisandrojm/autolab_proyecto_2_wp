@@ -1,0 +1,403 @@
+{
+  "title": "Perfiles de autorización de orden de compra",
+  "moduleId": 10003,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"CPA_PERFIL_AUTORIZACION_OC\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_PERFIL\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_PERFIL\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_PERFIL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"AUTORIZA_RANGOS_IMPORTES\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"MONEDA_EXPRESION_AUTORIZAR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"IMPORTE_MINIMO_AUTORIZAR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"IMPORTE_MAXIMO_AUTORIZAR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"ACTUALIZA_AUTOMATICO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"FECHA_OC_AUTORIZADA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"FECHA_OC_DESAUTORIZADA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"REEXPRESA_TOTALES\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"MONEDA_REEXPRESA_SUMA_TOTALES\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"MUESTRA_PERFILES_USUARIOS\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"SELECCION_COMPRADOR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SELECCION_SECTOR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SELECCION_SUCURSAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SELECCION_TALONARIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_CONCEPTO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CPA_PERFIL_AUTORIZACION_OC_CONCEPTO\"\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_COMPRADOR\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CPA_PERFIL_AUTORIZACION_OC_COMPRADOR\"\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_SUCURSALES\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CPA_PERFIL_AUTORIZACION_OC_SUCURSALES\"\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_TALONARIO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CPA_PERFIL_AUTORIZACION_OC_TALONARIO\"\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_SECTOR\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CPA_PERFIL_AUTORIZACION_OC_SECTOR\"\r\n      }\r\n    },\r\n    \"USUARIOS\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CPA_PERFIL_AUTORIZACION_OC_USUARIO\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"CPA_PERFIL_AUTORIZACION_OC_CONCEPTO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_CPA_CONCEPTO_AUTORIZACION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_COMPRADOR\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"COD_CPA50\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_CPA50\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_CPA50\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 5,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_SUCURSALES\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_SUCURSAL\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_TALONARIO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_TALONARIO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_SECTOR\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"COD_CPA51\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_CPA51\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_CPA51\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 8,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_USUARIO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"USUARIO1\",\r\n        \"ID_USUARIO\"\r\n      ],\r\n      \"properties\": {\r\n        \"USUARIO1\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 120,\r\n          \"minLength\": 0\r\n        },\r\n        \"COD_PERFIL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 120,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_USUARIO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CPA_PERFIL_AUTORIZACION_OC_CONCEPTO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA_CONCEPTO_AUTORIZACION\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CPA_CONCEPTO_AUTORIZACION { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CPA_PERFIL_AUTORIZACION_OC_COMPRADOR\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA50\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CPA50 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CPA50\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(5)]\n        public string COD_CPA50 { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CPA_PERFIL_AUTORIZACION_OC_SUCURSALES\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_SUCURSAL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SUCURSAL { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CPA_PERFIL_AUTORIZACION_OC_TALONARIO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TALONARIO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TALONARIO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CPA_PERFIL_AUTORIZACION_OC_SECTOR\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA51\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CPA51 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CPA51\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(8)]\n        public string COD_CPA51 { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CPA_PERFIL_AUTORIZACION_OC_USUARIO\n    {\n        [Newtonsoft.Json.JsonProperty(\"USUARIO1\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(120)]\n        public string USUARIO1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_PERFIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(120)]\n        public string COD_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_USUARIO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_USUARIO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CPA_PERFIL_AUTORIZACION_OC\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_PERFIL\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_PERFIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AUTORIZA_RANGOS_IMPORTES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? AUTORIZA_RANGOS_IMPORTES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MONEDA_EXPRESION_AUTORIZAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string MONEDA_EXPRESION_AUTORIZAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE_MINIMO_AUTORIZAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE_MINIMO_AUTORIZAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE_MAXIMO_AUTORIZAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE_MAXIMO_AUTORIZAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACTUALIZA_AUTOMATICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ACTUALIZA_AUTOMATICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_OC_AUTORIZADA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? FECHA_OC_AUTORIZADA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_OC_DESAUTORIZADA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? FECHA_OC_DESAUTORIZADA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"REEXPRESA_TOTALES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? REEXPRESA_TOTALES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MONEDA_REEXPRESA_SUMA_TOTALES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? MONEDA_REEXPRESA_SUMA_TOTALES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MUESTRA_PERFILES_USUARIOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? MUESTRA_PERFILES_USUARIOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SELECCION_COMPRADOR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SELECCION_COMPRADOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SELECCION_SECTOR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SELECCION_SECTOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SELECCION_SUCURSAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SELECCION_SUCURSAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SELECCION_TALONARIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SELECCION_TALONARIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CPA_PERFIL_AUTORIZACION_OC_CONCEPTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CPA_PERFIL_AUTORIZACION_OC_CONCEPTO> CPA_PERFIL_AUTORIZACION_OC_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CPA_PERFIL_AUTORIZACION_OC_COMPRADOR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CPA_PERFIL_AUTORIZACION_OC_COMPRADOR> CPA_PERFIL_AUTORIZACION_OC_COMPRADOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CPA_PERFIL_AUTORIZACION_OC_SUCURSALES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CPA_PERFIL_AUTORIZACION_OC_SUCURSALES> CPA_PERFIL_AUTORIZACION_OC_SUCURSALES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CPA_PERFIL_AUTORIZACION_OC_TALONARIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CPA_PERFIL_AUTORIZACION_OC_TALONARIO> CPA_PERFIL_AUTORIZACION_OC_TALONARIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CPA_PERFIL_AUTORIZACION_OC_SECTOR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CPA_PERFIL_AUTORIZACION_OC_SECTOR> CPA_PERFIL_AUTORIZACION_OC_SECTOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USUARIOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CPA_PERFIL_AUTORIZACION_OC_USUARIO> USUARIOS { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface CPA_PERFIL_AUTORIZACION_OC_CONCEPTO {\n    ID_CPA_CONCEPTO_AUTORIZACION: number;\n}\n\nexport interface CPA_PERFIL_AUTORIZACION_OC_COMPRADOR {\n    ID_CPA50: number | undefined;\n    COD_CPA50: string;\n}\n\nexport interface CPA_PERFIL_AUTORIZACION_OC_SUCURSALES {\n    ID_SUCURSAL: number;\n}\n\nexport interface CPA_PERFIL_AUTORIZACION_OC_TALONARIO {\n    ID_TALONARIO: number;\n}\n\nexport interface CPA_PERFIL_AUTORIZACION_OC_SECTOR {\n    ID_CPA51: number | undefined;\n    COD_CPA51: string;\n}\n\nexport interface CPA_PERFIL_AUTORIZACION_OC_USUARIO {\n    USUARIO1: string;\n    COD_PERFIL: string | undefined;\n    ID_USUARIO: number;\n}\n\nexport interface CPA_PERFIL_AUTORIZACION_OC {\n    COD_PERFIL: string;\n    DESC_PERFIL: string | undefined;\n    AUTORIZA_RANGOS_IMPORTES: boolean | undefined;\n    MONEDA_EXPRESION_AUTORIZAR: string | undefined;\n    IMPORTE_MINIMO_AUTORIZAR: number | undefined;\n    IMPORTE_MAXIMO_AUTORIZAR: number | undefined;\n    ACTUALIZA_AUTOMATICO: number | undefined;\n    FECHA_OC_AUTORIZADA: number | undefined;\n    FECHA_OC_DESAUTORIZADA: number | undefined;\n    REEXPRESA_TOTALES: boolean | undefined;\n    MONEDA_REEXPRESA_SUMA_TOTALES: number | undefined;\n    MUESTRA_PERFILES_USUARIOS: boolean | undefined;\n    SELECCION_COMPRADOR: string | undefined;\n    SELECCION_SECTOR: string | undefined;\n    SELECCION_SUCURSAL: string | undefined;\n    SELECCION_TALONARIO: string | undefined;\n    OBSERVACIONES: string | undefined;\n    CPA_PERFIL_AUTORIZACION_OC_CONCEPTO: CPA_PERFIL_AUTORIZACION_OC_CONCEPTO[] | undefined;\n    CPA_PERFIL_AUTORIZACION_OC_COMPRADOR: CPA_PERFIL_AUTORIZACION_OC_COMPRADOR[] | undefined;\n    CPA_PERFIL_AUTORIZACION_OC_SUCURSALES: CPA_PERFIL_AUTORIZACION_OC_SUCURSALES[] | undefined;\n    CPA_PERFIL_AUTORIZACION_OC_TALONARIO: CPA_PERFIL_AUTORIZACION_OC_TALONARIO[] | undefined;\n    CPA_PERFIL_AUTORIZACION_OC_SECTOR: CPA_PERFIL_AUTORIZACION_OC_SECTOR[] | undefined;\n    USUARIOS: CPA_PERFIL_AUTORIZACION_OC_USUARIO[] | undefined;\n}",
+          "example": {
+            "COD_PERFIL": null,
+            "DESC_PERFIL": null,
+            "AUTORIZA_RANGOS_IMPORTES": false,
+            "MONEDA_EXPRESION_AUTORIZAR": "C",
+            "IMPORTE_MINIMO_AUTORIZAR": 0,
+            "IMPORTE_MAXIMO_AUTORIZAR": 0,
+            "ACTUALIZA_AUTOMATICO": 0,
+            "FECHA_OC_AUTORIZADA": 0,
+            "FECHA_OC_DESAUTORIZADA": 0,
+            "REEXPRESA_TOTALES": false,
+            "MONEDA_REEXPRESA_SUMA_TOTALES": 0,
+            "MUESTRA_PERFILES_USUARIOS": false,
+            "SELECCION_COMPRADOR": "T",
+            "SELECCION_SECTOR": "T",
+            "SELECCION_SUCURSAL": "T",
+            "SELECCION_TALONARIO": "T",
+            "OBSERVACIONES": null,
+            "CPA_PERFIL_AUTORIZACION_OC_CONCEPTO": [
+              {
+                "ID_CPA_CONCEPTO_AUTORIZACION": 0
+              }
+            ],
+            "CPA_PERFIL_AUTORIZACION_OC_COMPRADOR": [
+              {
+                "ID_CPA50": 0,
+                "COD_CPA50": null
+              }
+            ],
+            "CPA_PERFIL_AUTORIZACION_OC_SUCURSALES": [
+              {
+                "ID_SUCURSAL": 0
+              }
+            ],
+            "CPA_PERFIL_AUTORIZACION_OC_TALONARIO": [
+              {
+                "ID_TALONARIO": 0
+              }
+            ],
+            "CPA_PERFIL_AUTORIZACION_OC_SECTOR": [
+              {
+                "ID_CPA51": 0,
+                "COD_CPA51": null
+              }
+            ],
+            "USUARIOS": [
+              {
+                "USUARIO1": null,
+                "COD_PERFIL": null,
+                "ID_USUARIO": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"CPA_PERFIL_AUTORIZACION_OC\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_PERFIL\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_PERFIL\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_PERFIL\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_PERFIL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"AUTORIZA_RANGOS_IMPORTES\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"MONEDA_EXPRESION_AUTORIZAR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"IMPORTE_MINIMO_AUTORIZAR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"IMPORTE_MAXIMO_AUTORIZAR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"ACTUALIZA_AUTOMATICO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"FECHA_OC_AUTORIZADA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"FECHA_OC_DESAUTORIZADA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"REEXPRESA_TOTALES\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"MONEDA_REEXPRESA_SUMA_TOTALES\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"MUESTRA_PERFILES_USUARIOS\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"SELECCION_COMPRADOR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SELECCION_SECTOR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SELECCION_SUCURSAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SELECCION_TALONARIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_CONCEPTO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CPA_PERFIL_AUTORIZACION_OC_CONCEPTO\"\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_COMPRADOR\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CPA_PERFIL_AUTORIZACION_OC_COMPRADOR\"\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_SUCURSALES\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CPA_PERFIL_AUTORIZACION_OC_SUCURSALES\"\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_TALONARIO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CPA_PERFIL_AUTORIZACION_OC_TALONARIO\"\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_SECTOR\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CPA_PERFIL_AUTORIZACION_OC_SECTOR\"\r\n      }\r\n    },\r\n    \"USUARIOS\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/CPA_PERFIL_AUTORIZACION_OC_USUARIO\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"CPA_PERFIL_AUTORIZACION_OC_CONCEPTO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_CPA_PERFIL_AUTORIZACION_OC_CONCEPTO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_PERFIL\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_CPA_CONCEPTO_AUTORIZACION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_COMPRADOR\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"COD_CPA50\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_CPA_PERFIL_AUTORIZACION_OC_COMPRADOR\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_PERFIL\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_CPA50\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_CPA50\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 5,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_SUCURSALES\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_CPA_PERFIL_AUTORIZACION_OC_SUCURSALES\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_PERFIL\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_SUCURSAL\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_TALONARIO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_CPA_PERFIL_AUTORIZACION_OC_TALONARIO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_PERFIL\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_TALONARIO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_SECTOR\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"COD_CPA51\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_CPA_PERFIL_AUTORIZACION_OC_SECTOR\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_PERFIL\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_CPA51\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_CPA51\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 8,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"CPA_PERFIL_AUTORIZACION_OC_USUARIO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"USUARIO1\",\r\n        \"ID_USUARIO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_PERFIL_DETALLE\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_PERFIL\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"USUARIO1\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 120,\r\n          \"minLength\": 0\r\n        },\r\n        \"COD_PERFIL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 120,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_USUARIO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CPA_PERFIL_AUTORIZACION_OC_CONCEPTO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA_PERFIL_AUTORIZACION_OC_CONCEPTO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CPA_PERFIL_AUTORIZACION_OC_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA_CONCEPTO_AUTORIZACION\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CPA_CONCEPTO_AUTORIZACION { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CPA_PERFIL_AUTORIZACION_OC_COMPRADOR\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA_PERFIL_AUTORIZACION_OC_COMPRADOR\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CPA_PERFIL_AUTORIZACION_OC_COMPRADOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA50\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CPA50 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CPA50\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(5)]\n        public string COD_CPA50 { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CPA_PERFIL_AUTORIZACION_OC_SUCURSALES\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA_PERFIL_AUTORIZACION_OC_SUCURSALES\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CPA_PERFIL_AUTORIZACION_OC_SUCURSALES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_SUCURSAL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_SUCURSAL { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CPA_PERFIL_AUTORIZACION_OC_TALONARIO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA_PERFIL_AUTORIZACION_OC_TALONARIO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CPA_PERFIL_AUTORIZACION_OC_TALONARIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TALONARIO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TALONARIO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CPA_PERFIL_AUTORIZACION_OC_SECTOR\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA_PERFIL_AUTORIZACION_OC_SECTOR\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CPA_PERFIL_AUTORIZACION_OC_SECTOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA51\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CPA51 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CPA51\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(8)]\n        public string COD_CPA51 { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CPA_PERFIL_AUTORIZACION_OC_USUARIO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL_DETALLE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERFIL_DETALLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USUARIO1\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(120)]\n        public string USUARIO1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_PERFIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(120)]\n        public string COD_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_USUARIO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_USUARIO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CPA_PERFIL_AUTORIZACION_OC\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_PERFIL\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_PERFIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AUTORIZA_RANGOS_IMPORTES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? AUTORIZA_RANGOS_IMPORTES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MONEDA_EXPRESION_AUTORIZAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string MONEDA_EXPRESION_AUTORIZAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE_MINIMO_AUTORIZAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE_MINIMO_AUTORIZAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE_MAXIMO_AUTORIZAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE_MAXIMO_AUTORIZAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACTUALIZA_AUTOMATICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ACTUALIZA_AUTOMATICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_OC_AUTORIZADA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? FECHA_OC_AUTORIZADA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_OC_DESAUTORIZADA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? FECHA_OC_DESAUTORIZADA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"REEXPRESA_TOTALES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? REEXPRESA_TOTALES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MONEDA_REEXPRESA_SUMA_TOTALES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? MONEDA_REEXPRESA_SUMA_TOTALES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MUESTRA_PERFILES_USUARIOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? MUESTRA_PERFILES_USUARIOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SELECCION_COMPRADOR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SELECCION_COMPRADOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SELECCION_SECTOR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SELECCION_SECTOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SELECCION_SUCURSAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SELECCION_SUCURSAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SELECCION_TALONARIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SELECCION_TALONARIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CPA_PERFIL_AUTORIZACION_OC_CONCEPTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CPA_PERFIL_AUTORIZACION_OC_CONCEPTO> CPA_PERFIL_AUTORIZACION_OC_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CPA_PERFIL_AUTORIZACION_OC_COMPRADOR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CPA_PERFIL_AUTORIZACION_OC_COMPRADOR> CPA_PERFIL_AUTORIZACION_OC_COMPRADOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CPA_PERFIL_AUTORIZACION_OC_SUCURSALES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CPA_PERFIL_AUTORIZACION_OC_SUCURSALES> CPA_PERFIL_AUTORIZACION_OC_SUCURSALES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CPA_PERFIL_AUTORIZACION_OC_TALONARIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CPA_PERFIL_AUTORIZACION_OC_TALONARIO> CPA_PERFIL_AUTORIZACION_OC_TALONARIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CPA_PERFIL_AUTORIZACION_OC_SECTOR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CPA_PERFIL_AUTORIZACION_OC_SECTOR> CPA_PERFIL_AUTORIZACION_OC_SECTOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USUARIOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<CPA_PERFIL_AUTORIZACION_OC_USUARIO> USUARIOS { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface CPA_PERFIL_AUTORIZACION_OC_CONCEPTO {\n    ID_CPA_PERFIL_AUTORIZACION_OC_CONCEPTO: number;\n    ID_PERFIL: number;\n    ID_CPA_CONCEPTO_AUTORIZACION: number;\n}\n\nexport interface CPA_PERFIL_AUTORIZACION_OC_COMPRADOR {\n    ID_CPA_PERFIL_AUTORIZACION_OC_COMPRADOR: number;\n    ID_PERFIL: number;\n    ID_CPA50: number | undefined;\n    COD_CPA50: string;\n}\n\nexport interface CPA_PERFIL_AUTORIZACION_OC_SUCURSALES {\n    ID_CPA_PERFIL_AUTORIZACION_OC_SUCURSALES: number;\n    ID_PERFIL: number;\n    ID_SUCURSAL: number;\n}\n\nexport interface CPA_PERFIL_AUTORIZACION_OC_TALONARIO {\n    ID_CPA_PERFIL_AUTORIZACION_OC_TALONARIO: number;\n    ID_PERFIL: number;\n    ID_TALONARIO: number;\n}\n\nexport interface CPA_PERFIL_AUTORIZACION_OC_SECTOR {\n    ID_CPA_PERFIL_AUTORIZACION_OC_SECTOR: number;\n    ID_PERFIL: number;\n    ID_CPA51: number | undefined;\n    COD_CPA51: string;\n}\n\nexport interface CPA_PERFIL_AUTORIZACION_OC_USUARIO {\n    ID_PERFIL_DETALLE: number;\n    ID_PERFIL: number;\n    USUARIO1: string;\n    COD_PERFIL: string | undefined;\n    ID_USUARIO: number;\n}\n\nexport interface CPA_PERFIL_AUTORIZACION_OC {\n    ID_PERFIL: number;\n    COD_PERFIL: string;\n    DESC_PERFIL: string | undefined;\n    AUTORIZA_RANGOS_IMPORTES: boolean | undefined;\n    MONEDA_EXPRESION_AUTORIZAR: string | undefined;\n    IMPORTE_MINIMO_AUTORIZAR: number | undefined;\n    IMPORTE_MAXIMO_AUTORIZAR: number | undefined;\n    ACTUALIZA_AUTOMATICO: number | undefined;\n    FECHA_OC_AUTORIZADA: number | undefined;\n    FECHA_OC_DESAUTORIZADA: number | undefined;\n    REEXPRESA_TOTALES: boolean | undefined;\n    MONEDA_REEXPRESA_SUMA_TOTALES: number | undefined;\n    MUESTRA_PERFILES_USUARIOS: boolean | undefined;\n    SELECCION_COMPRADOR: string | undefined;\n    SELECCION_SECTOR: string | undefined;\n    SELECCION_SUCURSAL: string | undefined;\n    SELECCION_TALONARIO: string | undefined;\n    OBSERVACIONES: string | undefined;\n    CPA_PERFIL_AUTORIZACION_OC_CONCEPTO: CPA_PERFIL_AUTORIZACION_OC_CONCEPTO[] | undefined;\n    CPA_PERFIL_AUTORIZACION_OC_COMPRADOR: CPA_PERFIL_AUTORIZACION_OC_COMPRADOR[] | undefined;\n    CPA_PERFIL_AUTORIZACION_OC_SUCURSALES: CPA_PERFIL_AUTORIZACION_OC_SUCURSALES[] | undefined;\n    CPA_PERFIL_AUTORIZACION_OC_TALONARIO: CPA_PERFIL_AUTORIZACION_OC_TALONARIO[] | undefined;\n    CPA_PERFIL_AUTORIZACION_OC_SECTOR: CPA_PERFIL_AUTORIZACION_OC_SECTOR[] | undefined;\n    USUARIOS: CPA_PERFIL_AUTORIZACION_OC_USUARIO[] | undefined;\n}",
+          "example": {
+            "ID_PERFIL": 0,
+            "COD_PERFIL": null,
+            "DESC_PERFIL": null,
+            "AUTORIZA_RANGOS_IMPORTES": false,
+            "MONEDA_EXPRESION_AUTORIZAR": "C",
+            "IMPORTE_MINIMO_AUTORIZAR": 0,
+            "IMPORTE_MAXIMO_AUTORIZAR": 0,
+            "ACTUALIZA_AUTOMATICO": 0,
+            "FECHA_OC_AUTORIZADA": 0,
+            "FECHA_OC_DESAUTORIZADA": 0,
+            "REEXPRESA_TOTALES": false,
+            "MONEDA_REEXPRESA_SUMA_TOTALES": 0,
+            "MUESTRA_PERFILES_USUARIOS": false,
+            "SELECCION_COMPRADOR": "T",
+            "SELECCION_SECTOR": "T",
+            "SELECCION_SUCURSAL": "T",
+            "SELECCION_TALONARIO": "T",
+            "OBSERVACIONES": null,
+            "CPA_PERFIL_AUTORIZACION_OC_CONCEPTO": [
+              {
+                "ID_CPA_PERFIL_AUTORIZACION_OC_CONCEPTO": 0,
+                "ID_PERFIL": 0,
+                "ID_CPA_CONCEPTO_AUTORIZACION": 0
+              }
+            ],
+            "CPA_PERFIL_AUTORIZACION_OC_COMPRADOR": [
+              {
+                "ID_CPA_PERFIL_AUTORIZACION_OC_COMPRADOR": 0,
+                "ID_PERFIL": 0,
+                "ID_CPA50": 0,
+                "COD_CPA50": null
+              }
+            ],
+            "CPA_PERFIL_AUTORIZACION_OC_SUCURSALES": [
+              {
+                "ID_CPA_PERFIL_AUTORIZACION_OC_SUCURSALES": 0,
+                "ID_PERFIL": 0,
+                "ID_SUCURSAL": 0
+              }
+            ],
+            "CPA_PERFIL_AUTORIZACION_OC_TALONARIO": [
+              {
+                "ID_CPA_PERFIL_AUTORIZACION_OC_TALONARIO": 0,
+                "ID_PERFIL": 0,
+                "ID_TALONARIO": 0
+              }
+            ],
+            "CPA_PERFIL_AUTORIZACION_OC_SECTOR": [
+              {
+                "ID_CPA_PERFIL_AUTORIZACION_OC_SECTOR": 0,
+                "ID_PERFIL": 0,
+                "ID_CPA51": 0,
+                "COD_CPA51": null
+              }
+            ],
+            "USUARIOS": [
+              {
+                "ID_PERFIL_DETALLE": 0,
+                "ID_PERFIL": 0,
+                "USUARIO1": null,
+                "COD_PERFIL": null,
+                "ID_USUARIO": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "CPA_PERFIL_AUTORIZACION_OC": [
+      "CPA_PERFIL_AUTORIZACION_OC_CONCEPTO",
+      "CPA_PERFIL_AUTORIZACION_OC_COMPRADOR",
+      "CPA_PERFIL_AUTORIZACION_OC_SUCURSALES",
+      "CPA_PERFIL_AUTORIZACION_OC_TALONARIO",
+      "CPA_PERFIL_AUTORIZACION_OC_SECTOR",
+      "USUARIOS",
+      "COD_CPA_PERFIL_AUTORIZACION_OC",
+      "DESC_CPA_PERFIL_AUTORIZACION_OC",
+      "AUTORIZA_RANGOS_IMPORTES",
+      "MONEDA_EXPRESION_AUTORIZAR",
+      "IMPORTE_MINIMO_AUTORIZAR",
+      "IMPORTE_MAXIMO_AUTORIZAR",
+      "ACTUALIZA_AUTOMATICO",
+      "FECHA_OC_AUTORIZADA",
+      "FECHA_OC_DESAUTORIZADA",
+      "REEXPRESA_TOTALES",
+      "MONEDA_REEXPRESA_SUMA_TOTALES",
+      "MUESTRA_PERFILES_USUARIOS",
+      "SELECCION_COMPRADOR",
+      "SELECCION_SECTOR",
+      "SELECCION_SUCURSAL",
+      "SELECCION_TALONARIO",
+      "OBSERVACIONES"
+    ],
+    "CPA_PERFIL_AUTORIZACION_OC_CONCEPTO": [
+      "ID_CPA_PERFIL_AUTORIZACION_OC",
+      "ID_CPA_CONCEPTO_AUTORIZACION"
+    ],
+    "CPA_PERFIL_AUTORIZACION_OC_COMPRADOR": [
+      "ID_CPA_PERFIL_AUTORIZACION_OC",
+      "ID_CPA50",
+      "COD_CPA50"
+    ],
+    "CPA_PERFIL_AUTORIZACION_OC_SUCURSALES ": [
+      "ID_CPA_PERFIL_AUTORIZACION_OC",
+      "ID_SUCURSAL"
+    ],
+    "CPA_PERFIL_AUTORIZACION_OC_TALONARIO ": [
+      "ID_CPA_PERFIL_AUTORIZACION_OC",
+      "ID_TALONARIO"
+    ],
+    "CPA_PERFIL_AUTORIZACION_OC_SECTOR": [
+      "ID_CPA_PERFIL_AUTORIZACION_OC",
+      "ID_CPA51",
+      "COD_CPA51"
+    ],
+    "CPA_PERFIL_AUTORIZACION_OC_USUARIO": [
+      "ID_CPA_PERFIL_AUTORIZACION_OC",
+      "USUARIO",
+      "COD_PERFIL",
+      "ID_USUARIO"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

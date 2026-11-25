@@ -1,0 +1,2098 @@
+{
+  "modulo": "Sueldos",
+  "capturado": "2026-10-08T17:20:25.562Z",
+  "procesos": {
+    "336": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosDetallePorCuentaModel"
+      ],
+      "titulo": "Detalle por cuenta"
+    },
+    "352": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosDetallePorAuxiliarModel"
+      ],
+      "titulo": "Detalle por auxiliar"
+    },
+    "353": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosDetallePorSubauxiliarModel"
+      ],
+      "titulo": "Detalle por subauxiliar"
+    },
+    "412": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "EQUIVALENCIA_LISTADOR_SU",
+        "VALOR_EQUIVALENCIA_LISTADOR_SU"
+      ],
+      "titulo": "Equivalencias para listador de conceptos y totales"
+    },
+    "587": {
+      "estado": "sin-api",
+      "tablas": [
+        "DEFINICION_ASCII_SU",
+        "SECCION_ASCII_SU",
+        "COLUMNA_ASCII_SU"
+      ],
+      "titulo": "Definición de archivos ASCII"
+    },
+    "592": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "RotacionDePersonalPorCategoriaModel"
+      ],
+      "titulo": "Rotación de Personal por Categorías en un determinado período"
+    },
+    "637": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "RotacionDePersonalGeneralModel"
+      ],
+      "titulo": "Rotación de Personal General en un determinado período"
+    },
+    "638": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "RotacionDePersonalPorDepartamentoModel"
+      ],
+      "titulo": "Rotación de Personal por Departamentos en un determinado período"
+    },
+    "639": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "RotacionDePersonalGrupoJerarquicoModel"
+      ],
+      "titulo": "Rotación de Personal por Grupos jerárquicos en un determinado período"
+    },
+    "640": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "RotacionDePersonalLugarTrabajoModel"
+      ],
+      "titulo": "Rotación de Personal por Lugar de trabajo en un determinado período"
+    },
+    "641": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "RotacionDePersonalAgrupacionModel"
+      ],
+      "titulo": "Rotación de Personal por Grupos en un determinado período"
+    },
+    "642": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "RotacionDePersonalTipoConvenioModel"
+      ],
+      "titulo": "Rotación de Personal por Tipos de convenios en un determinado período"
+    },
+    "790": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosNominaLegajosModel"
+      ],
+      "titulo": "Legajos"
+    },
+    "1012": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_CONCEPTO_LIQUIDACION"
+      ],
+      "titulo": "Conceptos de liquidación"
+    },
+    "1013": {
+      "estado": "sin-api",
+      "tablas": [
+        "TIPO_CONCEPTO",
+        "CONCEPTO_SUBTIPO"
+      ],
+      "titulo": "Tipos de conceptos"
+    },
+    "1031": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "SITUACION_REVISTA"
+      ],
+      "titulo": "Códigos de situación de revista"
+    },
+    "1032": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TABLA",
+        "FILA_TABLA"
+      ],
+      "titulo": "Tablas auxiliares"
+    },
+    "1033": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MATRIZ",
+        "RANGO_MATRIZ"
+      ],
+      "titulo": "Matrices auxiliares"
+    },
+    "1034": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MATRIZ_SUELDO",
+        "RANGO_MATRIZ_SUELDO"
+      ],
+      "titulo": "Matrices de sueldos"
+    },
+    "1036": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "BILLETE"
+      ],
+      "titulo": "Billetes"
+    },
+    "1038": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_LEGAJO"
+      ],
+      "titulo": "Legajos de Sueldos"
+    },
+    "1039": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_FAMILIAR"
+      ],
+      "titulo": "Familiares"
+    },
+    "1041": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_CANTIDAD_FAMILIAR"
+      ],
+      "titulo": "Actualización manual de cantidades"
+    },
+    "1044": {
+      "estado": "sin-api",
+      "tablas": [
+        "ActualizacionMasivaSueldosParams",
+        "LEGAJO_CLOUD",
+        "LEGAJO_SU_ITEM_SUELDO",
+        "LEGAJO_SU_COSTO_LABORAL",
+        "INGRESO_EGRESO",
+        "RENGLON_LEGAJO_ACTUALIZADO",
+        "CATEGORIA",
+        "RENGLON_CATEGORIA_ACTUALIZADA"
+      ],
+      "titulo": "Actualización masiva de Sueldos"
+    },
+    "1058": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "ART"
+      ],
+      "titulo": "ART"
+    },
+    "1060": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_ACUMULADO_FIJO"
+      ],
+      "titulo": "Acumulados fijos"
+    },
+    "1061": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_MAESTRO_ACUMULADO_DEFINIBLE"
+      ],
+      "titulo": "Acumulados definibles"
+    },
+    "1062": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_LEGAJO"
+      ],
+      "titulo": "Legajos eventuales"
+    },
+    "1063": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "SERVICIO_EVENTUAL"
+      ],
+      "titulo": "Empresas de servicios eventuales"
+    },
+    "1066": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "CONVENIO",
+        "DIA_HABIL"
+      ],
+      "titulo": "Convenios"
+    },
+    "1067": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "ZONA_DGI"
+      ],
+      "titulo": "Zonas ARCA"
+    },
+    "1070": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "CATEGORIA"
+      ],
+      "titulo": "Categorías"
+    },
+    "1074": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TIPO_CONTRATO"
+      ],
+      "titulo": "Modalidades de contratación"
+    },
+    "1078": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GRUPO_JERARQUICO"
+      ],
+      "titulo": "Grupos jerárquicos"
+    },
+    "1082": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "LUGAR_TRABAJO"
+      ],
+      "titulo": "Lugares de trabajo"
+    },
+    "1083": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "OBRA_SOCIAL",
+        "PLAN_OS"
+      ],
+      "titulo": "Obras sociales"
+    },
+    "1084": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "OBRA_SOCIAL_DGI"
+      ],
+      "titulo": "Obras sociales ARCA"
+    },
+    "1086": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "SINDICATO"
+      ],
+      "titulo": "Sindicatos"
+    },
+    "1089": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "NOVEDAD",
+        "NOVEDAD_GRUPO",
+        "MODULO_NOVEDAD"
+      ],
+      "titulo": "Novedades"
+    },
+    "1093": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_DATO_FIJO"
+      ],
+      "titulo": "Datos fijos de la liquidación"
+    },
+    "1097": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_TOT_LIQUIDACION"
+      ],
+      "titulo": "Liquidación de conceptos individual"
+    },
+    "1098": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "LiquidacionConceptosGlobalApiParams"
+      ],
+      "titulo": "Liquidación de conceptos global"
+    },
+    "1102": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_TOT_LIQUIDACION"
+      ],
+      "titulo": "Liquidación de ganancias individual"
+    },
+    "1105": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "LiquidacionGananciasGlobalApiParams"
+      ],
+      "titulo": "Liquidación de ganancias global"
+    },
+    "1106": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "AutorizacionLiquidacionesApiParams"
+      ],
+      "titulo": "Autorización de liquidaciones"
+    },
+    "1109": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_TOT_LIQUIDACION"
+      ],
+      "titulo": "Simulación de liquidación"
+    },
+    "1112": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_DETALLE_LICENCIA"
+      ],
+      "titulo": "Detalle de licencias"
+    },
+    "1113": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_TOT_LIQUIDACION"
+      ],
+      "titulo": "Simulación de sueldo bruto"
+    },
+    "1114": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_TOT_LIQUIDACION"
+      ],
+      "titulo": "Consulta de liquidaciones"
+    },
+    "1117": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "AnulacionLiquidacionesApiParams"
+      ],
+      "titulo": "Anulación de liquidaciones"
+    },
+    "1144": {
+      "estado": "sin-api",
+      "tablas": [
+        "PARAMETRO_SU"
+      ],
+      "titulo": "Parámetros de Sueldos"
+    },
+    "1145": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_FORMULA"
+      ],
+      "titulo": "Fórmulas de liquidación"
+    },
+    "1148": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "ACTIVIDAD_LEGAJO_DGI"
+      ],
+      "titulo": "Actividades ARCA para empleados"
+    },
+    "1149": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "HISTORIAL",
+        "HISTORIAL_ITEM_SUELDO"
+      ],
+      "titulo": "Historial laboral"
+    },
+    "1150": {
+      "estado": "sin-api",
+      "tablas": [
+        "GeneracionHistorialLaboralApiParams"
+      ],
+      "titulo": "Generación de historial laboral"
+    },
+    "1152": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MAESTRO_TRAMO_GCIA",
+        "TRAMO_GCIA"
+      ],
+      "titulo": "Tramos de imposición"
+    },
+    "1154": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_NOVEDAD_REGISTRADA"
+      ],
+      "titulo": "Novedades registradas"
+    },
+    "1155": {
+      "estado": "sin-api",
+      "tablas": [
+        "ActualizacionGlobalNovedadesApiParam",
+        "RENGLON_NOVEDAD_ACTUALIZAR"
+      ],
+      "titulo": "Actualización global de novedades"
+    },
+    "1245": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TIPO_LIQUIDACION"
+      ],
+      "titulo": "Tipos de liquidación"
+    },
+    "1273": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_PARAMETRO_ASCII_BANCO"
+      ],
+      "titulo": "Definición de formato de archivo ASCII"
+    },
+    "1344": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MAESTRO_TOPE_GCIA",
+        "TOPE_GCIA"
+      ],
+      "titulo": "Topes de deducciones"
+    },
+    "1345": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_MAESTRO_OTRO_EMPLEO_GCIA"
+      ],
+      "titulo": "Otros ingresos - Empleos externos"
+    },
+    "1346": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MAESTRO_PAGO_GENERAL_GCIA",
+        "PAGO_GENERAL_GCIA",
+        "DETALLE_PAGO_GENERAL_GCIA"
+      ],
+      "titulo": "Pagos por deducciones generales"
+    },
+    "1377": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_VARIABLE"
+      ],
+      "titulo": "Definición de variables"
+    },
+    "1386": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "VARIABLE_GRUPO"
+      ],
+      "titulo": "Grupos para variables"
+    },
+    "1395": {
+      "estado": "sin-api",
+      "tablas": [
+        "GeneracionMasivaVacacionApiParams",
+        "TRAMO_LEGAJO"
+      ],
+      "titulo": "Generación masiva de vacaciones"
+    },
+    "1397": {
+      "estado": "sin-api",
+      "tablas": [
+        "GeneracionAsciiAcreditacionHaberesApiParams",
+        "DATO_FIJO_GRID",
+        "ACREDITACION_ASCII_GRID"
+      ],
+      "titulo": "Generación de archivo ASCII para acreditación de haberes"
+    },
+    "1401": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GRUPO_NOVEDAD",
+        "NOVEDAD"
+      ],
+      "titulo": "Grupos para novedades"
+    },
+    "1419": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "CONDICION_LEGAJO_DGI"
+      ],
+      "titulo": "Condiciones ARCA"
+    },
+    "1420": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "SITUACION_LEGAJO_DGI"
+      ],
+      "titulo": "Situaciones ARCA"
+    },
+    "1434": {
+      "estado": "sin-api",
+      "tablas": [
+        "GeneracionAutomaticaNovedadApiParams"
+      ],
+      "titulo": "Generación automática de novedades"
+    },
+    "1440": {
+      "estado": "sin-api",
+      "tablas": [
+        "MAESTRO_TIPO_CONCEPTO",
+        "TIPO_CONCEPTO"
+      ],
+      "titulo": "Habilitación de rangos de conceptos"
+    },
+    "1539": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "INCAPACIDAD_LEGAJO_DGI"
+      ],
+      "titulo": "Incapacidades ARCA"
+    },
+    "1569": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MULTITABLA",
+        "FILA_MULTITABLA",
+        "COLUMNA_MULTITABLA"
+      ],
+      "titulo": "Multitablas auxiliares"
+    },
+    "1597": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "LEGAJO_CONTABLE_HABITUAL",
+        "AUXILIAR_HABITUAL_LEGAJO",
+        "AUXILIAR_REGLA_HABITUAL_LEGAJO",
+        "SUBAUXILIAR_REGLA_HABITUAL_LEGAJO"
+      ],
+      "titulo": "Actualización individual de apropiaciones habituales"
+    },
+    "1706": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "LOCALIDAD_DGI"
+      ],
+      "titulo": "Localidades ARCA"
+    },
+    "1711": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "JUZGADO_DGI"
+      ],
+      "titulo": "Juzgados ARCA"
+    },
+    "1842": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MODELO_ASIENTO_SU",
+        "RENGLON_MODELO_ASIENTO_SU"
+      ],
+      "titulo": "Modelos de asientos"
+    },
+    "1849": {
+      "estado": "error",
+      "detalle": "Se detectó una situación inesperada",
+      "titulo": null
+    },
+    "1851": {
+      "estado": "error",
+      "detalle": "Se detectó una situación inesperada",
+      "titulo": null
+    },
+    "1853": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "LEGAJO_CONTABLE_OCASIONAL",
+        "AUXILIAR_OCASIONAL_LEGAJO",
+        "AUXILIAR_REGLA_OCASIONAL_LEGAJO",
+        "SUBAUXILIAR_REGLA_OCASIONAL_LEGAJO"
+      ],
+      "titulo": "Actualización individual de apropiaciones ocasionales"
+    },
+    "1913": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "NIVEL_ESTUDIO_DGI"
+      ],
+      "titulo": "Nivel de estudios ARCA"
+    },
+    "2087": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosDeduccionesModel"
+      ],
+      "titulo": "Deducciones"
+    },
+    "2088": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosPagosDeDeduccionesGeneralesModel"
+      ],
+      "titulo": "Pagos de deducciones generales"
+    },
+    "2090": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosTramosDeImposicionModel"
+      ],
+      "titulo": "Tramos de imposición"
+    },
+    "2094": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosTotalesLiquidadosPorMesAnioCostoLaboralModel"
+      ],
+      "titulo": "Totales liquidados por mes/año"
+    },
+    "2095": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosEvolucionPorDepartamentoModel"
+      ],
+      "titulo": "Evolución por departamento"
+    },
+    "2096": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosEvolucionPorGrupoJerarquicoModel"
+      ],
+      "titulo": "Evolución por grupo jerárquico"
+    },
+    "2097": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosRetencionesPercepcionesYPagosACuentaModel"
+      ],
+      "titulo": "Retenciones, Percepciones y Pagos a cuenta"
+    },
+    "2122": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_MAESTRO_PAGO_A_CUENTA_GANANCIAS"
+      ],
+      "titulo": "Retenciones, percepciones y pagos a cuenta"
+    },
+    "2126": {
+      "estado": "sin-api",
+      "tablas": [
+        "ImportacionNovedadSiradigApiParams",
+        "LegajoGrid"
+      ],
+      "titulo": "Importación de novedades de SiRADIG"
+    },
+    "2295": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TIPO_EVENTO_DGI"
+      ],
+      "titulo": "Tipos de eventos ARCA"
+    },
+    "2302": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TIPO_DOCUMENTACION_DGI"
+      ],
+      "titulo": "Tipos de documentación ARCA"
+    },
+    "2308": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TIPO_DOCUMENTACION_EXT_DGI"
+      ],
+      "titulo": "Tipos de documentación en el exterior ARCA"
+    },
+    "2314": {
+      "estado": "sin-api",
+      "tablas": [
+        "ControlAcreditacionHaberesApiParams",
+        "DATO_FIJO_GRID",
+        "CONTROL_ACREDITACION_GRID"
+      ],
+      "titulo": "Control de acreditación de haberes"
+    },
+    "2320": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "ITEM_COSTO_LABORAL"
+      ],
+      "titulo": "Cargas sociales"
+    },
+    "2321": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "ITEM_SUELDO"
+      ],
+      "titulo": "Adicionales"
+    },
+    "2342": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AJUSTE",
+        "FORMULA_CONCEPTO"
+      ],
+      "titulo": "Ajustes afectados al mejor sueldo"
+    },
+    "2383": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "ORGANISMO_GCIA"
+      ],
+      "titulo": "Organismos para el pago de deducciones"
+    },
+    "2603": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "DEDUCCION_GCIA"
+      ],
+      "titulo": "Configuración de deducciones"
+    },
+    "2630": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosNominaLegajosEventualesModel"
+      ],
+      "titulo": "Nómina (legajos eventuales)"
+    },
+    "2631": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosConceptosParticularesModel"
+      ],
+      "titulo": "Conceptos particulares"
+    },
+    "2806": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosVencimientosDeEmbargosYObligacionesModel"
+      ],
+      "titulo": "Vencimientos de embargos y obligaciones"
+    },
+    "2832": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_EMBARGO_LEGAJO"
+      ],
+      "titulo": "Embargos y obligaciones"
+    },
+    "2836": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosEmbargosYObligacionesModel"
+      ],
+      "titulo": "Embargos y obligaciones"
+    },
+    "3187": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_MODIFICACION_GANANCIAS_A_RETENER"
+      ],
+      "titulo": "Actualización del impuesto a retener/devolver"
+    },
+    "12709": {
+      "estado": "sin-api",
+      "tablas": [
+        "EMBARGO",
+        "RETENCIONES"
+      ],
+      "titulo": "Ficha Live de embargos"
+    },
+    "17597": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosResumenDeTotalesLiquidadosModel"
+      ],
+      "titulo": "Resumen por departamento de totales liquidados"
+    },
+    "17598": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosComparativoDeTotalesLiquidadosModel"
+      ],
+      "titulo": "Comparativo de totales liquidados"
+    },
+    "17599": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosTotalesLiquidadosPorMesAnioModel"
+      ],
+      "titulo": "Totales liquidados por mes/año"
+    },
+    "17600": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosSueldoNominalVsSueldoLiquidadoModel"
+      ],
+      "titulo": "Sueldo nominal vs. Sueldo liquidado"
+    },
+    "17602": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosResumenDeConceptosLiquidadosModel"
+      ],
+      "titulo": "Resumen de conceptos liquidados"
+    },
+    "17603": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosComparativoDeConceptosLiquidadosModel"
+      ],
+      "titulo": "Comparativo de conceptos liquidados"
+    },
+    "17604": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosConceptosLiquidadosPorMesAnioModel"
+      ],
+      "titulo": "Conceptos liquidados por mes/año"
+    },
+    "17606": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosSueldoBasicoAdicionalesYCargasSocialesModel"
+      ],
+      "titulo": "Sueldo bruto y costo estimado"
+    },
+    "17607": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosAdicionalesAlSueldoBasicoModel"
+      ],
+      "titulo": "Adicionales al sueldo básico"
+    },
+    "17608": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosDetalleDeTicketsModel"
+      ],
+      "titulo": "Detalle de tickets"
+    },
+    "17610": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosDepositosDeHaberesModel"
+      ],
+      "titulo": "Acreditación de haberes"
+    },
+    "17612": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosMejorSueldoModel"
+      ],
+      "titulo": "Mejor sueldo"
+    },
+    "17613": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosAjustesRegistradosModel"
+      ],
+      "titulo": "Ajustes registrados"
+    },
+    "17614": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosNovedadesRegistradasModel"
+      ],
+      "titulo": "Novedades registradas"
+    },
+    "20079": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosNominaDeConceptosDeLiquidacionModel"
+      ],
+      "titulo": "Nómina de conceptos de liquidación"
+    },
+    "20080": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosAnalisisRemuneracionesRG5008Model"
+      ],
+      "titulo": "Análisis remuneraciones RG 5008"
+    },
+    "20194": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosDetalleAjusteAnualModel"
+      ],
+      "titulo": "Detalle de ajuste anual"
+    },
+    "20207": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosDetalleDeTotalesLiquidadosModel"
+      ],
+      "titulo": "Detalle de totales liquidados"
+    },
+    "20210": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosDetalleDeConceptosLiquidadosModel"
+      ],
+      "titulo": "Detalle de conceptos liquidados"
+    },
+    "20241": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ApropiacionesHabitualesModel"
+      ],
+      "titulo": "Apropiaciones habituales"
+    },
+    "20242": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ApropiacionesOcasionalesModel"
+      ],
+      "titulo": "Apropiaciones ocasionales"
+    },
+    "20246": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_MAESTRO_LEGAJO_ADICIONAL_GCIA"
+      ],
+      "titulo": "Otros ingresos - Otros legajos"
+    },
+    "20250": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_CUENTA_DEFECTO_MODELO_ASIENTO_SUELDOS"
+      ],
+      "titulo": "Cuentas por defecto para modelos de asientos"
+    },
+    "20255": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TIPO_SERVICIO_AFIP"
+      ],
+      "titulo": "Tipos de servicios ARCA"
+    },
+    "20287": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosDetalleAjusteImpuestoGananciasModel"
+      ],
+      "titulo": "Detalle de ajustes de impuesto a las ganancias"
+    },
+    "20312": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SaldosDisponiblesPorNovedadModel"
+      ],
+      "titulo": "Saldos disponibles por novedad"
+    },
+    "20350": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_SALDO_VACACION"
+      ],
+      "titulo": "Vacaciones"
+    },
+    "20402": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SaldoVacacionesModel"
+      ],
+      "titulo": "Saldos de vacaciones"
+    },
+    "20403": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TramosVacacionesModel"
+      ],
+      "titulo": "Tramos de vacaciones"
+    },
+    "20420": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ImportacionSiRADIGModel"
+      ],
+      "titulo": "Novedades importadas de SiRADIG"
+    },
+    "20427": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosDetalleBonosLiquidadosModel"
+      ],
+      "titulo": "Detalle Bonos / Fallos de cajas / Similar naturaleza liquidados"
+    },
+    "20429": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosDetalleCompensacionAnalogaModel"
+      ],
+      "titulo": "Detalle compensación análoga"
+    },
+    "20437": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "UltimasNovedadesImportadasSiRADIGModel"
+      ],
+      "titulo": "Ultimas novedades importadas de SiRADIG"
+    },
+    "21152": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "SALARIO_MINIMO_VITAL_MOVIL"
+      ],
+      "titulo": "Detalle salario mínimo vital y móvil"
+    },
+    "21157": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "AnulacionLiquidacionGananciasGlobalApiParams"
+      ],
+      "titulo": "Anulación de liquidaciones de ganancias"
+    },
+    "21171": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "DEFECTO_TOT_LIQUIDACION",
+        "DEFECTO_TOT_LIQUIDACION_CONCEPTO",
+        "DEFECTO_TOT_LIQUIDACION_CONCEPTO_EXCLUIDO"
+      ],
+      "titulo": "Plantillas para liquidación de conceptos"
+    },
+    "21262": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MAESTRO_TRAMO_GCIA_ANUAL",
+        "TRAMO_GCIA_ANUAL"
+      ],
+      "titulo": "Tramos de imposición anuales"
+    },
+    "21266": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MAESTRO_TOPE_GCIA_ANUAL",
+        "TOPE_GCIA_ANUAL"
+      ],
+      "titulo": "Topes de deducciones anuales"
+    },
+    "21270": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TOPE_BASE_IMPONIBLE"
+      ],
+      "titulo": "Topes para bases imponibles"
+    },
+    "21278": {
+      "estado": "sin-api",
+      "tablas": [
+        "AsignacionMasivaSubtiposApiParam",
+        "CONCEPTO_GRID"
+      ],
+      "titulo": "Asignación masiva de subtipos"
+    },
+    "21394": {
+      "estado": "sin-api",
+      "tablas": [
+        "BorradorLiquidacionApiParams"
+      ],
+      "titulo": "Borrador de liquidaciones"
+    },
+    "21396": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosConceptosInconsistentesModel"
+      ],
+      "titulo": "Conceptos imposibles de informar en F.1359"
+    },
+    "21398": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosEmpleosExternosInconsistentesModel"
+      ],
+      "titulo": "Importes en empleos externos imposibles de informar en F.1359"
+    },
+    "21424": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosOtrosLegajosInconsistentesModel"
+      ],
+      "titulo": "Importes en otros legajos imposibles de informar en F.1359"
+    },
+    "21425": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosAcumuladosFijosInconsistentesModel"
+      ],
+      "titulo": "Importes en acumulados fijos imposibles de informar en F.1359"
+    },
+    "21499": {
+      "estado": "sin-api",
+      "tablas": [
+        "EliminacionAcreditacionHaberesApiParams",
+        "DETALLE_DEPOSITO_GRID"
+      ],
+      "titulo": "Eliminación de acreditación de haberes"
+    },
+    "21501": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "RetencionesEmbargosYObligacionesModel"
+      ],
+      "titulo": "Retenciones de embargos y obligaciones"
+    },
+    "21517": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "EliminacionAcreditacionHaberesAuditoriaModel"
+      ],
+      "titulo": "Detalle de acreditaciones eliminadas"
+    },
+    "21597": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosNovedadesRegistradasModel"
+      ],
+      "titulo": "Novedades registradas por departamento"
+    },
+    "21598": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ContabilizacionDeLiquidacionesModel"
+      ],
+      "titulo": "Contabilización de liquidaciones"
+    },
+    "21599": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ContabilizacionDeLiquidacionesModel"
+      ],
+      "titulo": "Contabilización de liquidaciones pendientes de exportar"
+    },
+    "21608": {
+      "estado": "sin-api",
+      "tablas": [
+        "NotificacionPagoEmbargoApiParams"
+      ],
+      "titulo": "Notificación de pago de embargos y obligaciones"
+    },
+    "21616": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SueldosMejorSueldoTramoModel"
+      ],
+      "titulo": "Mejor sueldo por tramo laboral"
+    },
+    "21650": {
+      "estado": "sin-api",
+      "tablas": [
+        "NotificacionesPeriodoPruebaApiParams"
+      ],
+      "titulo": "Notificaciones para período de prueba"
+    },
+    "21719": {
+      "estado": "sin-api",
+      "tablas": [
+        "ActualizacionModalidadesContratacionApiParams",
+        "MODALIDAD_CONTRATACION"
+      ],
+      "titulo": "Actualización de modalidades de contratación"
+    },
+    "21948": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "PeriodoPruebaBaseModel"
+      ],
+      "titulo": "Legajos con período de prueba notificado"
+    },
+    "21949": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "PeriodoPruebaBaseModel"
+      ],
+      "titulo": "Legajos con modalidad de contratación actualizada"
+    }
+  }
+}

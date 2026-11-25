@@ -1,0 +1,133 @@
+{
+  "title": "Contabilización de liquidaciones",
+  "moduleId": 8,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "ContabilizacionDeLiquidacionesModel": [
+      "ID_DATO_FIJO",
+      "NUMERO_DATO_FIJO",
+      "NRO_DATO_FIJO",
+      "PER_LIQUIDACION",
+      "DESC_TIPO_LIQUIDACION",
+      "DESC_PAGO",
+      "ESTADO_DATO_FIJO",
+      "COD_MODELO_ASIENTO_SU_DF",
+      "DESC_MODELO_ASIENTO_SU_DF",
+      "FECHA_CONTABLE",
+      "ID_LEGAJO",
+      "NRO_LEGAJO",
+      "APELLIDO_Y_NOMBRE",
+      "COD_MODELO_ASIENTO_SU_LEGAJO",
+      "DESC_MODELO_ASIENTO_SU_LEGAJO",
+      "CONTABILIZADO",
+      "TRANSFERIDO_CN",
+      "NRO_LOTE_CN_GENERADO",
+      "NRO_LOTE_CN_RECIBIDO",
+      "COD_TIPO_ASIENTO",
+      "NRO_ASIENTO_ANALITICO",
+      "NRO_INTERNO_ANALITICO",
+      "FECHA_ASIENTO",
+      "ESTADO_ASIENTO_ANALITICO",
+      "CLASE_ASIENTO",
+      "DESC_ASIENTO_ANALITICO",
+      "NRO_INTERNO_ASIENTO",
+      "NRO_ASIENTO_FICHA",
+      "TIPO_LIQUIDACION",
+      "USUARIO_CONTABILIZACION",
+      "FECHA_CONTABILIZACION",
+      "TERMINAL_CONTABILIZACION",
+      "USUARIO_GENERACION",
+      "FECHA_GENERACION",
+      "TERMINAL_GENERACION",
+      "ESTADO_LOTE_CN_GENERADO",
+      "ESTADO_LOTE_CN_RECIBIDO",
+      "USUARIO_IMPORTACION",
+      "FECHA_IMPORTACION",
+      "TERMINAL_IMPORTACION",
+      "DESC_TIPO_ASIENTO"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

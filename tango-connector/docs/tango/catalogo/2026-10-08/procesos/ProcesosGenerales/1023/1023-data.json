@@ -1,0 +1,22 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_DEPARTAMENTO": 1,
+        "coD_DEPARTAMENTO": "ADM",
+        "desC_DEPARTAMENTO": "administracion",
+        "roW_VERSION": "AAAAAADO1Ec="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

@@ -1,0 +1,34 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_TIPO_GASTO_CP": 4,
+        "coD_CPA70": "DES",
+        "iD_CPA70": 2,
+        "roW_VERSION": "AAAAAADQWus="
+      },
+      {
+        "iD_TIPO_GASTO_CP": 5,
+        "coD_CPA70": "PRE",
+        "iD_CPA70": 1,
+        "roW_VERSION": "AAAAAADQWuw="
+      },
+      {
+        "iD_TIPO_GASTO_CP": 6,
+        "coD_CPA70": "S/C",
+        "iD_CPA70": 3,
+        "roW_VERSION": "AAAAAADQWu0="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

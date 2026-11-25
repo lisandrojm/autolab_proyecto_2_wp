@@ -1,0 +1,136 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 1,
+        "coD_NIVEL_ESTUDIO_DGI": "12",
+        "desC_NIVEL_ESTUDIO_DGI": "Universitario                           ",
+        "roW_VERSION": "AAAAAADPOW0="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 2,
+        "coD_NIVEL_ESTUDIO_DGI": "02",
+        "desC_NIVEL_ESTUDIO_DGI": "Primarios                               ",
+        "roW_VERSION": "AAAAAADPOWM="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 3,
+        "coD_NIVEL_ESTUDIO_DGI": "01",
+        "desC_NIVEL_ESTUDIO_DGI": "Sin estudios                            ",
+        "roW_VERSION": "AAAAAADPOWI="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 4,
+        "coD_NIVEL_ESTUDIO_DGI": "14",
+        "desC_NIVEL_ESTUDIO_DGI": "Rehabilitación/Estimulación",
+        "roW_VERSION": "AAAAAADPOW8="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 5,
+        "coD_NIVEL_ESTUDIO_DGI": "15",
+        "desC_NIVEL_ESTUDIO_DGI": "Esc. Especial-Diferencial               ",
+        "roW_VERSION": "AAAAAADPOXA="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 6,
+        "coD_NIVEL_ESTUDIO_DGI": "16",
+        "desC_NIVEL_ESTUDIO_DGI": "Preescolar                              ",
+        "roW_VERSION": "AAAAAADPOXE="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 7,
+        "coD_NIVEL_ESTUDIO_DGI": "17",
+        "desC_NIVEL_ESTUDIO_DGI": "Nivel inicial                           ",
+        "roW_VERSION": "AAAAAADPOXI="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 8,
+        "coD_NIVEL_ESTUDIO_DGI": "18",
+        "desC_NIVEL_ESTUDIO_DGI": "Con estudio (Obra Social)",
+        "roW_VERSION": "AAAAAADPOXM="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 9,
+        "coD_NIVEL_ESTUDIO_DGI": "19",
+        "desC_NIVEL_ESTUDIO_DGI": "Alumno reg. Exten. (desemp)",
+        "roW_VERSION": "AAAAAADPOXQ="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 10,
+        "coD_NIVEL_ESTUDIO_DGI": "20",
+        "desC_NIVEL_ESTUDIO_DGI": "Escolaridad a domicilio",
+        "roW_VERSION": "AAAAAADPOXU="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 11,
+        "coD_NIVEL_ESTUDIO_DGI": "03",
+        "desC_NIVEL_ESTUDIO_DGI": "Primario incompleto",
+        "roW_VERSION": "AAAAAADPOWQ="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 12,
+        "coD_NIVEL_ESTUDIO_DGI": "04",
+        "desC_NIVEL_ESTUDIO_DGI": "Secundario                              ",
+        "roW_VERSION": "AAAAAADPOWU="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 13,
+        "coD_NIVEL_ESTUDIO_DGI": "05",
+        "desC_NIVEL_ESTUDIO_DGI": "Secundario incompleto",
+        "roW_VERSION": "AAAAAADPOWY="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 14,
+        "coD_NIVEL_ESTUDIO_DGI": "06",
+        "desC_NIVEL_ESTUDIO_DGI": "General básico                          ",
+        "roW_VERSION": "AAAAAADPOWc="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 15,
+        "coD_NIVEL_ESTUDIO_DGI": "07",
+        "desC_NIVEL_ESTUDIO_DGI": "General básico incompleto",
+        "roW_VERSION": "AAAAAADPOWg="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 16,
+        "coD_NIVEL_ESTUDIO_DGI": "08",
+        "desC_NIVEL_ESTUDIO_DGI": "Polimodal                               ",
+        "roW_VERSION": "AAAAAADPOWk="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 17,
+        "coD_NIVEL_ESTUDIO_DGI": "09",
+        "desC_NIVEL_ESTUDIO_DGI": "Polimodal incompleto",
+        "roW_VERSION": "AAAAAADPOWo="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 18,
+        "coD_NIVEL_ESTUDIO_DGI": "10",
+        "desC_NIVEL_ESTUDIO_DGI": "Terciario                               ",
+        "roW_VERSION": "AAAAAADPOWs="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 19,
+        "coD_NIVEL_ESTUDIO_DGI": "11",
+        "desC_NIVEL_ESTUDIO_DGI": "Terciario incompleto",
+        "roW_VERSION": "AAAAAADPOWw="
+      },
+      {
+        "iD_NIVEL_ESTUDIO_DGI": 20,
+        "coD_NIVEL_ESTUDIO_DGI": "13",
+        "desC_NIVEL_ESTUDIO_DGI": "Universitario incompleto",
+        "roW_VERSION": "AAAAAADPOW4="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

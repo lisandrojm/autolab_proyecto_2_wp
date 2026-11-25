@@ -1,0 +1,376 @@
+{
+  "title": "Perfiles de gestión de clientes",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"GVA72\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_PERFIL\",\r\n    \"HABILITADO\",\r\n    \"USA_SITUACION_FINANCIERA\",\r\n    \"USA_CTACTE\",\r\n    \"USA_VALOR\",\r\n    \"USA_VENTA\",\r\n    \"USA_PEDIDO\",\r\n    \"USA_COTIZ\",\r\n    \"CONF_PARAM\",\r\n    \"ACC_CODIGO\",\r\n    \"AVC_CODIGO\",\r\n    \"AVD_CODIGO\",\r\n    \"AVE_CODIGO\",\r\n    \"APE_CODIGO\",\r\n    \"ACO_CODIGO\",\r\n    \"PVC_CODIGO\",\r\n    \"PVD_CODIGO\",\r\n    \"MONEDA\",\r\n    \"T_COMP_VTA\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_PERFIL\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_PERFIL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 100,\r\n      \"minLength\": 0\r\n    },\r\n    \"HABILITADO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"USA_SITUACION_FINANCIERA\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"USA_CTACTE\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"USA_VALOR\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"USA_VENTA\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"USA_PEDIDO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"USA_COTIZ\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"CONF_PARAM\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ACC_CODIGO\": {\r\n      \"type\": \"integer\"\r\n    },\r\n    \"FECHA_ACCD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_ACCH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"AVC_CODIGO\": {\r\n      \"type\": \"integer\"\r\n    },\r\n    \"FECHA_AVCD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_AVCH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"AVD_CODIGO\": {\r\n      \"type\": \"integer\"\r\n    },\r\n    \"FECHA_AVDD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_AVDH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"AVE_CODIGO\": {\r\n      \"type\": \"integer\"\r\n    },\r\n    \"FECHA_AVED\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_AVEH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"APE_CODIGO\": {\r\n      \"type\": \"integer\"\r\n    },\r\n    \"FECHA_APED\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_APEH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"ACO_CODIGO\": {\r\n      \"type\": \"integer\"\r\n    },\r\n    \"FECHA_ACOD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_ACOH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"PVC_CODIGO\": {\r\n      \"type\": \"integer\"\r\n    },\r\n    \"FECHA_PVCD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_PVCH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"PVD_CODIGO\": {\r\n      \"type\": \"integer\"\r\n    },\r\n    \"FECHA_PVDD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_PVDH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"MONEDA\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"T_COMP_VTA\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8000,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_USUARIO_SELECCIONADO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"USUARIOS\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/GVA74\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"GVA74\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"USUARIO1\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 30,\r\n          \"minLength\": 0\r\n        },\r\n        \"CLIENTE_POR_PERFIL\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/GVA89\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"GVA89\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_GVA14\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_GVA14\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA74\n    {\n        [Newtonsoft.Json.JsonProperty(\"USUARIO1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string USUARIO1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CLIENTE_POR_PERFIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<GVA89> CLIENTE_POR_PERFIL { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA89\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA14\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_GVA14 { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA72\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_PERFIL\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_PERFIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string DESC_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Always)]\n        public bool HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_SITUACION_FINANCIERA\", Required = Newtonsoft.Json.Required.Always)]\n        public bool USA_SITUACION_FINANCIERA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_CTACTE\", Required = Newtonsoft.Json.Required.Always)]\n        public bool USA_CTACTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_VALOR\", Required = Newtonsoft.Json.Required.Always)]\n        public bool USA_VALOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_VENTA\", Required = Newtonsoft.Json.Required.Always)]\n        public bool USA_VENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_PEDIDO\", Required = Newtonsoft.Json.Required.Always)]\n        public bool USA_PEDIDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_COTIZ\", Required = Newtonsoft.Json.Required.Always)]\n        public bool USA_COTIZ { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CONF_PARAM\", Required = Newtonsoft.Json.Required.Always)]\n        public bool CONF_PARAM { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACC_CODIGO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ACC_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_ACCD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_ACCD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_ACCH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_ACCH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AVC_CODIGO\", Required = Newtonsoft.Json.Required.Always)]\n        public int AVC_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_AVCD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_AVCD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_AVCH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_AVCH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AVD_CODIGO\", Required = Newtonsoft.Json.Required.Always)]\n        public int AVD_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_AVDD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_AVDD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_AVDH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_AVDH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AVE_CODIGO\", Required = Newtonsoft.Json.Required.Always)]\n        public int AVE_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_AVED\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_AVED { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_AVEH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_AVEH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"APE_CODIGO\", Required = Newtonsoft.Json.Required.Always)]\n        public int APE_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_APED\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_APED { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_APEH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_APEH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACO_CODIGO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ACO_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_ACOD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_ACOD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_ACOH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_ACOH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PVC_CODIGO\", Required = Newtonsoft.Json.Required.Always)]\n        public int PVC_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_PVCD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_PVCD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_PVCH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_PVCH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PVD_CODIGO\", Required = Newtonsoft.Json.Required.Always)]\n        public int PVD_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_PVDD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_PVDD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_PVDH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_PVDH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MONEDA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"T_COMP_VTA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string T_COMP_VTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_USUARIO_SELECCIONADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_USUARIO_SELECCIONADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USUARIOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<GVA74> USUARIOS { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface GVA74 {\n    USUARIO1: string | undefined;\n    CLIENTE_POR_PERFIL: GVA89[] | undefined;\n}\n\nexport interface GVA89 {\n    ID_GVA14: number;\n}\n\nexport interface GVA72 {\n    COD_PERFIL: string;\n    DESC_PERFIL: string | undefined;\n    HABILITADO: boolean;\n    USA_SITUACION_FINANCIERA: boolean;\n    USA_CTACTE: boolean;\n    USA_VALOR: boolean;\n    USA_VENTA: boolean;\n    USA_PEDIDO: boolean;\n    USA_COTIZ: boolean;\n    CONF_PARAM: boolean;\n    ACC_CODIGO: number;\n    FECHA_ACCD: Date | undefined;\n    FECHA_ACCH: Date | undefined;\n    AVC_CODIGO: number;\n    FECHA_AVCD: Date | undefined;\n    FECHA_AVCH: Date | undefined;\n    AVD_CODIGO: number;\n    FECHA_AVDD: Date | undefined;\n    FECHA_AVDH: Date | undefined;\n    AVE_CODIGO: number;\n    FECHA_AVED: Date | undefined;\n    FECHA_AVEH: Date | undefined;\n    APE_CODIGO: number;\n    FECHA_APED: Date | undefined;\n    FECHA_APEH: Date | undefined;\n    ACO_CODIGO: number;\n    FECHA_ACOD: Date | undefined;\n    FECHA_ACOH: Date | undefined;\n    PVC_CODIGO: number;\n    FECHA_PVCD: Date | undefined;\n    FECHA_PVCH: Date | undefined;\n    PVD_CODIGO: number;\n    FECHA_PVDD: Date | undefined;\n    FECHA_PVDH: Date | undefined;\n    MONEDA: string;\n    T_COMP_VTA: string;\n    OBSERVACIONES: string | undefined;\n    ID_USUARIO_SELECCIONADO: number | undefined;\n    USUARIOS: GVA74[] | undefined;\n}",
+          "example": {
+            "COD_PERFIL": null,
+            "DESC_PERFIL": null,
+            "HABILITADO": true,
+            "USA_SITUACION_FINANCIERA": true,
+            "USA_CTACTE": true,
+            "USA_VALOR": true,
+            "USA_VENTA": true,
+            "USA_PEDIDO": true,
+            "USA_COTIZ": true,
+            "CONF_PARAM": true,
+            "ACC_CODIGO": 1,
+            "FECHA_ACCD": "0001-01-01T00:00:00",
+            "FECHA_ACCH": "0001-01-01T00:00:00",
+            "AVC_CODIGO": 1,
+            "FECHA_AVCD": "0001-01-01T00:00:00",
+            "FECHA_AVCH": "0001-01-01T00:00:00",
+            "AVD_CODIGO": 1,
+            "FECHA_AVDD": "0001-01-01T00:00:00",
+            "FECHA_AVDH": "0001-01-01T00:00:00",
+            "AVE_CODIGO": 1,
+            "FECHA_AVED": "0001-01-01T00:00:00",
+            "FECHA_AVEH": "0001-01-01T00:00:00",
+            "APE_CODIGO": 1,
+            "FECHA_APED": "0001-01-01T00:00:00",
+            "FECHA_APEH": "0001-01-01T00:00:00",
+            "ACO_CODIGO": 1,
+            "FECHA_ACOD": "0001-01-01T00:00:00",
+            "FECHA_ACOH": "0001-01-01T00:00:00",
+            "PVC_CODIGO": 1,
+            "FECHA_PVCD": "0001-01-01T00:00:00",
+            "FECHA_PVCH": "0001-01-01T00:00:00",
+            "PVD_CODIGO": 1,
+            "FECHA_PVDD": "0001-01-01T00:00:00",
+            "FECHA_PVDH": "0001-01-01T00:00:00",
+            "MONEDA": "C",
+            "T_COMP_VTA": "1",
+            "OBSERVACIONES": null,
+            "ID_USUARIO_SELECCIONADO": 0,
+            "USUARIOS": [
+              {
+                "USUARIO1": null,
+                "CLIENTE_POR_PERFIL": [
+                  {
+                    "ID_GVA14": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"GVA72\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_PERFIL\",\r\n    \"HABILITADO\",\r\n    \"USA_SITUACION_FINANCIERA\",\r\n    \"USA_CTACTE\",\r\n    \"USA_VALOR\",\r\n    \"USA_VENTA\",\r\n    \"USA_PEDIDO\",\r\n    \"USA_COTIZ\",\r\n    \"CONF_PARAM\",\r\n    \"ACC_CODIGO\",\r\n    \"AVC_CODIGO\",\r\n    \"AVD_CODIGO\",\r\n    \"AVE_CODIGO\",\r\n    \"APE_CODIGO\",\r\n    \"ACO_CODIGO\",\r\n    \"PVC_CODIGO\",\r\n    \"PVD_CODIGO\",\r\n    \"MONEDA\",\r\n    \"T_COMP_VTA\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_PERFIL\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_PERFIL\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_PERFIL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 100,\r\n      \"minLength\": 0\r\n    },\r\n    \"HABILITADO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"USA_SITUACION_FINANCIERA\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"USA_CTACTE\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"USA_VALOR\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"USA_VENTA\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"USA_PEDIDO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"USA_COTIZ\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"CONF_PARAM\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ACC_CODIGO\": {\r\n      \"type\": \"integer\"\r\n    },\r\n    \"FECHA_ACCD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_ACCH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"AVC_CODIGO\": {\r\n      \"type\": \"integer\"\r\n    },\r\n    \"FECHA_AVCD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_AVCH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"AVD_CODIGO\": {\r\n      \"type\": \"integer\"\r\n    },\r\n    \"FECHA_AVDD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_AVDH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"AVE_CODIGO\": {\r\n      \"type\": \"integer\"\r\n    },\r\n    \"FECHA_AVED\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_AVEH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"APE_CODIGO\": {\r\n      \"type\": \"integer\"\r\n    },\r\n    \"FECHA_APED\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_APEH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"ACO_CODIGO\": {\r\n      \"type\": \"integer\"\r\n    },\r\n    \"FECHA_ACOD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_ACOH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"PVC_CODIGO\": {\r\n      \"type\": \"integer\"\r\n    },\r\n    \"FECHA_PVCD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_PVCH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"PVD_CODIGO\": {\r\n      \"type\": \"integer\"\r\n    },\r\n    \"FECHA_PVDD\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_PVDH\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"MONEDA\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"T_COMP_VTA\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8000,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_USUARIO_SELECCIONADO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"USUARIOS\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/GVA74\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"GVA74\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_PERFIL_DETALLE\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_PERFIL\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"USUARIO1\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 30,\r\n          \"minLength\": 0\r\n        },\r\n        \"CLIENTE_POR_PERFIL\": {\r\n          \"type\": [\r\n            \"array\",\r\n            \"null\"\r\n          ],\r\n          \"items\": {\r\n            \"$ref\": \"#/definitions/GVA89\"\r\n          }\r\n        }\r\n      }\r\n    },\r\n    \"GVA89\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_GVA14\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_GVA14\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_PERFIL_DETALLE\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_GVA89\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA74\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL_DETALLE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERFIL_DETALLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USUARIO1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string USUARIO1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CLIENTE_POR_PERFIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<GVA89> CLIENTE_POR_PERFIL { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA89\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA14\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_GVA14 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL_DETALLE\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERFIL_DETALLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA89\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_GVA89 { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA72\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_PERFIL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_PERFIL\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_PERFIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string DESC_PERFIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Always)]\n        public bool HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_SITUACION_FINANCIERA\", Required = Newtonsoft.Json.Required.Always)]\n        public bool USA_SITUACION_FINANCIERA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_CTACTE\", Required = Newtonsoft.Json.Required.Always)]\n        public bool USA_CTACTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_VALOR\", Required = Newtonsoft.Json.Required.Always)]\n        public bool USA_VALOR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_VENTA\", Required = Newtonsoft.Json.Required.Always)]\n        public bool USA_VENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_PEDIDO\", Required = Newtonsoft.Json.Required.Always)]\n        public bool USA_PEDIDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_COTIZ\", Required = Newtonsoft.Json.Required.Always)]\n        public bool USA_COTIZ { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CONF_PARAM\", Required = Newtonsoft.Json.Required.Always)]\n        public bool CONF_PARAM { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACC_CODIGO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ACC_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_ACCD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_ACCD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_ACCH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_ACCH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AVC_CODIGO\", Required = Newtonsoft.Json.Required.Always)]\n        public int AVC_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_AVCD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_AVCD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_AVCH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_AVCH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AVD_CODIGO\", Required = Newtonsoft.Json.Required.Always)]\n        public int AVD_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_AVDD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_AVDD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_AVDH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_AVDH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"AVE_CODIGO\", Required = Newtonsoft.Json.Required.Always)]\n        public int AVE_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_AVED\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_AVED { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_AVEH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_AVEH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"APE_CODIGO\", Required = Newtonsoft.Json.Required.Always)]\n        public int APE_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_APED\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_APED { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_APEH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_APEH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACO_CODIGO\", Required = Newtonsoft.Json.Required.Always)]\n        public int ACO_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_ACOD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_ACOD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_ACOH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_ACOH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PVC_CODIGO\", Required = Newtonsoft.Json.Required.Always)]\n        public int PVC_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_PVCD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_PVCD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_PVCH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_PVCH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PVD_CODIGO\", Required = Newtonsoft.Json.Required.Always)]\n        public int PVD_CODIGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_PVDD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_PVDD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_PVDH\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_PVDH { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MONEDA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string MONEDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"T_COMP_VTA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string T_COMP_VTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_USUARIO_SELECCIONADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_USUARIO_SELECCIONADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USUARIOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<GVA74> USUARIOS { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface GVA74 {\n    ID_PERFIL_DETALLE: number;\n    ID_PERFIL: number;\n    USUARIO1: string | undefined;\n    CLIENTE_POR_PERFIL: GVA89[] | undefined;\n}\n\nexport interface GVA89 {\n    ID_GVA14: number;\n    ID_PERFIL_DETALLE: number;\n    ID_GVA89: number;\n}\n\nexport interface GVA72 {\n    ID_PERFIL: number;\n    COD_PERFIL: string;\n    DESC_PERFIL: string | undefined;\n    HABILITADO: boolean;\n    USA_SITUACION_FINANCIERA: boolean;\n    USA_CTACTE: boolean;\n    USA_VALOR: boolean;\n    USA_VENTA: boolean;\n    USA_PEDIDO: boolean;\n    USA_COTIZ: boolean;\n    CONF_PARAM: boolean;\n    ACC_CODIGO: number;\n    FECHA_ACCD: Date | undefined;\n    FECHA_ACCH: Date | undefined;\n    AVC_CODIGO: number;\n    FECHA_AVCD: Date | undefined;\n    FECHA_AVCH: Date | undefined;\n    AVD_CODIGO: number;\n    FECHA_AVDD: Date | undefined;\n    FECHA_AVDH: Date | undefined;\n    AVE_CODIGO: number;\n    FECHA_AVED: Date | undefined;\n    FECHA_AVEH: Date | undefined;\n    APE_CODIGO: number;\n    FECHA_APED: Date | undefined;\n    FECHA_APEH: Date | undefined;\n    ACO_CODIGO: number;\n    FECHA_ACOD: Date | undefined;\n    FECHA_ACOH: Date | undefined;\n    PVC_CODIGO: number;\n    FECHA_PVCD: Date | undefined;\n    FECHA_PVCH: Date | undefined;\n    PVD_CODIGO: number;\n    FECHA_PVDD: Date | undefined;\n    FECHA_PVDH: Date | undefined;\n    MONEDA: string;\n    T_COMP_VTA: string;\n    OBSERVACIONES: string | undefined;\n    ID_USUARIO_SELECCIONADO: number | undefined;\n    USUARIOS: GVA74[] | undefined;\n}",
+          "example": {
+            "ID_PERFIL": 0,
+            "COD_PERFIL": null,
+            "DESC_PERFIL": null,
+            "HABILITADO": true,
+            "USA_SITUACION_FINANCIERA": true,
+            "USA_CTACTE": true,
+            "USA_VALOR": true,
+            "USA_VENTA": true,
+            "USA_PEDIDO": true,
+            "USA_COTIZ": true,
+            "CONF_PARAM": true,
+            "ACC_CODIGO": 1,
+            "FECHA_ACCD": "0001-01-01T00:00:00",
+            "FECHA_ACCH": "0001-01-01T00:00:00",
+            "AVC_CODIGO": 1,
+            "FECHA_AVCD": "0001-01-01T00:00:00",
+            "FECHA_AVCH": "0001-01-01T00:00:00",
+            "AVD_CODIGO": 1,
+            "FECHA_AVDD": "0001-01-01T00:00:00",
+            "FECHA_AVDH": "0001-01-01T00:00:00",
+            "AVE_CODIGO": 1,
+            "FECHA_AVED": "0001-01-01T00:00:00",
+            "FECHA_AVEH": "0001-01-01T00:00:00",
+            "APE_CODIGO": 1,
+            "FECHA_APED": "0001-01-01T00:00:00",
+            "FECHA_APEH": "0001-01-01T00:00:00",
+            "ACO_CODIGO": 1,
+            "FECHA_ACOD": "0001-01-01T00:00:00",
+            "FECHA_ACOH": "0001-01-01T00:00:00",
+            "PVC_CODIGO": 1,
+            "FECHA_PVCD": "0001-01-01T00:00:00",
+            "FECHA_PVCH": "0001-01-01T00:00:00",
+            "PVD_CODIGO": 1,
+            "FECHA_PVDD": "0001-01-01T00:00:00",
+            "FECHA_PVDH": "0001-01-01T00:00:00",
+            "MONEDA": "C",
+            "T_COMP_VTA": "1",
+            "OBSERVACIONES": null,
+            "ID_USUARIO_SELECCIONADO": 0,
+            "USUARIOS": [
+              {
+                "ID_PERFIL_DETALLE": 0,
+                "ID_PERFIL": 0,
+                "USUARIO1": null,
+                "CLIENTE_POR_PERFIL": [
+                  {
+                    "ID_GVA14": 0,
+                    "ID_PERFIL_DETALLE": 0,
+                    "ID_GVA89": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "AXV_PERFILES_GESTION_DE_CLIENTES": [
+      "CONFIG_PARARAMETROS_GESTION_CLIENTES",
+      "HABILITA_COTIZACION",
+      "HABILITA_CUENTA_CORRIENTE",
+      "HABILITA_PEDIDO",
+      "HABILITA_VALORES",
+      "HABILITA_VENTAS",
+      "HABILITADO",
+      "HABILITA_SITUACION_FINANCIERA",
+      "MONEDA",
+      "TIPO_COMPROBANTE_VENTA",
+      "CUENTA_CORRIENTE_PERIODO",
+      "CUENTA_CORRIENTE_PERIODO_DESDE",
+      "CUENTA_CORRIENTE_PERIODO_HASTA",
+      "COTIZACIONES_PERIODO",
+      "COTIZACIONES_PERIODO_DESDE",
+      "COTIZACIONES_PERIODO_HASTA",
+      "PEDIDOS_PERIODO",
+      "PEDIDOS_PERIODO_DESDE",
+      "PEDIDOS_PERIODO_HASTA",
+      "VALORES_CHEQUES_PERIODO",
+      "VALORES_CHEQUES_PERIODO_DESDE",
+      "VALORES_CHEQUES_PERIODO_HASTA",
+      "VALORES_DOCUMENTOS_PERIODO",
+      "VALORES_DOCUMENTOS_PERIODO_DESDE",
+      "VALORES_DOCUMENTOS_PERIODO_HASTA",
+      "VENTAS_PERIODO",
+      "VENTAS_PERIODO_DESDE",
+      "VENTAS_PERIODO_HASTA",
+      "PROYECCIONES_VALORES_CHEQUES_PERIODO",
+      "PROYECCIONES_VALORES_CHEQUES_PERIODO_DESDE",
+      "PROYECCIONES_VALORES_CHEQUES_PERIODO_HASTA",
+      "PROYECCIONES_VALORES_DOCUMENTOS_PERIODO",
+      "PROYECCIONES_VALORES_DOCUMENTOS_PERIODO_DESDE",
+      "PROYECCIONES_VALORES_DOCUMENTOS_PERIODO_HASTA",
+      "OBSERVACIONES",
+      "COD_PERFIL",
+      "DESC_PERFIL",
+      "USERS"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

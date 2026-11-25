@@ -1,0 +1,64 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_CLASE_CUENTA": 1,
+        "coD_CLASE_CUENTA": "A ",
+        "desC_CLASE_CUENTA": "Activo",
+        "roW_VERSION": "AAAAAADO0uY="
+      },
+      {
+        "iD_CLASE_CUENTA": 2,
+        "coD_CLASE_CUENTA": "P ",
+        "desC_CLASE_CUENTA": "Pasivo",
+        "roW_VERSION": "AAAAAADO0uc="
+      },
+      {
+        "iD_CLASE_CUENTA": 3,
+        "coD_CLASE_CUENTA": "PN",
+        "desC_CLASE_CUENTA": "Patrimonio neto",
+        "roW_VERSION": "AAAAAADO0ug="
+      },
+      {
+        "iD_CLASE_CUENTA": 4,
+        "coD_CLASE_CUENTA": "R+",
+        "desC_CLASE_CUENTA": "Resultado positivo",
+        "roW_VERSION": "AAAAAADO0uo="
+      },
+      {
+        "iD_CLASE_CUENTA": 5,
+        "coD_CLASE_CUENTA": "R-",
+        "desC_CLASE_CUENTA": "Resultado negativo",
+        "roW_VERSION": "AAAAAADO0uk="
+      },
+      {
+        "iD_CLASE_CUENTA": 6,
+        "coD_CLASE_CUENTA": "RA",
+        "desC_CLASE_CUENTA": "Resultados acumulados",
+        "roW_VERSION": "AAAAAADO0us="
+      },
+      {
+        "iD_CLASE_CUENTA": 7,
+        "coD_CLASE_CUENTA": "RE",
+        "desC_CLASE_CUENTA": "Resultado del ejercicio",
+        "roW_VERSION": "AAAAAADO0uw="
+      },
+      {
+        "iD_CLASE_CUENTA": 8,
+        "coD_CLASE_CUENTA": "SC",
+        "desC_CLASE_CUENTA": "Sin clasificar",
+        "roW_VERSION": "AAAAAADf3gY="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

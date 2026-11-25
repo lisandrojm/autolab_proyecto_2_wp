@@ -1,0 +1,121 @@
+{
+  "title": "Auditoría de precios en comprobantes",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "VentasAuditoriaAuditoriaDePreciosEnComprobantesModel": [
+      "FECHA_DE_COMPROBANTE",
+      "COD_TIPO_COMPROBANTE",
+      "DESC_TIPO_COMPROBANTE",
+      "TALONARIO",
+      "NRO_COMPROBANTE",
+      "COD_CLIENTE",
+      "RAZON_SOCIAL",
+      "COD_ARTICULO",
+      "DESCRIPCION",
+      "DESCRIPCION_ADICIONAL",
+      "ES_KIT",
+      "USA_ESCALAS",
+      "COD_LISTA_DE_PRECIOS",
+      "LISTA_DE_PRECIOS",
+      "PRECIO_DE_LISTA",
+      "BONIFICACION",
+      "PRECIO_FINAL",
+      "BONIFICACION_APLICADA",
+      "PRECIO_AL",
+      "PORC_VARIACION",
+      "VARIACION",
+      "MOTIVO_DE_AUDITORIA",
+      "FECHA_DE_ULTIMA_MODIFICACION",
+      "USUARIO_DE_ULTIMA_MODIFICACION",
+      "TERMINAL_DE_ULTIMA_MODIFICACION",
+      "ID_GVA12",
+      "ID_GVA14",
+      "ID_STA11",
+      "ID_GVA38"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

@@ -1,0 +1,23 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_ORGANISMO_GCIA": 1,
+        "coD_ORGANISMO_GCIA": "NODETERMINADO",
+        "desC_ORGANISMO_GCIA": "Organismo no determinado",
+        "importadO_SIRADIG": "N",
+        "roW_VERSION": "AAAAAADc4mI="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

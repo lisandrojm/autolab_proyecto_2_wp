@@ -1,0 +1,65 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_TIPO_DOCUMENTO": 1,
+        "tipO_DOCUMENTO1": "LC",
+        "desC_DOCUMENTO": "Libreta Cívica",
+        "tipO_JURISDICCION": "Nacional",
+        "roW_VERSION": "AAAAAADPVZc="
+      },
+      {
+        "iD_TIPO_DOCUMENTO": 2,
+        "tipO_DOCUMENTO1": "LE",
+        "desC_DOCUMENTO": "Libreta de Enrolamiento",
+        "tipO_JURISDICCION": "Nacional",
+        "roW_VERSION": "AAAAAADPVZg="
+      },
+      {
+        "iD_TIPO_DOCUMENTO": 3,
+        "tipO_DOCUMENTO1": "PA",
+        "desC_DOCUMENTO": "Pasaporte",
+        "tipO_JURISDICCION": "Nacional",
+        "roW_VERSION": "AAAAAADPVZk="
+      },
+      {
+        "iD_TIPO_DOCUMENTO": 4,
+        "tipO_DOCUMENTO1": "DU",
+        "desC_DOCUMENTO": "Documento Unico",
+        "tipO_JURISDICCION": "Nacional",
+        "roW_VERSION": "AAAAAADPVZU="
+      },
+      {
+        "iD_TIPO_DOCUMENTO": 5,
+        "tipO_DOCUMENTO1": "CM",
+        "desC_DOCUMENTO": "Certificado migratorio",
+        "tipO_JURISDICCION": "Nacional",
+        "roW_VERSION": "AAAAAADPVZQ="
+      },
+      {
+        "iD_TIPO_DOCUMENTO": 6,
+        "tipO_DOCUMENTO1": "CI",
+        "desC_DOCUMENTO": "Cédula de Identidad",
+        "tipO_JURISDICCION": "Provincial",
+        "roW_VERSION": "AAAAAADPVZM="
+      },
+      {
+        "iD_TIPO_DOCUMENTO": 7,
+        "tipO_DOCUMENTO1": "ET",
+        "desC_DOCUMENTO": "En trámite",
+        "tipO_JURISDICCION": "Nacional",
+        "roW_VERSION": "AAAAAADPVZY="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

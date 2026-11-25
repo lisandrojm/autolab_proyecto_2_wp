@@ -1,0 +1,129 @@
+{
+  "title": "Ranking por artículo",
+  "moduleId": 10003,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "CompraseImportacionesRankingPorArticuloModel": [
+      "COD_ARTICULO",
+      "DESCRIPCION",
+      "COD_CLASIFICACION",
+      "DESCRIPCION_CLASIFICACION",
+      "DESC_ADICIONAL",
+      "SINONIMO",
+      "COD_FAMILIA_ARTICULO",
+      "FAMILIA_ARTICULO",
+      "COD_GRUPO_ARTICULO",
+      "GRUPO_ARTICULO",
+      "USA_ESCALAS",
+      "COD_BASE_ARTICULO",
+      "DESC_BASE_ARTICULO",
+      "VALOR_DE_LA_ESCALA_1",
+      "VALOR_DE_LA_ESCALA_2",
+      "UM_STOCK",
+      "CANTIDAD",
+      "TOTAL",
+      "UM_RENGLON",
+      "CANTIDAD_RENGLON",
+      "PORCENTAJE_DE_PARTICIPACION",
+      "PORCENTAJE_ACUMULADO",
+      "ACUMULADO",
+      "ID_STA11",
+      "ART_CARPETA_ID_FOLDER",
+      "ART_CARPETA_NIVEL_1",
+      "ART_CARPETA_NIVEL_2",
+      "ART_CARPETA_NIVEL_3",
+      "ART_CARPETA_NIVEL_4",
+      "ART_CARPETA_NIVEL_5",
+      "ART_CARPETA_NIVEL_6",
+      "ART_CARPETA_NIVEL_7",
+      "ART_CARPETA_NIVEL_8",
+      "ART_CARPETA_NIVEL_9",
+      "ART_CARPETA_NIVEL_10",
+      "ART_CARPETA_NIVEL_11",
+      "ART_CARPETA_NIVEL_12"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

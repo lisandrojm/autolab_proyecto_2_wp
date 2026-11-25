@@ -1,0 +1,536 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_CPA70": 1,
+        "coD_GASTO": "PRE",
+        "coD_CPA70": "PRE",
+        "desC_GASTO": "Precio de Compra",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "PRE",
+        "roW_VERSION": "AAAAAADO0/U="
+      },
+      {
+        "iD_CPA70": 2,
+        "coD_GASTO": "DES",
+        "coD_CPA70": "DES",
+        "desC_GASTO": "Gastos de Despacho",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "DES",
+        "roW_VERSION": "AAAAAADO0/Q="
+      },
+      {
+        "iD_CPA70": 3,
+        "coD_GASTO": "S/C",
+        "coD_CPA70": "S/C",
+        "desC_GASTO": "Sin Clasificar",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "S/C",
+        "roW_VERSION": "AAAAAADO0/Y="
+      },
+      {
+        "iD_CPA70": 4,
+        "coD_GASTO": "001",
+        "coD_CPA70": "001",
+        "desC_GASTO": "RENDICION-PRODUCCION-JULIAN",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "001",
+        "roW_VERSION": "AAAAAADO08M="
+      },
+      {
+        "iD_CPA70": 5,
+        "coD_GASTO": "002",
+        "coD_CPA70": "002",
+        "desC_GASTO": "RENDICION-ARTE-BARBARA",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "002",
+        "roW_VERSION": "AAAAAADO08Q="
+      },
+      {
+        "iD_CPA70": 6,
+        "coD_GASTO": "003",
+        "coD_CPA70": "003",
+        "desC_GASTO": "RENDICION-PRODUCCION-JULIAN",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "003",
+        "roW_VERSION": "AAAAAADO08U="
+      },
+      {
+        "iD_CPA70": 7,
+        "coD_GASTO": "004",
+        "coD_CPA70": "004",
+        "desC_GASTO": "RENDICION-DIEGO DISNEY",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "004",
+        "roW_VERSION": "AAAAAADO08Y="
+      },
+      {
+        "iD_CPA70": 8,
+        "coD_GASTO": "005",
+        "coD_CPA70": "005",
+        "desC_GASTO": "RENDICION-VESTUARIO-M. FUERTES",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "005",
+        "roW_VERSION": "AAAAAADO08c="
+      },
+      {
+        "iD_CPA70": 9,
+        "coD_GASTO": "006",
+        "coD_CPA70": "006",
+        "desC_GASTO": "RENDICION-MAQUILLAJE-V. CATENA",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "006",
+        "roW_VERSION": "AAAAAADO08g="
+      },
+      {
+        "iD_CPA70": 10,
+        "coD_GASTO": "007",
+        "coD_CPA70": "007",
+        "desC_GASTO": "RENDICION-ARTE-MINISHOW",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "007",
+        "roW_VERSION": "AAAAAADO08k="
+      },
+      {
+        "iD_CPA70": 11,
+        "coD_GASTO": "008",
+        "coD_CPA70": "008",
+        "desC_GASTO": "RENDICION CAJA PRODUCCION",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "008",
+        "roW_VERSION": "AAAAAADO08o="
+      },
+      {
+        "iD_CPA70": 12,
+        "coD_GASTO": "009",
+        "coD_CPA70": "009",
+        "desC_GASTO": "RENDICION VEST. M.FUERTES2",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "009",
+        "roW_VERSION": "AAAAAADO08s="
+      },
+      {
+        "iD_CPA70": 13,
+        "coD_GASTO": "010",
+        "coD_CPA70": "010",
+        "desC_GASTO": "RENDICION-ARTE",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "010",
+        "roW_VERSION": "AAAAAADO08w="
+      },
+      {
+        "iD_CPA70": 14,
+        "coD_GASTO": "011",
+        "coD_CPA70": "011",
+        "desC_GASTO": "RENDICION VESTUARIO",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "011",
+        "roW_VERSION": "AAAAAADO080="
+      },
+      {
+        "iD_CPA70": 15,
+        "coD_GASTO": "012",
+        "coD_CPA70": "012",
+        "desC_GASTO": "RENDICION PRDUCCION JULIAN",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "012",
+        "roW_VERSION": "AAAAAADO084="
+      },
+      {
+        "iD_CPA70": 16,
+        "coD_GASTO": "013",
+        "coD_CPA70": "013",
+        "desC_GASTO": "RENDICION N° 9 ARTE",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "013",
+        "roW_VERSION": "AAAAAADO088="
+      },
+      {
+        "iD_CPA70": 17,
+        "coD_GASTO": "014",
+        "coD_CPA70": "014",
+        "desC_GASTO": "RENDICION VEST. M.FUERTES",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "014",
+        "roW_VERSION": "AAAAAADO09A="
+      },
+      {
+        "iD_CPA70": 18,
+        "coD_GASTO": "015",
+        "coD_CPA70": "015",
+        "desC_GASTO": "RENDICION EXPRESS YOURSELF",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "015",
+        "roW_VERSION": "AAAAAADO09E="
+      },
+      {
+        "iD_CPA70": 19,
+        "coD_GASTO": "016",
+        "coD_CPA70": "016",
+        "desC_GASTO": "RENDICION CAJA CHICA PRODU.",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "016",
+        "roW_VERSION": "AAAAAADO09I="
+      },
+      {
+        "iD_CPA70": 20,
+        "coD_GASTO": "017",
+        "coD_CPA70": "017",
+        "desC_GASTO": "RENDICION-NORMA",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "017",
+        "roW_VERSION": "AAAAAADO09M="
+      },
+      {
+        "iD_CPA70": 21,
+        "coD_GASTO": "018",
+        "coD_CPA70": "018",
+        "desC_GASTO": "RENDICION- ARTE-",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "018",
+        "roW_VERSION": "AAAAAADO09Q="
+      },
+      {
+        "iD_CPA70": 22,
+        "coD_GASTO": "019",
+        "coD_CPA70": "019",
+        "desC_GASTO": "RENDICION CAJA FLOR 2",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "019",
+        "roW_VERSION": "AAAAAADO09U="
+      },
+      {
+        "iD_CPA70": 23,
+        "coD_GASTO": "020",
+        "coD_CPA70": "020",
+        "desC_GASTO": "RENDICION VESTUARIO M.FUERTES",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "020",
+        "roW_VERSION": "AAAAAADO09Y="
+      },
+      {
+        "iD_CPA70": 24,
+        "coD_GASTO": "021",
+        "coD_CPA70": "021",
+        "desC_GASTO": "RENDICION NORMA 04/03/2011",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "021",
+        "roW_VERSION": "AAAAAADO09c="
+      },
+      {
+        "iD_CPA70": 25,
+        "coD_GASTO": "022",
+        "coD_CPA70": "022",
+        "desC_GASTO": "RENDICION 04/03/2011 ARTE PHD",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "022",
+        "roW_VERSION": "AAAAAADO09g="
+      },
+      {
+        "iD_CPA70": 26,
+        "coD_GASTO": "023",
+        "coD_CPA70": "023",
+        "desC_GASTO": "RENDICION -PRODUCCION- 07/03",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "023",
+        "roW_VERSION": "AAAAAADO09k="
+      },
+      {
+        "iD_CPA70": 27,
+        "coD_GASTO": "024",
+        "coD_CPA70": "024",
+        "desC_GASTO": "RENDICION MAQ. PH 15/03",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "024",
+        "roW_VERSION": "AAAAAADO09o="
+      },
+      {
+        "iD_CPA70": 28,
+        "coD_GASTO": "025",
+        "coD_CPA70": "025",
+        "desC_GASTO": "RENDICION ARTE 15/03",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "025",
+        "roW_VERSION": "AAAAAADO09s="
+      },
+      {
+        "iD_CPA70": 29,
+        "coD_GASTO": "026",
+        "coD_CPA70": "026",
+        "desC_GASTO": "RENDICION VEST. 15/03/2011",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "026",
+        "roW_VERSION": "AAAAAADO09w="
+      },
+      {
+        "iD_CPA70": 30,
+        "coD_GASTO": "027",
+        "coD_CPA70": "027",
+        "desC_GASTO": "RENDICION FLOR 30/03/2011",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "027",
+        "roW_VERSION": "AAAAAADO090="
+      },
+      {
+        "iD_CPA70": 31,
+        "coD_GASTO": "028",
+        "coD_CPA70": "028",
+        "desC_GASTO": "RENDICION ARTE 22/03/2011",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "028",
+        "roW_VERSION": "AAAAAADO094="
+      },
+      {
+        "iD_CPA70": 32,
+        "coD_GASTO": "029",
+        "coD_CPA70": "029",
+        "desC_GASTO": "RENDICION 23/03/2011 PROD MEX.",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "029",
+        "roW_VERSION": "AAAAAADO098="
+      },
+      {
+        "iD_CPA70": 33,
+        "coD_GASTO": "030",
+        "coD_CPA70": "030",
+        "desC_GASTO": "RENDICION 23/03/2011 PROD MEX",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "030",
+        "roW_VERSION": "AAAAAADO0+A="
+      },
+      {
+        "iD_CPA70": 34,
+        "coD_GASTO": "031",
+        "coD_CPA70": "031",
+        "desC_GASTO": "RENDICION VEST. 23MARZO PHD",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "031",
+        "roW_VERSION": "AAAAAADO0+E="
+      },
+      {
+        "iD_CPA70": 35,
+        "coD_GASTO": "032",
+        "coD_CPA70": "032",
+        "desC_GASTO": "RENDICION 23MARZ PRODUCCION",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "032",
+        "roW_VERSION": "AAAAAADO0+I="
+      },
+      {
+        "iD_CPA70": 36,
+        "coD_GASTO": "033",
+        "coD_CPA70": "033",
+        "desC_GASTO": "RENDICION 01/04/2011 ARTE",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "033",
+        "roW_VERSION": "AAAAAADO0+M="
+      },
+      {
+        "iD_CPA70": 37,
+        "coD_GASTO": "034",
+        "coD_CPA70": "034",
+        "desC_GASTO": "RENDICION 01/04/2011",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "034",
+        "roW_VERSION": "AAAAAADO0+Q="
+      },
+      {
+        "iD_CPA70": 38,
+        "coD_GASTO": "035",
+        "coD_CPA70": "035",
+        "desC_GASTO": "RENDICION CAJA 30/04/2011",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "035",
+        "roW_VERSION": "AAAAAADO0+U="
+      },
+      {
+        "iD_CPA70": 39,
+        "coD_GASTO": "036",
+        "coD_CPA70": "036",
+        "desC_GASTO": "RENDICION ARTE 13/04/2011",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "036",
+        "roW_VERSION": "AAAAAADO0+Y="
+      },
+      {
+        "iD_CPA70": 40,
+        "coD_GASTO": "037",
+        "coD_CPA70": "037",
+        "desC_GASTO": "RENDICION ARTE 18/04/2011",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "037",
+        "roW_VERSION": "AAAAAADO0+c="
+      },
+      {
+        "iD_CPA70": 41,
+        "coD_GASTO": "038",
+        "coD_CPA70": "038",
+        "desC_GASTO": "RENDICION PRODUCCION 25/04",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "038",
+        "roW_VERSION": "AAAAAADO0+g="
+      },
+      {
+        "iD_CPA70": 42,
+        "coD_GASTO": "039",
+        "coD_CPA70": "039",
+        "desC_GASTO": "RENDICION PRODUCCION  28/04",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "039",
+        "roW_VERSION": "AAAAAADO0+k="
+      },
+      {
+        "iD_CPA70": 43,
+        "coD_GASTO": "040",
+        "coD_CPA70": "040",
+        "desC_GASTO": "RENDICION VESTUARIO 28/04/2011",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "040",
+        "roW_VERSION": "AAAAAADO0+o="
+      },
+      {
+        "iD_CPA70": 44,
+        "coD_GASTO": "041",
+        "coD_CPA70": "041",
+        "desC_GASTO": "RENDICION PRODUC. 29/04/2011",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "041",
+        "roW_VERSION": "AAAAAADO0+s="
+      },
+      {
+        "iD_CPA70": 45,
+        "coD_GASTO": "042",
+        "coD_CPA70": "042",
+        "desC_GASTO": "RENDICION PRODUCCION 05/05",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "042",
+        "roW_VERSION": "AAAAAADO0+w="
+      },
+      {
+        "iD_CPA70": 46,
+        "coD_GASTO": "043",
+        "coD_CPA70": "043",
+        "desC_GASTO": "RENDICION VESTUARIO 06/05",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "043",
+        "roW_VERSION": "AAAAAADO0+0="
+      },
+      {
+        "iD_CPA70": 47,
+        "coD_GASTO": "044",
+        "coD_CPA70": "044",
+        "desC_GASTO": "RENDICION 06/05/2011 MAQUI.",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "044",
+        "roW_VERSION": "AAAAAADO0+4="
+      },
+      {
+        "iD_CPA70": 48,
+        "coD_GASTO": "045",
+        "coD_CPA70": "045",
+        "desC_GASTO": "RENDICION PRODUCCION 09/05/11",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "045",
+        "roW_VERSION": "AAAAAADO0+8="
+      },
+      {
+        "iD_CPA70": 49,
+        "coD_GASTO": "046",
+        "coD_CPA70": "046",
+        "desC_GASTO": "RENDICION LENCINA 09/05/2011",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "046",
+        "roW_VERSION": "AAAAAADO0/A="
+      },
+      {
+        "iD_CPA70": 50,
+        "coD_GASTO": "047",
+        "coD_CPA70": "047",
+        "desC_GASTO": "RENDICION ARTE 10/05/2011",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "047",
+        "roW_VERSION": "AAAAAADO0/E="
+      },
+      {
+        "iD_CPA70": 51,
+        "coD_GASTO": "048",
+        "coD_CPA70": "048",
+        "desC_GASTO": "RENDICION PRODUCCION 11/05",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "048",
+        "roW_VERSION": "AAAAAADO0/I="
+      },
+      {
+        "iD_CPA70": 52,
+        "coD_GASTO": "049",
+        "coD_CPA70": "049",
+        "desC_GASTO": "RENDICION CAJA FLOR - MAYO",
+        "porC_GASTO": 0,
+        "tipO_DIST": "V",
+        "codigo": "049",
+        "roW_VERSION": "AAAAAADO0/M="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

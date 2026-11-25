@@ -1,0 +1,127 @@
+{
+  "modulo": "AplicacionesNexo",
+  "capturado": "2026-10-08T17:21:07.124Z",
+  "procesos": {
+    "19663": {
+      "estado": "error",
+      "detalle": "Se detectó una situación inesperada",
+      "titulo": null
+    },
+    "19664": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "NexoReportesParams"
+      ],
+      "titulo": "Reportes"
+    },
+    "19665": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "NexoFichadasParams"
+      ],
+      "titulo": "Fichadas"
+    },
+    "19666": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "NexoUpdateParams"
+      ],
+      "titulo": "Update"
+    },
+    "19667": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "NexoTableroParams",
+        "Scheduler"
+      ],
+      "titulo": "Tablero"
+    },
+    "19668": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "NexoBackupParams"
+      ],
+      "titulo": "Backup"
+    },
+    "19669": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "NexoCobranzasParams"
+      ],
+      "titulo": "Cobranzas"
+    },
+    "19670": {
+      "estado": "sin-api",
+      "tablas": [
+        "NexoTiendasParams"
+      ],
+      "titulo": "Tiendas"
+    },
+    "19671": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "NexoTangonetParams"
+      ],
+      "titulo": "Tangonet"
+    },
+    "19672": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "NexoConnectParams"
+      ],
+      "titulo": "Connect"
+    },
+    "20154": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "NexoEmpleadosParams"
+      ],
+      "titulo": "Empleados"
+    }
+  }
+}

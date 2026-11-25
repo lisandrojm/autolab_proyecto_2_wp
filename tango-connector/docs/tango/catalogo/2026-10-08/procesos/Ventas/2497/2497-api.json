@@ -1,0 +1,344 @@
+{
+  "title": "Condiciones de venta",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"GVA01\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"properties\": {\r\n    \"COND_VTA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"DESC_COND\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_GVA10\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"FAC_CREDIT\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"GENERA_FECHAS_ALTERNATIVAS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"APLICA_MORA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_INTERES_POR_MORA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"FECHA_VIGENCIA_DESDE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_VIGENCIA_HASTA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"ACEPTA_CONTADO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ACEPTA_CTA\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"PORC_MIN_CONTADO\": {\r\n      \"type\": \"number\",\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"OBLIGA_CONTADO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"TIPO_ASIGNACION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8000,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_DESCRIP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"RENGLON_CONDICION_VENTA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/RENGLON_CONDICION_VENTA\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"RENGLON_CONDICION_VENTA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"PORC_MONTO\",\r\n        \"CANT_CUOTA\",\r\n        \"TIPO_VENCIMIENTO\"\r\n      ],\r\n      \"properties\": {\r\n        \"N_RENGLON\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"PORC_MONTO\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"CANT_CUOTA\": {\r\n          \"type\": \"integer\"\r\n        },\r\n        \"TIPO_VENCIMIENTO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"A_VENCER\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"DIA_MES\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"CANT_DIAS\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"PORC_INT\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"FORMA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"ALTERNATIVA_1\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"RECARGO_DESCUENTO_1\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"ALTERNATIVA_2\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"RECARGO_DESCUENTO_2\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"FECHA_FIJA_DIAMES\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"FECHA_FIJA_FECHA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"format\": \"date-time\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class RENGLON_CONDICION_VENTA\n    {\n        [Newtonsoft.Json.JsonProperty(\"N_RENGLON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? N_RENGLON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_MONTO\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal PORC_MONTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_CUOTA\", Required = Newtonsoft.Json.Required.Always)]\n        public int CANT_CUOTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_VENCIMIENTO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_VENCIMIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"A_VENCER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? A_VENCER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIA_MES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string DIA_MES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_DIAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? CANT_DIAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_INT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORC_INT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FORMA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string FORMA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ALTERNATIVA_1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ALTERNATIVA_1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"RECARGO_DESCUENTO_1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? RECARGO_DESCUENTO_1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ALTERNATIVA_2\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ALTERNATIVA_2 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"RECARGO_DESCUENTO_2\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? RECARGO_DESCUENTO_2 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_FIJA_DIAMES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string FECHA_FIJA_DIAMES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_FIJA_FECHA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_FIJA_FECHA { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA01\n    {\n        [Newtonsoft.Json.JsonProperty(\"COND_VTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? COND_VTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_COND\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string DESC_COND { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA10\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA10 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FAC_CREDIT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? FAC_CREDIT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GENERA_FECHAS_ALTERNATIVAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string GENERA_FECHAS_ALTERNATIVAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"APLICA_MORA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string APLICA_MORA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_INTERES_POR_MORA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_INTERES_POR_MORA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_VIGENCIA_DESDE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_VIGENCIA_DESDE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_VIGENCIA_HASTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_VIGENCIA_HASTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACEPTA_CONTADO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ACEPTA_CONTADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACEPTA_CTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ACEPTA_CTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_MIN_CONTADO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal PORC_MIN_CONTADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBLIGA_CONTADO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool OBLIGA_CONTADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_ASIGNACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_ASIGNACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_DESCRIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string COD_DESCRIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"RENGLON_CONDICION_VENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<RENGLON_CONDICION_VENTA> RENGLON_CONDICION_VENTA { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface RENGLON_CONDICION_VENTA {\n    N_RENGLON: number | undefined;\n    PORC_MONTO: number;\n    CANT_CUOTA: number;\n    TIPO_VENCIMIENTO: string;\n    A_VENCER: number | undefined;\n    DIA_MES: string | undefined;\n    CANT_DIAS: number | undefined;\n    PORC_INT: number | undefined;\n    FORMA: string | undefined;\n    ALTERNATIVA_1: number | undefined;\n    RECARGO_DESCUENTO_1: number | undefined;\n    ALTERNATIVA_2: number | undefined;\n    RECARGO_DESCUENTO_2: number | undefined;\n    FECHA_FIJA_DIAMES: string | undefined;\n    FECHA_FIJA_FECHA: Date | undefined;\n}\n\nexport interface GVA01 {\n    COND_VTA: number | undefined;\n    DESC_COND: string | undefined;\n    ID_GVA10: number | undefined;\n    FAC_CREDIT: boolean | undefined;\n    GENERA_FECHAS_ALTERNATIVAS: string | undefined;\n    APLICA_MORA: string | undefined;\n    ID_INTERES_POR_MORA: number | undefined;\n    FECHA_VIGENCIA_DESDE: Date | undefined;\n    FECHA_VIGENCIA_HASTA: Date | undefined;\n    ACEPTA_CONTADO: boolean;\n    ACEPTA_CTA: boolean;\n    PORC_MIN_CONTADO: number;\n    OBLIGA_CONTADO: boolean;\n    TIPO_ASIGNACION: string | undefined;\n    OBSERVACIONES: string | undefined;\n    COD_DESCRIP: string | undefined;\n    RENGLON_CONDICION_VENTA: RENGLON_CONDICION_VENTA[] | undefined;\n}",
+          "example": {
+            "COND_VTA": 0,
+            "DESC_COND": null,
+            "ID_GVA10": 0,
+            "FAC_CREDIT": false,
+            "GENERA_FECHAS_ALTERNATIVAS": "N",
+            "APLICA_MORA": "N",
+            "ID_INTERES_POR_MORA": 0,
+            "FECHA_VIGENCIA_DESDE": "0001-01-01T00:00:00",
+            "FECHA_VIGENCIA_HASTA": "0001-01-01T00:00:00",
+            "ACEPTA_CONTADO": false,
+            "ACEPTA_CTA": false,
+            "PORC_MIN_CONTADO": 0,
+            "OBLIGA_CONTADO": false,
+            "TIPO_ASIGNACION": null,
+            "OBSERVACIONES": null,
+            "COD_DESCRIP": "0",
+            "RENGLON_CONDICION_VENTA": [
+              {
+                "N_RENGLON": 0,
+                "PORC_MONTO": 0,
+                "CANT_CUOTA": 0,
+                "TIPO_VENCIMIENTO": null,
+                "A_VENCER": 0,
+                "FECHA_FIJA_DIAMES": null,
+                "FECHA_FIJA_FECHA": "0001-01-01T00:00:00",
+                "DIA_MES": null,
+                "CANT_DIAS": 0,
+                "PORC_INT": 0,
+                "FORMA": null,
+                "ALTERNATIVA_1": 0,
+                "RECARGO_DESCUENTO_1": 0,
+                "ALTERNATIVA_2": 0,
+                "RECARGO_DESCUENTO_2": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"GVA01\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"properties\": {\r\n    \"ID_GVA01\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COND_VTA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"DESC_COND\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_GVA10\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"FAC_CREDIT\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"GENERA_FECHAS_ALTERNATIVAS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"APLICA_MORA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_INTERES_POR_MORA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"FECHA_VIGENCIA_DESDE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"FECHA_VIGENCIA_HASTA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"ACEPTA_CONTADO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ACEPTA_CTA\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"PORC_MIN_CONTADO\": {\r\n      \"type\": \"number\",\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"OBLIGA_CONTADO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"TIPO_ASIGNACION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 8000,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_DESCRIP\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"RENGLON_CONDICION_VENTA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/RENGLON_CONDICION_VENTA\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"RENGLON_CONDICION_VENTA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"PORC_MONTO\",\r\n        \"CANT_CUOTA\",\r\n        \"TIPO_VENCIMIENTO\"\r\n      ],\r\n      \"properties\": {\r\n        \"N_RENGLON\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"PORC_MONTO\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"CANT_CUOTA\": {\r\n          \"type\": \"integer\"\r\n        },\r\n        \"TIPO_VENCIMIENTO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"A_VENCER\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"DIA_MES\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"CANT_DIAS\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"PORC_INT\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"FORMA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"ALTERNATIVA_1\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"RECARGO_DESCUENTO_1\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"ALTERNATIVA_2\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"RECARGO_DESCUENTO_2\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"ID_RENGLON_CONDICION_VENTA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_GVA01\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"FECHA_FIJA_DIAMES\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"FECHA_FIJA_FECHA\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"format\": \"date-time\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class RENGLON_CONDICION_VENTA\n    {\n        [Newtonsoft.Json.JsonProperty(\"N_RENGLON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? N_RENGLON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_MONTO\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal PORC_MONTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_CUOTA\", Required = Newtonsoft.Json.Required.Always)]\n        public int CANT_CUOTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_VENCIMIENTO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_VENCIMIENTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"A_VENCER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? A_VENCER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIA_MES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string DIA_MES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_DIAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? CANT_DIAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_INT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORC_INT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FORMA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string FORMA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ALTERNATIVA_1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ALTERNATIVA_1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"RECARGO_DESCUENTO_1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? RECARGO_DESCUENTO_1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ALTERNATIVA_2\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ALTERNATIVA_2 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"RECARGO_DESCUENTO_2\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? RECARGO_DESCUENTO_2 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_RENGLON_CONDICION_VENTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_RENGLON_CONDICION_VENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA01\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_GVA01 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_FIJA_DIAMES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string FECHA_FIJA_DIAMES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_FIJA_FECHA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_FIJA_FECHA { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA01\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA01\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_GVA01 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COND_VTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? COND_VTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_COND\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string DESC_COND { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA10\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GVA10 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FAC_CREDIT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? FAC_CREDIT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GENERA_FECHAS_ALTERNATIVAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string GENERA_FECHAS_ALTERNATIVAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"APLICA_MORA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string APLICA_MORA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_INTERES_POR_MORA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_INTERES_POR_MORA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_VIGENCIA_DESDE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_VIGENCIA_DESDE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FECHA_VIGENCIA_HASTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? FECHA_VIGENCIA_HASTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACEPTA_CONTADO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ACEPTA_CONTADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ACEPTA_CTA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ACEPTA_CTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_MIN_CONTADO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal PORC_MIN_CONTADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBLIGA_CONTADO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool OBLIGA_CONTADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_ASIGNACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_ASIGNACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(8000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_DESCRIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string COD_DESCRIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"RENGLON_CONDICION_VENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<RENGLON_CONDICION_VENTA> RENGLON_CONDICION_VENTA { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface RENGLON_CONDICION_VENTA {\n    N_RENGLON: number | undefined;\n    PORC_MONTO: number;\n    CANT_CUOTA: number;\n    TIPO_VENCIMIENTO: string;\n    A_VENCER: number | undefined;\n    DIA_MES: string | undefined;\n    CANT_DIAS: number | undefined;\n    PORC_INT: number | undefined;\n    FORMA: string | undefined;\n    ALTERNATIVA_1: number | undefined;\n    RECARGO_DESCUENTO_1: number | undefined;\n    ALTERNATIVA_2: number | undefined;\n    RECARGO_DESCUENTO_2: number | undefined;\n    ID_RENGLON_CONDICION_VENTA: number;\n    ID_GVA01: number;\n    FECHA_FIJA_DIAMES: string | undefined;\n    FECHA_FIJA_FECHA: Date | undefined;\n}\n\nexport interface GVA01 {\n    ID_GVA01: number;\n    COND_VTA: number | undefined;\n    DESC_COND: string | undefined;\n    ID_GVA10: number | undefined;\n    FAC_CREDIT: boolean | undefined;\n    GENERA_FECHAS_ALTERNATIVAS: string | undefined;\n    APLICA_MORA: string | undefined;\n    ID_INTERES_POR_MORA: number | undefined;\n    FECHA_VIGENCIA_DESDE: Date | undefined;\n    FECHA_VIGENCIA_HASTA: Date | undefined;\n    ACEPTA_CONTADO: boolean;\n    ACEPTA_CTA: boolean;\n    PORC_MIN_CONTADO: number;\n    OBLIGA_CONTADO: boolean;\n    TIPO_ASIGNACION: string | undefined;\n    OBSERVACIONES: string | undefined;\n    COD_DESCRIP: string | undefined;\n    RENGLON_CONDICION_VENTA: RENGLON_CONDICION_VENTA[] | undefined;\n}",
+          "example": {
+            "ID_GVA01": 0,
+            "COND_VTA": 0,
+            "DESC_COND": null,
+            "ID_GVA10": 0,
+            "FAC_CREDIT": false,
+            "GENERA_FECHAS_ALTERNATIVAS": "N",
+            "APLICA_MORA": "N",
+            "ID_INTERES_POR_MORA": 0,
+            "FECHA_VIGENCIA_DESDE": "0001-01-01T00:00:00",
+            "FECHA_VIGENCIA_HASTA": "0001-01-01T00:00:00",
+            "ACEPTA_CONTADO": false,
+            "ACEPTA_CTA": false,
+            "PORC_MIN_CONTADO": 0,
+            "OBLIGA_CONTADO": false,
+            "TIPO_ASIGNACION": null,
+            "OBSERVACIONES": null,
+            "COD_DESCRIP": "0",
+            "RENGLON_CONDICION_VENTA": [
+              {
+                "N_RENGLON": 0,
+                "PORC_MONTO": 0,
+                "CANT_CUOTA": 0,
+                "TIPO_VENCIMIENTO": null,
+                "A_VENCER": 0,
+                "FECHA_FIJA_DIAMES": null,
+                "FECHA_FIJA_FECHA": "0001-01-01T00:00:00",
+                "DIA_MES": null,
+                "CANT_DIAS": 0,
+                "PORC_INT": 0,
+                "FORMA": null,
+                "ALTERNATIVA_1": 0,
+                "RECARGO_DESCUENTO_1": 0,
+                "ALTERNATIVA_2": 0,
+                "RECARGO_DESCUENTO_2": 0,
+                "ID_RENGLON_CONDICION_VENTA": 0,
+                "ID_GVA01": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "GVA01": [
+      "RENGLON_CONDICION_VENTA",
+      "COND_VTA",
+      "DESC_COND",
+      "ID_GVA10",
+      "FAC_CREDIT",
+      "GENERA_FECHAS_ALTERNATIVAS",
+      "APLICA_MORA",
+      "ID_INTERES_POR_MORA",
+      "FECHA_VIGENCIA_DESDE",
+      "FECHA_VIGENCIA_HASTA",
+      "ACEPTA_CONTADO",
+      "ACEPTA_CTA",
+      "PORC_MIN_CONTADO",
+      "OBLIGA_CONTADO",
+      "TIPO_ASIGNACION",
+      "OBSERVACIONES"
+    ],
+    "RENGLON_CONDICION_VENTA": [
+      "FECHA_FIJA_DIAMES",
+      "FECHA_FIJA_FECHA",
+      "ID_GVA01",
+      "N_RENGLON",
+      "PORC_MONTO",
+      "CANT_CUOTA",
+      "TIPO_VENCIMIENTO",
+      "A_VENCER",
+      "DIA_MES",
+      "CANT_DIAS",
+      "PORC_INT",
+      "FORMA",
+      "ALTERNATIVA_1",
+      "RECARGO_DESCUENTO_1",
+      "ALTERNATIVA_2",
+      "RECARGO_DESCUENTO_2"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

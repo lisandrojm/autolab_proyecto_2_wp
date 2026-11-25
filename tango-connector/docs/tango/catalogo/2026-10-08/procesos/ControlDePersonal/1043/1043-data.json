@@ -1,0 +1,37 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_CONCEPTO_JUSTIFICACION": 1,
+        "coD_CONCEPTO_JUSTIFICACION": "SIN_AVISO",
+        "desC_CONCEPTO_JUSTIFICACION": "Sin aviso",
+        "justificado": "N",
+        "generA_HORAS": "N",
+        "afectA_AUSENTISMO": "S",
+        "compensable": "S",
+        "observaciones": "Concepto utilizado por el sistema para generar descuentos ante anormalidades no previstas.",
+        "roW_VERSION": "AAAAAADO0vM="
+      },
+      {
+        "iD_CONCEPTO_JUSTIFICACION": 2,
+        "coD_CONCEPTO_JUSTIFICACION": "AUS_FER",
+        "desC_CONCEPTO_JUSTIFICACION": "Ausente por feriado",
+        "justificado": "S",
+        "generA_HORAS": "S",
+        "afectA_AUSENTISMO": "N",
+        "compensable": "N",
+        "roW_VERSION": "AAAAAADO0vI="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

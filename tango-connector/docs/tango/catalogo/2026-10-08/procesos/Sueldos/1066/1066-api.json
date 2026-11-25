@@ -1,0 +1,330 @@
+{
+  "title": "Convenios",
+  "moduleId": 8,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"CONVENIO\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_CONVENIO\",\r\n    \"METODO_SUELDO\",\r\n    \"COMPUTA_ANTIGUEDAD\",\r\n    \"DIAS_A_MES\",\r\n    \"CANCELACION_DIAS_VACACIONES\",\r\n    \"TOPE_MAX_INDEMNIZACION\",\r\n    \"MESES_PERIODO_PRUEBA\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_MATRIZ_PLUS_ANTIGUEDAD\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_MATRIZ_VACACION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_CONVENIO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_CONVENIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"NRO_CONVENIO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ANIO_CONVENIO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"METODO_SUELDO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"PORC_CONVENIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"PORC_TOPE_TICKET\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"IMPORTE_A_DETRAER\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"IMP_CONVENIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"COMPUTA_ANTIGUEDAD\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"DIAS_A_MES\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"DIVISOR_VACACIONES\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CANCELACION_DIAS_VACACIONES\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"ANTIGUEDAD_MINIMA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CONCEPTO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"FRACCION_VACACIONES_MINIMO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"DIA_PROPORCIONAL_MINIMO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"ID_GRUPO_NOVEDAD\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_SIMPLIFICACION_REGISTRAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"TOPE_MAX_INDEMNIZACION\": {\r\n      \"type\": \"number\",\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"MESES_PERIODO_PRUEBA\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"DIA_HABIL\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/DIA_HABIL\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"DIA_HABIL\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"PER_LABORAL\",\r\n        \"DIAS_HABILES\"\r\n      ],\r\n      \"properties\": {\r\n        \"PER_LABORAL\": {\r\n          \"type\": \"string\",\r\n          \"format\": \"date-time\",\r\n          \"minLength\": 1\r\n        },\r\n        \"DIAS_HABILES\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class DIA_HABIL\n    {\n        [Newtonsoft.Json.JsonProperty(\"PER_LABORAL\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public System.DateTimeOffset PER_LABORAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIAS_HABILES\", Required = Newtonsoft.Json.Required.Always)]\n        public int DIAS_HABILES { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CONVENIO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_MATRIZ_PLUS_ANTIGUEDAD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MATRIZ_PLUS_ANTIGUEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MATRIZ_VACACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MATRIZ_VACACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CONVENIO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_CONVENIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_CONVENIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? NRO_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ANIO_CONVENIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ANIO_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"METODO_SUELDO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string METODO_SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_CONVENIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORC_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_TOPE_TICKET\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORC_TOPE_TICKET { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE_A_DETRAER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE_A_DETRAER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMP_CONVENIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMP_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COMPUTA_ANTIGUEDAD\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string COMPUTA_ANTIGUEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIAS_A_MES\", Required = Newtonsoft.Json.Required.Always)]\n        public int DIAS_A_MES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIVISOR_VACACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? DIVISOR_VACACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANCELACION_DIAS_VACACIONES\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string CANCELACION_DIAS_VACACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ANTIGUEDAD_MINIMA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ANTIGUEDAD_MINIMA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CONCEPTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FRACCION_VACACIONES_MINIMO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? FRACCION_VACACIONES_MINIMO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIA_PROPORCIONAL_MINIMO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? DIA_PROPORCIONAL_MINIMO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GRUPO_NOVEDAD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GRUPO_NOVEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_SIMPLIFICACION_REGISTRAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_SIMPLIFICACION_REGISTRAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_MAX_INDEMNIZACION\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal TOPE_MAX_INDEMNIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MESES_PERIODO_PRUEBA\", Required = Newtonsoft.Json.Required.Always)]\n        public int MESES_PERIODO_PRUEBA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIA_HABIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<DIA_HABIL> DIA_HABIL { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface DIA_HABIL {\n    PER_LABORAL: Date;\n    DIAS_HABILES: number;\n}\n\nexport interface CONVENIO {\n    ID_MATRIZ_PLUS_ANTIGUEDAD: number | undefined;\n    ID_MATRIZ_VACACION: number | undefined;\n    COD_CONVENIO: string;\n    DESC_CONVENIO: string | undefined;\n    NRO_CONVENIO: number | undefined;\n    ANIO_CONVENIO: number | undefined;\n    METODO_SUELDO: string;\n    PORC_CONVENIO: number | undefined;\n    PORC_TOPE_TICKET: number | undefined;\n    IMPORTE_A_DETRAER: number | undefined;\n    IMP_CONVENIO: number | undefined;\n    COMPUTA_ANTIGUEDAD: string;\n    DIAS_A_MES: number;\n    DIVISOR_VACACIONES: number | undefined;\n    CANCELACION_DIAS_VACACIONES: string;\n    ANTIGUEDAD_MINIMA: number | undefined;\n    ID_CONCEPTO: number | undefined;\n    FRACCION_VACACIONES_MINIMO: number | undefined;\n    DIA_PROPORCIONAL_MINIMO: number | undefined;\n    ID_GRUPO_NOVEDAD: number | undefined;\n    OBSERVACIONES: string | undefined;\n    COD_SIMPLIFICACION_REGISTRAL: string | undefined;\n    TOPE_MAX_INDEMNIZACION: number;\n    MESES_PERIODO_PRUEBA: number;\n    DIA_HABIL: DIA_HABIL[] | undefined;\n}",
+          "example": {
+            "ID_MATRIZ_PLUS_ANTIGUEDAD": 0,
+            "ID_MATRIZ_VACACION": 0,
+            "COD_CONVENIO": null,
+            "DESC_CONVENIO": null,
+            "NRO_CONVENIO": 0,
+            "ANIO_CONVENIO": 0,
+            "METODO_SUELDO": null,
+            "PORC_CONVENIO": 0,
+            "PORC_TOPE_TICKET": 0,
+            "IMPORTE_A_DETRAER": 0,
+            "IMP_CONVENIO": 0,
+            "COMPUTA_ANTIGUEDAD": "Período",
+            "DIAS_A_MES": 30,
+            "DIVISOR_VACACIONES": 25,
+            "CANCELACION_DIAS_VACACIONES": "Corridos",
+            "ANTIGUEDAD_MINIMA": 6,
+            "ID_CONCEPTO": 0,
+            "FRACCION_VACACIONES_MINIMO": 20,
+            "DIA_PROPORCIONAL_MINIMO": 1,
+            "ID_GRUPO_NOVEDAD": 0,
+            "OBSERVACIONES": null,
+            "COD_SIMPLIFICACION_REGISTRAL": null,
+            "TOPE_MAX_INDEMNIZACION": 0,
+            "MESES_PERIODO_PRUEBA": 6,
+            "DIA_HABIL": [
+              {
+                "PER_LABORAL": "0001-01-01T00:00:00",
+                "DIAS_HABILES": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"CONVENIO\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_CONVENIO\",\r\n    \"METODO_SUELDO\",\r\n    \"COMPUTA_ANTIGUEDAD\",\r\n    \"DIAS_A_MES\",\r\n    \"CANCELACION_DIAS_VACACIONES\",\r\n    \"TOPE_MAX_INDEMNIZACION\",\r\n    \"MESES_PERIODO_PRUEBA\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_CONVENIO\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_MATRIZ_PLUS_ANTIGUEDAD\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_MATRIZ_VACACION\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_CONVENIO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_CONVENIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"NRO_CONVENIO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ANIO_CONVENIO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"METODO_SUELDO\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"PORC_CONVENIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"PORC_TOPE_TICKET\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"IMPORTE_A_DETRAER\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"IMP_CONVENIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"COMPUTA_ANTIGUEDAD\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"DIAS_A_MES\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"DIVISOR_VACACIONES\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CANCELACION_DIAS_VACACIONES\": {\r\n      \"type\": \"string\",\r\n      \"minLength\": 1\r\n    },\r\n    \"ANTIGUEDAD_MINIMA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_CONCEPTO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"FRACCION_VACACIONES_MINIMO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"DIA_PROPORCIONAL_MINIMO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"ID_GRUPO_NOVEDAD\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_SIMPLIFICACION_REGISTRAL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"TOPE_MAX_INDEMNIZACION\": {\r\n      \"type\": \"number\",\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"MESES_PERIODO_PRUEBA\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"DIA_HABIL\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/DIA_HABIL\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"DIA_HABIL\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"PER_LABORAL\",\r\n        \"DIAS_HABILES\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_DIA_HABIL\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_CONVENIO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"PER_LABORAL\": {\r\n          \"type\": \"string\",\r\n          \"format\": \"date-time\",\r\n          \"minLength\": 1\r\n        },\r\n        \"DIAS_HABILES\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class DIA_HABIL\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_DIA_HABIL\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_DIA_HABIL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CONVENIO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PER_LABORAL\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public System.DateTimeOffset PER_LABORAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIAS_HABILES\", Required = Newtonsoft.Json.Required.Always)]\n        public int DIAS_HABILES { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class CONVENIO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_CONVENIO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MATRIZ_PLUS_ANTIGUEDAD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MATRIZ_PLUS_ANTIGUEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MATRIZ_VACACION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MATRIZ_VACACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_CONVENIO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_CONVENIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NRO_CONVENIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? NRO_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ANIO_CONVENIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ANIO_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"METODO_SUELDO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string METODO_SUELDO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_CONVENIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORC_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORC_TOPE_TICKET\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORC_TOPE_TICKET { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMPORTE_A_DETRAER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMPORTE_A_DETRAER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMP_CONVENIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? IMP_CONVENIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COMPUTA_ANTIGUEDAD\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string COMPUTA_ANTIGUEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIAS_A_MES\", Required = Newtonsoft.Json.Required.Always)]\n        public int DIAS_A_MES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIVISOR_VACACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? DIVISOR_VACACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANCELACION_DIAS_VACACIONES\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string CANCELACION_DIAS_VACACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ANTIGUEDAD_MINIMA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ANTIGUEDAD_MINIMA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CONCEPTO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CONCEPTO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FRACCION_VACACIONES_MINIMO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? FRACCION_VACACIONES_MINIMO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIA_PROPORCIONAL_MINIMO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? DIA_PROPORCIONAL_MINIMO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_GRUPO_NOVEDAD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_GRUPO_NOVEDAD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_SIMPLIFICACION_REGISTRAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_SIMPLIFICACION_REGISTRAL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TOPE_MAX_INDEMNIZACION\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal TOPE_MAX_INDEMNIZACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MESES_PERIODO_PRUEBA\", Required = Newtonsoft.Json.Required.Always)]\n        public int MESES_PERIODO_PRUEBA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DIA_HABIL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<DIA_HABIL> DIA_HABIL { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface DIA_HABIL {\n    ID_DIA_HABIL: number;\n    ID_CONVENIO: number;\n    PER_LABORAL: Date;\n    DIAS_HABILES: number;\n}\n\nexport interface CONVENIO {\n    ID_CONVENIO: number;\n    ID_MATRIZ_PLUS_ANTIGUEDAD: number | undefined;\n    ID_MATRIZ_VACACION: number | undefined;\n    COD_CONVENIO: string;\n    DESC_CONVENIO: string | undefined;\n    NRO_CONVENIO: number | undefined;\n    ANIO_CONVENIO: number | undefined;\n    METODO_SUELDO: string;\n    PORC_CONVENIO: number | undefined;\n    PORC_TOPE_TICKET: number | undefined;\n    IMPORTE_A_DETRAER: number | undefined;\n    IMP_CONVENIO: number | undefined;\n    COMPUTA_ANTIGUEDAD: string;\n    DIAS_A_MES: number;\n    DIVISOR_VACACIONES: number | undefined;\n    CANCELACION_DIAS_VACACIONES: string;\n    ANTIGUEDAD_MINIMA: number | undefined;\n    ID_CONCEPTO: number | undefined;\n    FRACCION_VACACIONES_MINIMO: number | undefined;\n    DIA_PROPORCIONAL_MINIMO: number | undefined;\n    ID_GRUPO_NOVEDAD: number | undefined;\n    OBSERVACIONES: string | undefined;\n    COD_SIMPLIFICACION_REGISTRAL: string | undefined;\n    TOPE_MAX_INDEMNIZACION: number;\n    MESES_PERIODO_PRUEBA: number;\n    DIA_HABIL: DIA_HABIL[] | undefined;\n}",
+          "example": {
+            "ID_CONVENIO": 0,
+            "ID_MATRIZ_PLUS_ANTIGUEDAD": 0,
+            "ID_MATRIZ_VACACION": 0,
+            "COD_CONVENIO": null,
+            "DESC_CONVENIO": null,
+            "NRO_CONVENIO": 0,
+            "ANIO_CONVENIO": 0,
+            "METODO_SUELDO": null,
+            "PORC_CONVENIO": 0,
+            "PORC_TOPE_TICKET": 0,
+            "IMPORTE_A_DETRAER": 0,
+            "IMP_CONVENIO": 0,
+            "COMPUTA_ANTIGUEDAD": "Período",
+            "DIAS_A_MES": 30,
+            "DIVISOR_VACACIONES": 25,
+            "CANCELACION_DIAS_VACACIONES": "Corridos",
+            "ANTIGUEDAD_MINIMA": 6,
+            "ID_CONCEPTO": 0,
+            "FRACCION_VACACIONES_MINIMO": 20,
+            "DIA_PROPORCIONAL_MINIMO": 1,
+            "ID_GRUPO_NOVEDAD": 0,
+            "OBSERVACIONES": null,
+            "COD_SIMPLIFICACION_REGISTRAL": null,
+            "TOPE_MAX_INDEMNIZACION": 0,
+            "MESES_PERIODO_PRUEBA": 6,
+            "DIA_HABIL": [
+              {
+                "ID_DIA_HABIL": 0,
+                "ID_CONVENIO": 0,
+                "PER_LABORAL": "0001-01-01T00:00:00",
+                "DIAS_HABILES": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "CONVENIO": [
+      "DIA_HABIL",
+      "ID_MATRIZ_PLUS_ANTIGUEDAD",
+      "ID_MATRIZ_VACACION",
+      "COD_CONVENIO",
+      "DESC_CONVENIO",
+      "NRO_CONVENIO",
+      "ANIO_CONVENIO",
+      "METODO_SUELDO",
+      "PORC_CONVENIO",
+      "PORC_TOPE_TICKET",
+      "IMPORTE_A_DETRAER",
+      "IMP_CONVENIO",
+      "COMPUTA_ANTIGUEDAD",
+      "DIAS_A_MES",
+      "DIVISOR_VACACIONES",
+      "CANCELACION_DIAS_VACACIONES",
+      "ANTIGUEDAD_MINIMA",
+      "ID_CONCEPTO",
+      "FRACCION_VACACIONES_MINIMO",
+      "DIA_PROPORCIONAL_MINIMO",
+      "ID_GRUPO_NOVEDAD",
+      "OBSERVACIONES",
+      "COD_SIMPLIFICACION_REGISTRAL",
+      "TOPE_MAX_INDEMNIZACION",
+      "MESES_PERIODO_PRUEBA"
+    ],
+    "DIA_HABIL": [
+      "ID_CONVENIO",
+      "PER_LABORAL",
+      "DIAS_HABILES"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

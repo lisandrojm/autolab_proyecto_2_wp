@@ -1,0 +1,117 @@
+{
+  "title": "Consolidado de comprobantes ventas y compras",
+  "moduleId": 10003,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "VentasConsolidadoDeComprobantesVentasYComprasModel": [
+      "ID_SUCURSAL",
+      "ID_GVA81",
+      "NOMBRE_COMERCIAL",
+      "PROVINCIA",
+      "NOMBRE_PROVINCIA",
+      "COD_CLASIFICACION",
+      "CLASIFICACION",
+      "CUIT",
+      "RUBRO",
+      "DESC_RUBRO",
+      "TOTSIMPUESTOS_VENTAS_CTE",
+      "TOTSIMPUESTOS_VENTAS_EXT",
+      "TOTSIMPUESTOS_COMPRAS_CTE",
+      "TOTSIMPUESTOS_COMPRAS_EXT",
+      "CONSOLIDADO_SIMPUESTOS_CTE",
+      "CONSOLIDADO_SIMPUESTOS_EXT",
+      "TOTAL_VENTAS_CTE",
+      "TOTAL_VENTAS_EXT",
+      "TOTAL_COMPRAS_CTE",
+      "TOTAL_COMPRAS_EXT",
+      "CONSOLIDADO_CTE",
+      "CONSOLIDADO_EXT",
+      "FECHA",
+      "SUCURSAL",
+      "FECHA_2"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

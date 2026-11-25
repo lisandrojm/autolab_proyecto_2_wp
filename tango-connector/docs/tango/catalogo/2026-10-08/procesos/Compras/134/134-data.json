@@ -1,0 +1,36 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_ASIENTO_MODELO_CP": 1,
+        "coD_ASIENTO_MODELO": "01",
+        "desC_ASIENTO_MODELO": "FACTURAS Y NOTAS DE DEBITO",
+        "iD_TIPO_ASIENTO": 23,
+        "factura": "S",
+        "credito": "N",
+        "debito": "S",
+        "roW_VERSION": "AAAAAADP+Ik="
+      },
+      {
+        "iD_ASIENTO_MODELO_CP": 2,
+        "coD_ASIENTO_MODELO": "02",
+        "desC_ASIENTO_MODELO": "NOTAS DE CREDITO",
+        "iD_TIPO_ASIENTO": 23,
+        "factura": "N",
+        "credito": "S",
+        "debito": "N",
+        "roW_VERSION": "AAAAAADP+Io="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

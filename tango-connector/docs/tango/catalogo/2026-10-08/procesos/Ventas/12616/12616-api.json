@@ -1,0 +1,130 @@
+{
+  "title": "Notas de crédito pendientes de generar por pago con tarjeta de regalo",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "VentasNotasDeCreditoPendientesDeGenerarPorPagoConTarjetaDeRegaloModel": [
+      "COMPROBANTE_ORIGINAL",
+      "COD_TIPO_COMPROBANTE",
+      "DESC_TIPO_COMPROBANTE",
+      "NRO_COMPROBANTE",
+      "FECHA_DE_EMISION",
+      "COD_CLIENTE",
+      "RAZON_SOCIAL",
+      "COD_VENDEDOR",
+      "NOMBRE_VENDEDOR",
+      "SITUACION_DE_NOTA_DE_CREDITO",
+      "TIPO_NC",
+      "NRO_NC",
+      "IMPORTE_NOTA_DE_CREDITO",
+      "COD_TARJETA_DE_REGALO",
+      "DESC_TARJETA_DE_REGALO",
+      "TIPO_TARJETA_DE_REGALO",
+      "CUENTA_ASOCIADA_A_LA_TARJETA",
+      "ARTICULO_ASOCIADO_A_LA_TARJETA",
+      "MOTIVO_DE_NOTA_DE_CREDITO",
+      "COMPROBANTE_PARA_NOTA_DE_CREDITO",
+      "MODELO_DE_ASIENTO",
+      "ID_GVA12",
+      "ID_GVA14",
+      "ID_GVA23",
+      "TELEFONO",
+      "TELEFONO_2",
+      "TELEFONO_MOVIL_WA",
+      "MOVIL",
+      "EMAIL",
+      "EMAIL_COMPROBANTES",
+      "EMAILS_ENVIO_COTIZACION",
+      "MOVILES_ENVIO_COTIZACION",
+      "EMAILS_ENVIO_RECIBO",
+      "MOVILES_ENVIO_RECIBO",
+      "EMAILS_ENVIO_PEDIDO",
+      "MOVILES_ENVIO_PEDIDO",
+      "EMAILS_RESPONSABLES_PAGOS",
+      "MOVILES_RESPONSABLES_PAGOS"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

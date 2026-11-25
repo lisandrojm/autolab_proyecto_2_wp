@@ -1,0 +1,352 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_NACIONALIDAD": 1,
+        "nacionalidaD1": "Argentina",
+        "coD_ANSES_NAC": "012",
+        "roW_VERSION": "AAAAAADPORg="
+      },
+      {
+        "iD_NACIONALIDAD": 2,
+        "nacionalidaD1": "Brasil",
+        "coD_ANSES_NAC": "026",
+        "roW_VERSION": "AAAAAADPOR0="
+      },
+      {
+        "iD_NACIONALIDAD": 3,
+        "nacionalidaD1": "Uruguay",
+        "coD_ANSES_NAC": "170",
+        "roW_VERSION": "AAAAAADPOUw="
+      },
+      {
+        "iD_NACIONALIDAD": 4,
+        "nacionalidaD1": "Chile",
+        "coD_ANSES_NAC": "036",
+        "roW_VERSION": "AAAAAADPOR8="
+      },
+      {
+        "iD_NACIONALIDAD": 5,
+        "nacionalidaD1": "Paraguay",
+        "coD_ANSES_NAC": "132",
+        "roW_VERSION": "AAAAAADPOT8="
+      },
+      {
+        "iD_NACIONALIDAD": 6,
+        "nacionalidaD1": "Colombia",
+        "coD_ANSES_NAC": "039",
+        "roW_VERSION": "AAAAAADPOSE="
+      },
+      {
+        "iD_NACIONALIDAD": 7,
+        "nacionalidaD1": "Cuba",
+        "coD_ANSES_NAC": "044",
+        "roW_VERSION": "AAAAAADPOSQ="
+      },
+      {
+        "iD_NACIONALIDAD": 8,
+        "nacionalidaD1": "Ecuador",
+        "coD_ANSES_NAC": "047",
+        "roW_VERSION": "AAAAAADPOSY="
+      },
+      {
+        "iD_NACIONALIDAD": 9,
+        "nacionalidaD1": "EE.UU.",
+        "coD_ANSES_NAC": "052",
+        "roW_VERSION": "AAAAAADPOSc="
+      },
+      {
+        "iD_NACIONALIDAD": 10,
+        "nacionalidaD1": "Haití",
+        "coD_ANSES_NAC": "071",
+        "roW_VERSION": "AAAAAADPOS0="
+      },
+      {
+        "iD_NACIONALIDAD": 11,
+        "nacionalidaD1": "Méjico",
+        "coD_ANSES_NAC": "115",
+        "roW_VERSION": "AAAAAADPOTY="
+      },
+      {
+        "iD_NACIONALIDAD": 12,
+        "nacionalidaD1": "Panamá",
+        "coD_ANSES_NAC": "130",
+        "roW_VERSION": "AAAAAADPOT4="
+      },
+      {
+        "iD_NACIONALIDAD": 13,
+        "nacionalidaD1": "Perú",
+        "coD_ANSES_NAC": "133",
+        "roW_VERSION": "AAAAAADPOUA="
+      },
+      {
+        "iD_NACIONALIDAD": 14,
+        "nacionalidaD1": "Alemania",
+        "coD_ANSES_NAC": "003",
+        "roW_VERSION": "AAAAAADPORY="
+      },
+      {
+        "iD_NACIONALIDAD": 15,
+        "nacionalidaD1": "Bélgica",
+        "coD_ANSES_NAC": "019",
+        "roW_VERSION": "AAAAAADPORs="
+      },
+      {
+        "iD_NACIONALIDAD": 16,
+        "nacionalidaD1": "España",
+        "coD_ANSES_NAC": "051",
+        "roW_VERSION": "AAAAAADPOSg="
+      },
+      {
+        "iD_NACIONALIDAD": 17,
+        "nacionalidaD1": "Grecia",
+        "coD_ANSES_NAC": "062",
+        "roW_VERSION": "AAAAAADPOSs="
+      },
+      {
+        "iD_NACIONALIDAD": 18,
+        "nacionalidaD1": "Hungría",
+        "coD_ANSES_NAC": "075",
+        "roW_VERSION": "AAAAAADPOTA="
+      },
+      {
+        "iD_NACIONALIDAD": 19,
+        "nacionalidaD1": "Italia",
+        "coD_ANSES_NAC": "089",
+        "roW_VERSION": "AAAAAADPOTM="
+      },
+      {
+        "iD_NACIONALIDAD": 20,
+        "nacionalidaD1": "Polonia",
+        "coD_ANSES_NAC": "135",
+        "roW_VERSION": "AAAAAADPOUE="
+      },
+      {
+        "iD_NACIONALIDAD": 21,
+        "nacionalidaD1": "Rumania",
+        "coD_ANSES_NAC": "143",
+        "roW_VERSION": "AAAAAADPOUU="
+      },
+      {
+        "iD_NACIONALIDAD": 22,
+        "nacionalidaD1": "Suiza",
+        "coD_ANSES_NAC": "158",
+        "roW_VERSION": "AAAAAADPOUk="
+      },
+      {
+        "iD_NACIONALIDAD": 23,
+        "nacionalidaD1": "Corea",
+        "coD_ANSES_NAC": "041",
+        "roW_VERSION": "AAAAAADPOSI="
+      },
+      {
+        "iD_NACIONALIDAD": 24,
+        "nacionalidaD1": "Japón",
+        "coD_ANSES_NAC": "091",
+        "roW_VERSION": "AAAAAADPOTQ="
+      },
+      {
+        "iD_NACIONALIDAD": 25,
+        "nacionalidaD1": "Siria",
+        "coD_ANSES_NAC": "152",
+        "roW_VERSION": "AAAAAADPOUc="
+      },
+      {
+        "iD_NACIONALIDAD": 26,
+        "nacionalidaD1": "Australia",
+        "coD_ANSES_NAC": "013",
+        "roW_VERSION": "AAAAAADPORk="
+      },
+      {
+        "iD_NACIONALIDAD": 27,
+        "nacionalidaD1": "Otro Amér.",
+        "coD_ANSES_NAC": "301",
+        "roW_VERSION": "AAAAAADPOTo="
+      },
+      {
+        "iD_NACIONALIDAD": 28,
+        "nacionalidaD1": "Otro Europ",
+        "coD_ANSES_NAC": "302",
+        "roW_VERSION": "AAAAAADPOTw="
+      },
+      {
+        "iD_NACIONALIDAD": 29,
+        "nacionalidaD1": "Otro Asia",
+        "coD_ANSES_NAC": "303",
+        "roW_VERSION": "AAAAAADPOTs="
+      },
+      {
+        "iD_NACIONALIDAD": 30,
+        "nacionalidaD1": "Un.Sudafri",
+        "coD_ANSES_NAC": "304",
+        "roW_VERSION": "AAAAAADPOUs="
+      },
+      {
+        "iD_NACIONALIDAD": 31,
+        "nacionalidaD1": "Otro Afric",
+        "coD_ANSES_NAC": "305",
+        "roW_VERSION": "AAAAAADPOTk="
+      },
+      {
+        "iD_NACIONALIDAD": 32,
+        "nacionalidaD1": "Otro Ocean",
+        "coD_ANSES_NAC": "306",
+        "roW_VERSION": "AAAAAADPOT0="
+      },
+      {
+        "iD_NACIONALIDAD": 33,
+        "nacionalidaD1": "Apátrida",
+        "coD_ANSES_NAC": "307",
+        "roW_VERSION": "AAAAAADPORc="
+      },
+      {
+        "iD_NACIONALIDAD": 34,
+        "nacionalidaD1": "Bolivia",
+        "coD_ANSES_NAC": "024",
+        "roW_VERSION": "AAAAAADPORw="
+      },
+      {
+        "iD_NACIONALIDAD": 35,
+        "nacionalidaD1": "Canadá",
+        "coD_ANSES_NAC": "032",
+        "roW_VERSION": "AAAAAADPOR4="
+      },
+      {
+        "iD_NACIONALIDAD": 36,
+        "nacionalidaD1": "Costa Rica",
+        "coD_ANSES_NAC": "043",
+        "roW_VERSION": "AAAAAADPOSM="
+      },
+      {
+        "iD_NACIONALIDAD": 37,
+        "nacionalidaD1": "Salvador",
+        "coD_ANSES_NAC": "049",
+        "roW_VERSION": "AAAAAADPOUY="
+      },
+      {
+        "iD_NACIONALIDAD": 38,
+        "nacionalidaD1": "Guatemala",
+        "coD_ANSES_NAC": "065",
+        "roW_VERSION": "AAAAAADPOSw="
+      },
+      {
+        "iD_NACIONALIDAD": 39,
+        "nacionalidaD1": "Honduras",
+        "coD_ANSES_NAC": "073",
+        "roW_VERSION": "AAAAAADPOS8="
+      },
+      {
+        "iD_NACIONALIDAD": 40,
+        "nacionalidaD1": "Nicaragua",
+        "coD_ANSES_NAC": "122",
+        "roW_VERSION": "AAAAAADPOTc="
+      },
+      {
+        "iD_NACIONALIDAD": 41,
+        "nacionalidaD1": "R.Dominic.",
+        "coD_ANSES_NAC": "141",
+        "roW_VERSION": "AAAAAADPOUQ="
+      },
+      {
+        "iD_NACIONALIDAD": 42,
+        "nacionalidaD1": "Venezuela",
+        "coD_ANSES_NAC": "172",
+        "roW_VERSION": "AAAAAADPOU0="
+      },
+      {
+        "iD_NACIONALIDAD": 43,
+        "nacionalidaD1": "Austria",
+        "coD_ANSES_NAC": "014",
+        "roW_VERSION": "AAAAAADPORo="
+      },
+      {
+        "iD_NACIONALIDAD": 44,
+        "nacionalidaD1": "Dinamarca",
+        "coD_ANSES_NAC": "045",
+        "roW_VERSION": "AAAAAADPOSU="
+      },
+      {
+        "iD_NACIONALIDAD": 45,
+        "nacionalidaD1": "Francia",
+        "coD_ANSES_NAC": "058",
+        "roW_VERSION": "AAAAAADPOSk="
+      },
+      {
+        "iD_NACIONALIDAD": 46,
+        "nacionalidaD1": "Holanda",
+        "coD_ANSES_NAC": "072",
+        "roW_VERSION": "AAAAAADPOS4="
+      },
+      {
+        "iD_NACIONALIDAD": 47,
+        "nacionalidaD1": "Irlanda",
+        "coD_ANSES_NAC": "080",
+        "roW_VERSION": "AAAAAADPOTE="
+      },
+      {
+        "iD_NACIONALIDAD": 48,
+        "nacionalidaD1": "Noruega",
+        "coD_ANSES_NAC": "125",
+        "roW_VERSION": "AAAAAADPOTg="
+      },
+      {
+        "iD_NACIONALIDAD": 49,
+        "nacionalidaD1": "Portugal",
+        "coD_ANSES_NAC": "136",
+        "roW_VERSION": "AAAAAADPOUI="
+      },
+      {
+        "iD_NACIONALIDAD": 50,
+        "nacionalidaD1": "Suecia",
+        "coD_ANSES_NAC": "157",
+        "roW_VERSION": "AAAAAADPOUg="
+      },
+      {
+        "iD_NACIONALIDAD": 51,
+        "nacionalidaD1": "China",
+        "coD_ANSES_NAC": "037",
+        "roW_VERSION": "AAAAAADPOSA="
+      },
+      {
+        "iD_NACIONALIDAD": 52,
+        "nacionalidaD1": "Israel",
+        "coD_ANSES_NAC": "088",
+        "roW_VERSION": "AAAAAADPOTI="
+      },
+      {
+        "iD_NACIONALIDAD": 53,
+        "nacionalidaD1": "Líbano",
+        "coD_ANSES_NAC": "099",
+        "roW_VERSION": "AAAAAADPOTU="
+      },
+      {
+        "iD_NACIONALIDAD": 54,
+        "nacionalidaD1": "Turquía",
+        "coD_ANSES_NAC": "167",
+        "roW_VERSION": "AAAAAADPOUo="
+      },
+      {
+        "iD_NACIONALIDAD": 55,
+        "nacionalidaD1": "Pto. Rico",
+        "coD_ANSES_NAC": "300",
+        "roW_VERSION": "AAAAAADPOUM="
+      },
+      {
+        "iD_NACIONALIDAD": 56,
+        "nacionalidaD1": "G. Bretaña",
+        "coD_ANSES_NAC": "139",
+        "roW_VERSION": "AAAAAADPOSo="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

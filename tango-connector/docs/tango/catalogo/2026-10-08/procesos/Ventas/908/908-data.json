@@ -1,0 +1,85 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_GVA66": 1,
+        "coD_GVA66": "1",
+        "coD_RET": "1",
+        "desC_RET": "RETENCION DE IVA",
+        "tipO_RET": "I",
+        "coD_REGIM": 0,
+        "iD_SBA01": 16,
+        "coD_PROV": "",
+        "coD_CTA": 1010020314,
+        "codigo": "1",
+        "roW_VERSION": "AAAAAADO2jI="
+      },
+      {
+        "iD_GVA66": 2,
+        "coD_GVA66": "2",
+        "coD_RET": "2",
+        "desC_RET": "RETENCION DE GANANCIAS",
+        "tipO_RET": "G",
+        "coD_REGIM": 0,
+        "iD_SBA01": 15,
+        "coD_PROV": "",
+        "coD_CTA": 1010020304,
+        "codigo": "2",
+        "roW_VERSION": "AAAAAADO2jM="
+      },
+      {
+        "iD_GVA66": 3,
+        "coD_GVA66": "3",
+        "coD_RET": "3",
+        "desC_RET": "RETENCION DE SUSS",
+        "tipO_RET": "O",
+        "coD_REGIM": 0,
+        "iD_SBA01": 199,
+        "coD_PROV": "",
+        "coD_CTA": 1010020327,
+        "codigo": "3",
+        "roW_VERSION": "AAAAAADO2jQ="
+      },
+      {
+        "iD_GVA66": 4,
+        "coD_GVA66": "4",
+        "coD_RET": "4",
+        "desC_RET": "RETENCION DE IIBB CABA",
+        "tipO_RET": "B",
+        "iD_GVA18": 1,
+        "coD_REGIM": 0,
+        "iD_SBA01": 17,
+        "coD_GVA18": "00",
+        "coD_PROV": "00",
+        "coD_CTA": 1010020318,
+        "codigo": "4",
+        "roW_VERSION": "AAAAAADO2jU="
+      },
+      {
+        "iD_GVA66": 5,
+        "coD_GVA66": "5",
+        "coD_RET": "5",
+        "desC_RET": "RETENCION DE IIBB BS AS",
+        "tipO_RET": "B",
+        "iD_GVA18": 2,
+        "coD_REGIM": 0,
+        "iD_SBA01": 211,
+        "coD_GVA18": "01",
+        "coD_PROV": "01",
+        "coD_CTA": 1010020322,
+        "codigo": "5",
+        "roW_VERSION": "AAAAAADO2jY="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

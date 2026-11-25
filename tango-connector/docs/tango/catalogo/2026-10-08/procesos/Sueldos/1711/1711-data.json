@@ -1,0 +1,916 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_JUZGADO_DGI": 1,
+        "coD_JUZGADO_DGI": "0001",
+        "desC_JUZGADO_DGI": "JDO. DE LOMAS DE ZAMORA",
+        "secretaria": 1,
+        "coD_DGI": "0001",
+        "observaciones": "JUZGADO DE LOMAS DE ZAMORA",
+        "roW_VERSION": "AAAAAADO3sw="
+      },
+      {
+        "iD_JUZGADO_DGI": 2,
+        "coD_JUZGADO_DGI": "0002",
+        "desC_JUZGADO_DGI": "INSTANCIA CIVIL Y CCIAL N°2 -OBERA",
+        "secretaria": 1,
+        "coD_DGI": "0002",
+        "observaciones": "INSTANCIA CIVIL Y COMERCIAL N°2 -OBERA",
+        "roW_VERSION": "AAAAAADO3s0="
+      },
+      {
+        "iD_JUZGADO_DGI": 3,
+        "coD_JUZGADO_DGI": "0003",
+        "desC_JUZGADO_DGI": "INSTANCIA  CIVIL Y CCIAL N°5 -POSADAS",
+        "secretaria": 1,
+        "coD_DGI": "0003",
+        "observaciones": "INSTANCIA EN LO CIVIL Y COMERCIAL N°5 -POSADAS",
+        "roW_VERSION": "AAAAAADO3s4="
+      },
+      {
+        "iD_JUZGADO_DGI": 4,
+        "coD_JUZGADO_DGI": "0004",
+        "desC_JUZGADO_DGI": "JDO. DE MENOR. DE 3º NOMINACIÓN-CBA",
+        "secretaria": 1,
+        "coD_DGI": "0004",
+        "observaciones": "JUZGADO DE MENORES DE TERCERA NOMINACIÓN-CORDOBA",
+        "roW_VERSION": "AAAAAADO3s8="
+      },
+      {
+        "iD_JUZGADO_DGI": 5,
+        "coD_JUZGADO_DGI": "0005",
+        "desC_JUZGADO_DGI": "JDO. 1º INS. MENOR.-VENADO TUERTO",
+        "secretaria": 1,
+        "coD_DGI": "0005",
+        "observaciones": "JUZGADO PRIMER INS. DE DIST. MENORES-VENADO TUERTO",
+        "roW_VERSION": "AAAAAADO3tA="
+      },
+      {
+        "iD_JUZGADO_DGI": 6,
+        "coD_JUZGADO_DGI": "0006",
+        "desC_JUZGADO_DGI": "JDO. NAC.DE 1º INSTANCIA N°4-CF",
+        "secretaria": 1,
+        "coD_DGI": "0006",
+        "observaciones": "JUZGADO NAC.DE PRIMER INSTANCIA N°4-CAPITAL FEDERA",
+        "roW_VERSION": "AAAAAADO3tE="
+      },
+      {
+        "iD_JUZGADO_DGI": 7,
+        "coD_JUZGADO_DGI": "0007",
+        "desC_JUZGADO_DGI": "JDO. 1º INST.  CIVIL - CAP.FEDERAL",
+        "secretaria": 1,
+        "coD_DGI": "0007",
+        "observaciones": "JUZGADO PRIMER INST. EN LO CIVIL - CAP.FEDERAL",
+        "roW_VERSION": "AAAAAADO3tI="
+      },
+      {
+        "iD_JUZGADO_DGI": 8,
+        "coD_JUZGADO_DGI": "0008",
+        "desC_JUZGADO_DGI": "JDO. 1° INST. CIVIL Y CCIAL -OBERA",
+        "secretaria": 1,
+        "coD_DGI": "0008",
+        "observaciones": "JUZGADO 1° INST. CIVIL Y COMERCIAL -OBERA",
+        "roW_VERSION": "AAAAAADO3tM="
+      },
+      {
+        "iD_JUZGADO_DGI": 9,
+        "coD_JUZGADO_DGI": "0009",
+        "desC_JUZGADO_DGI": "JDO. N°9  CIVIL Y CCIAL - RESISTENCIA",
+        "secretaria": 9,
+        "coD_DGI": "0009",
+        "observaciones": "JUZGADO N°9 EN LO CIVIL Y COMERCIAL - RESISTENCIA",
+        "roW_VERSION": "AAAAAADO3tQ="
+      },
+      {
+        "iD_JUZGADO_DGI": 10,
+        "coD_JUZGADO_DGI": "0010",
+        "desC_JUZGADO_DGI": "JDO. DE MENOR. - MALARGUE",
+        "secretaria": 1,
+        "coD_DGI": "0010",
+        "observaciones": "JUZGADO DE MENORES - MALARGUE",
+        "roW_VERSION": "AAAAAADO3tU="
+      },
+      {
+        "iD_JUZGADO_DGI": 11,
+        "coD_JUZGADO_DGI": "0011",
+        "desC_JUZGADO_DGI": "JDO. MENOR DE CONCORDIA",
+        "secretaria": 1,
+        "coD_DGI": "0011",
+        "observaciones": "JUZGADO MENOR DE CONCORDIA",
+        "roW_VERSION": "AAAAAADO3tY="
+      },
+      {
+        "iD_JUZGADO_DGI": 12,
+        "coD_JUZGADO_DGI": "0012",
+        "desC_JUZGADO_DGI": "JDO. DE MENOR. 2° -SAN RAFAEL-MZA.",
+        "secretaria": 1,
+        "coD_DGI": "0012",
+        "observaciones": "JUZGADO DE MENORES 2° CIRC.JUD.-SAN RAFAEL-MZA.",
+        "roW_VERSION": "AAAAAADO3tc="
+      },
+      {
+        "iD_JUZGADO_DGI": 13,
+        "coD_JUZGADO_DGI": "0013",
+        "desC_JUZGADO_DGI": "JDO 1° INST. CIVIL Y CCIAL-GUALEGUAYCHU",
+        "secretaria": 2,
+        "coD_DGI": "0013",
+        "observaciones": "JDO DE 1° INST. EN LO CIVIL Y CCIAL-GUALEGUAYCHU",
+        "roW_VERSION": "AAAAAADO3tg="
+      },
+      {
+        "iD_JUZGADO_DGI": 14,
+        "coD_JUZGADO_DGI": "0014",
+        "desC_JUZGADO_DGI": "JDO FLIA Y MINOR. JUD.SUR -T.DEL FUEGO",
+        "secretaria": 1,
+        "coD_DGI": "0014",
+        "observaciones": "JDO FLIA Y MINORIDAD DEL DIST.JUD.SUR -T.DEL FUEGO",
+        "roW_VERSION": "AAAAAADO3tk="
+      },
+      {
+        "iD_JUZGADO_DGI": 15,
+        "coD_JUZGADO_DGI": "0015",
+        "desC_JUZGADO_DGI": "JDO. N°3 DE MENOR.-LOMAS DE ZAMORA",
+        "secretaria": 1,
+        "coD_DGI": "0015",
+        "observaciones": "JUZGADO N°3 DE MENORES. SEC.UNICA-LOMAS DE ZAMORA",
+        "roW_VERSION": "AAAAAADO3to="
+      },
+      {
+        "iD_JUZGADO_DGI": 16,
+        "coD_JUZGADO_DGI": "0016",
+        "desC_JUZGADO_DGI": "JDO. N°2 -1° INSTAN. CIVIL/CCIAL-OBERA",
+        "secretaria": 1,
+        "coD_DGI": "0016",
+        "observaciones": "JUZGADO N°2 -1° INSTANCIA CIVIL Y CCIAL-OBERA",
+        "roW_VERSION": "AAAAAADO3ts="
+      },
+      {
+        "iD_JUZGADO_DGI": 17,
+        "coD_JUZGADO_DGI": "0017",
+        "desC_JUZGADO_DGI": "TRIB. DE MENOR. N°1 - MORON",
+        "secretaria": 1,
+        "coD_DGI": "0017",
+        "observaciones": "TRIBUNAL DE MENORES N°1 - MORON",
+        "roW_VERSION": "AAAAAADO3tw="
+      },
+      {
+        "iD_JUZGADO_DGI": 18,
+        "coD_JUZGADO_DGI": "0018",
+        "desC_JUZGADO_DGI": "TRIB. COLEGIADO N°2 -SANTA FE",
+        "secretaria": 2,
+        "coD_DGI": "0018",
+        "observaciones": "TRIBUNAL COLEGIADO N°2 -SANTA FE",
+        "roW_VERSION": "AAAAAADO3t0="
+      },
+      {
+        "iD_JUZGADO_DGI": 19,
+        "coD_JUZGADO_DGI": "0019",
+        "desC_JUZGADO_DGI": "JDO.  CIVIL Y CCIAL-CARLOTA-CBA",
+        "secretaria": 1,
+        "coD_DGI": "0019",
+        "observaciones": "JUZGADO EN LO CIVIL Y COMERCIAL-CARLOTA-CORDOBA",
+        "roW_VERSION": "AAAAAADO3t4="
+      },
+      {
+        "iD_JUZGADO_DGI": 20,
+        "coD_JUZGADO_DGI": "0020",
+        "desC_JUZGADO_DGI": "JDO. N°26 NAC. DE 1°INS. CIVIL-CF",
+        "secretaria": 1,
+        "coD_DGI": "0020",
+        "observaciones": "JUZGADO N°26 NAC. DE 1°INS.EN LO CIVIL-CAP.FEDERAL",
+        "roW_VERSION": "AAAAAADO3t8="
+      },
+      {
+        "iD_JUZGADO_DGI": 21,
+        "coD_JUZGADO_DGI": "0021",
+        "desC_JUZGADO_DGI": "JDO. N° 1 MENOR. DE NEUQUEN",
+        "secretaria": 1,
+        "coD_DGI": "0021",
+        "observaciones": "JUZGADO N° 1 MENORES DE NEUQUEN",
+        "roW_VERSION": "AAAAAADO3uA="
+      },
+      {
+        "iD_JUZGADO_DGI": 22,
+        "coD_JUZGADO_DGI": "0022",
+        "desC_JUZGADO_DGI": "JDO. 6º NOM. DE MINORIDAD Y FLIA-TUCUM",
+        "secretaria": 1,
+        "coD_DGI": "0022",
+        "observaciones": "JUZGADO SEXTA NOMINACIÓN DE MINORIDAD Y FLIA-TUCUM",
+        "roW_VERSION": "AAAAAADO3uE="
+      },
+      {
+        "iD_JUZGADO_DGI": 23,
+        "coD_JUZGADO_DGI": "0023",
+        "desC_JUZGADO_DGI": "JDO. EN 1° INSTANCIA  CIVIL-OBERA",
+        "secretaria": 1,
+        "coD_DGI": "0023",
+        "observaciones": "JUZGADO EN 1° INSTANCIA EN LO CIVIL-OBERA",
+        "roW_VERSION": "AAAAAADO3uI="
+      },
+      {
+        "iD_JUZGADO_DGI": 24,
+        "coD_JUZGADO_DGI": "0024",
+        "desC_JUZGADO_DGI": "TRIB. DE MENOR. - JUNIN",
+        "secretaria": 1,
+        "coD_DGI": "0024",
+        "observaciones": "TRIBUNAL DE MENORES - JUNIN",
+        "roW_VERSION": "AAAAAADO3uM="
+      },
+      {
+        "iD_JUZGADO_DGI": 25,
+        "coD_JUZGADO_DGI": "0025",
+        "desC_JUZGADO_DGI": "TRIB. DE FLIA-FORMOSA",
+        "secretaria": 1,
+        "coD_DGI": "0025",
+        "observaciones": "TRIBUNAL DE FAMILIA-FORMOSA",
+        "roW_VERSION": "AAAAAADO3uQ="
+      },
+      {
+        "iD_JUZGADO_DGI": 26,
+        "coD_JUZGADO_DGI": "0026",
+        "desC_JUZGADO_DGI": "SEC. CIVIL Y CCIAL N° 1-CONCORDIA",
+        "secretaria": 1,
+        "coD_DGI": "0026",
+        "observaciones": "SECRETARIA EN LO CIVIL Y COMERCIAL N° 1-CONCORDIA",
+        "roW_VERSION": "AAAAAADO3uU="
+      },
+      {
+        "iD_JUZGADO_DGI": 27,
+        "coD_JUZGADO_DGI": "0027",
+        "desC_JUZGADO_DGI": "JDO. CIVIL/CCIAL/MINERIA N°1-G. ROCA",
+        "secretaria": 11,
+        "coD_DGI": "0027",
+        "observaciones": "JUZGADO CIVIL, COMERCIAL Y MINERIA N°1-GRAL.ROCA",
+        "roW_VERSION": "AAAAAADO3uY="
+      },
+      {
+        "iD_JUZGADO_DGI": 28,
+        "coD_JUZGADO_DGI": "0028",
+        "desC_JUZGADO_DGI": "TRIB. DE MENOR. N° 1 -SAN NICOLAS",
+        "secretaria": 2,
+        "coD_DGI": "0028",
+        "observaciones": "TRIBUNAL DE MENORES N° 1 -SAN NICOLAS",
+        "roW_VERSION": "AAAAAADO3uc="
+      },
+      {
+        "iD_JUZGADO_DGI": 29,
+        "coD_JUZGADO_DGI": "0029",
+        "desC_JUZGADO_DGI": "CAMARA 4° CIVIL, CCIAL  -LA RIOJA",
+        "secretaria": 1,
+        "coD_DGI": "0029",
+        "observaciones": "CAMARA 4° EN LO CIVIL, CCIAL Y DE MINAS -LA RIOJA",
+        "roW_VERSION": "AAAAAADO3ug="
+      },
+      {
+        "iD_JUZGADO_DGI": 30,
+        "coD_JUZGADO_DGI": "0030",
+        "desC_JUZGADO_DGI": "SERV.NAC.DEL MENOR. FLIA-BS.AS",
+        "secretaria": 1,
+        "coD_DGI": "0030",
+        "observaciones": "SERV.NAC.DEL MENOR.SEC.DE ESTADO MENOR Y FLIA-BS.A",
+        "roW_VERSION": "AAAAAADO3uk="
+      },
+      {
+        "iD_JUZGADO_DGI": 31,
+        "coD_JUZGADO_DGI": "0031",
+        "desC_JUZGADO_DGI": "JDO. DE MENOR. N°1 - ROSARIO",
+        "secretaria": 1,
+        "coD_DGI": "0031",
+        "observaciones": "JUZGADO DE MENORES N°1 - ROSARIO",
+        "roW_VERSION": "AAAAAADO3uo="
+      },
+      {
+        "iD_JUZGADO_DGI": 32,
+        "coD_JUZGADO_DGI": "0032",
+        "desC_JUZGADO_DGI": "JDO. N°2 DE MENOR.- ROSARIO",
+        "secretaria": 1,
+        "coD_DGI": "0032",
+        "observaciones": "JUZGADO N°2 DE MENORES- ROSARIO",
+        "roW_VERSION": "AAAAAADO3us="
+      },
+      {
+        "iD_JUZGADO_DGI": 33,
+        "coD_JUZGADO_DGI": "0033",
+        "desC_JUZGADO_DGI": "JDO. DE MENOR. N°3 - ROSARIO",
+        "secretaria": 1,
+        "coD_DGI": "0033",
+        "observaciones": "JUZGADO DE MENORES N°3 - ROSARIO",
+        "roW_VERSION": "AAAAAADO3uw="
+      },
+      {
+        "iD_JUZGADO_DGI": 34,
+        "coD_JUZGADO_DGI": "0034",
+        "desC_JUZGADO_DGI": "TRIB. DE MENOR. -SANTA FE",
+        "secretaria": 1,
+        "coD_DGI": "0034",
+        "observaciones": "TRIBUNAL DE MENORES -SANTA FE",
+        "roW_VERSION": "AAAAAADO3u0="
+      },
+      {
+        "iD_JUZGADO_DGI": 35,
+        "coD_JUZGADO_DGI": "0035",
+        "desC_JUZGADO_DGI": "TRIB. DE MENOR. - SANTA FE",
+        "secretaria": 1,
+        "coD_DGI": "0035",
+        "observaciones": "TRIBUNAL DE MENORES - SANTA FE",
+        "roW_VERSION": "AAAAAADO3u4="
+      },
+      {
+        "iD_JUZGADO_DGI": 36,
+        "coD_JUZGADO_DGI": "0036",
+        "desC_JUZGADO_DGI": "JDO. NAC.DE INSANIA CIVIL N°86-BS.AS",
+        "secretaria": 1,
+        "coD_DGI": "0036",
+        "observaciones": "JUZGADO NAC.DE INSANIA CIVIL N°86-SEC.UNICA-BS.AS",
+        "roW_VERSION": "AAAAAADO3u8="
+      },
+      {
+        "iD_JUZGADO_DGI": 37,
+        "coD_JUZGADO_DGI": "0037",
+        "desC_JUZGADO_DGI": "JDO. DE FLIA N°4 - SALTA",
+        "secretaria": 1,
+        "coD_DGI": "0037",
+        "observaciones": "JUZGADO DE FAMILIA N°4 - SALTA",
+        "roW_VERSION": "AAAAAADO3vA="
+      },
+      {
+        "iD_JUZGADO_DGI": 38,
+        "coD_JUZGADO_DGI": "0038",
+        "desC_JUZGADO_DGI": "DEF. CIVIL N°1-EL DORADO-MISIONES",
+        "secretaria": 1,
+        "coD_DGI": "0038",
+        "observaciones": "DEFENSORIA OFICIAL CIVIL N°1-EL DORADO-MISIONES",
+        "roW_VERSION": "AAAAAADO3vE="
+      },
+      {
+        "iD_JUZGADO_DGI": 39,
+        "coD_JUZGADO_DGI": "0039",
+        "desC_JUZGADO_DGI": "JDO. CIVIL Y CCIAL N°3 - CONCORDIA",
+        "secretaria": 1,
+        "coD_DGI": "0039",
+        "observaciones": "JUZGADO CIVIL Y COMERCIAL N°3 - CONCORDIA",
+        "roW_VERSION": "AAAAAADO3vI="
+      },
+      {
+        "iD_JUZGADO_DGI": 40,
+        "coD_JUZGADO_DGI": "0040",
+        "desC_JUZGADO_DGI": "JDO. N° 2 DE MENOR. -OBERA-MISIONES",
+        "secretaria": 1,
+        "coD_DGI": "0040",
+        "observaciones": "JUZGADO N° 2 DE MENORES -OBERA-MISIONES",
+        "roW_VERSION": "AAAAAADO3vM="
+      },
+      {
+        "iD_JUZGADO_DGI": 41,
+        "coD_JUZGADO_DGI": "0041",
+        "desC_JUZGADO_DGI": "JDO. DE 1° INS. CIVIL/CCIAL-PTO.MADRYN",
+        "secretaria": 1,
+        "coD_DGI": "0041",
+        "observaciones": "JUZGADO DE 1° INS.EN LO CIVIL Y CCIAL-PTO.MADRYN",
+        "roW_VERSION": "AAAAAADO3vQ="
+      },
+      {
+        "iD_JUZGADO_DGI": 42,
+        "coD_JUZGADO_DGI": "0042",
+        "desC_JUZGADO_DGI": "CAMARA CIVIL/CCIAL/MINAS N°1 -LA RIOJA",
+        "secretaria": 1,
+        "coD_DGI": "0042",
+        "observaciones": "CAMARA CIVIL, COMERCIAL Y MINAS N°1 -LA RIOJA",
+        "roW_VERSION": "AAAAAADO3vU="
+      },
+      {
+        "iD_JUZGADO_DGI": 43,
+        "coD_JUZGADO_DGI": "0043",
+        "desC_JUZGADO_DGI": "DECIMO JDO. CIVIL, CCIAL Y MINAS - MZA.",
+        "secretaria": 1,
+        "coD_DGI": "0043",
+        "observaciones": "DECIMO JUZGADO CIVIL, COMERCIAL Y MINAS - MENDOZA",
+        "roW_VERSION": "AAAAAADO3vY="
+      },
+      {
+        "iD_JUZGADO_DGI": 44,
+        "coD_JUZGADO_DGI": "0044",
+        "desC_JUZGADO_DGI": "TRIB. DE FLIA SIN SECRETARIA-FORMOSA",
+        "secretaria": 1,
+        "coD_DGI": "0044",
+        "observaciones": "TRIBUNAL DE FAMILIA SIN SECRETARIA - FORMOSA",
+        "roW_VERSION": "AAAAAADO3vc="
+      },
+      {
+        "iD_JUZGADO_DGI": 45,
+        "coD_JUZGADO_DGI": "0045",
+        "desC_JUZGADO_DGI": "JDO. NAC.DE 1º INSTANCIA NRO. 76-CF",
+        "secretaria": 1,
+        "coD_DGI": "0045",
+        "observaciones": "JUZGADO NAC.DE PRIMER INSTANCIA NRO. 76-CAP.FED",
+        "roW_VERSION": "AAAAAADO3vg="
+      },
+      {
+        "iD_JUZGADO_DGI": 46,
+        "coD_JUZGADO_DGI": "0046",
+        "desC_JUZGADO_DGI": "TRIB. DE MENOR. N°1-LOMAS DE ZAMORA",
+        "secretaria": 1,
+        "coD_DGI": "0046",
+        "observaciones": "TRIBUNAL DE MENORES N°1 - LOMAS DE ZAMORA",
+        "roW_VERSION": "AAAAAADO3vk="
+      },
+      {
+        "iD_JUZGADO_DGI": 47,
+        "coD_JUZGADO_DGI": "0047",
+        "desC_JUZGADO_DGI": "JDO.  CIVIL Y CCIAL N°11-MORON",
+        "secretaria": 1,
+        "coD_DGI": "0047",
+        "observaciones": "JUZGADO EN LO CIVIL Y COMERCIAL N°11-MORON",
+        "roW_VERSION": "AAAAAADO3vo="
+      },
+      {
+        "iD_JUZGADO_DGI": 48,
+        "coD_JUZGADO_DGI": "0048",
+        "desC_JUZGADO_DGI": "JDO. CIVIL FLIA Y SUCESION-TUCUMAN",
+        "secretaria": 1,
+        "coD_DGI": "0048",
+        "observaciones": "JUZGADO CIVIL EN FLIA Y SUCESION-SEC.JUD.-TUCUMAN",
+        "roW_VERSION": "AAAAAADO3vs="
+      },
+      {
+        "iD_JUZGADO_DGI": 49,
+        "coD_JUZGADO_DGI": "0049",
+        "desC_JUZGADO_DGI": "JUZ DE 1° INST CIVIL/PERS Y FAM-SALTA",
+        "secretaria": 1,
+        "coD_DGI": "0049",
+        "observaciones": "JUZ DE 1° INST EN LO CIVIL DE PERS Y FAM - SALTA",
+        "roW_VERSION": "AAAAAADO3vw="
+      },
+      {
+        "iD_JUZGADO_DGI": 50,
+        "coD_JUZGADO_DGI": "0050",
+        "desC_JUZGADO_DGI": "TRIB. DE FLIA VOCALIA 1 - JUJUY",
+        "secretaria": 1,
+        "coD_DGI": "0050",
+        "observaciones": "TRIBUNAL DE FAMILIA VOCALIA 1 - JUJUY",
+        "roW_VERSION": "AAAAAADO3v0="
+      },
+      {
+        "iD_JUZGADO_DGI": 51,
+        "coD_JUZGADO_DGI": "0051",
+        "desC_JUZGADO_DGI": "TRIB. DE FLIA VOCALIA 3 - JUJUY",
+        "secretaria": 1,
+        "coD_DGI": "0051",
+        "observaciones": "TRIBUNAL DE FAMILIA VOCALIA 3 - JUJUY",
+        "roW_VERSION": "AAAAAADO3v4="
+      },
+      {
+        "iD_JUZGADO_DGI": 52,
+        "coD_JUZGADO_DGI": "0052",
+        "desC_JUZGADO_DGI": "TRIB. DE FLIA - JUJUY",
+        "secretaria": 1,
+        "coD_DGI": "0052",
+        "observaciones": "TRIBUNAL DE FAMILIA - JUJUY",
+        "roW_VERSION": "AAAAAADO3v8="
+      },
+      {
+        "iD_JUZGADO_DGI": 53,
+        "coD_JUZGADO_DGI": "0053",
+        "desC_JUZGADO_DGI": "DEF. DE MENOR. E INCAPACES - JUJUY",
+        "secretaria": 1,
+        "coD_DGI": "0053",
+        "observaciones": "DEFENSORIA DE MENORES E INCAPACES - JUJUY",
+        "roW_VERSION": "AAAAAADO3wE="
+      },
+      {
+        "iD_JUZGADO_DGI": 54,
+        "coD_JUZGADO_DGI": "0054",
+        "desC_JUZGADO_DGI": "JUZ DE 1° INST CIVIL/COM. 1° NOM-JUJUY",
+        "secretaria": 2,
+        "coD_DGI": "0054",
+        "observaciones": "JUZ DE 1° INST EN LO CIVIL Y COM. 1° NOM - JUJUY",
+        "roW_VERSION": "AAAAAADO3wI="
+      },
+      {
+        "iD_JUZGADO_DGI": 55,
+        "coD_JUZGADO_DGI": "0055",
+        "desC_JUZGADO_DGI": "JUZ DE 1° INST CIVIL/COM SEC 4-JUJUY",
+        "secretaria": 1,
+        "coD_DGI": "0055",
+        "observaciones": "JUZ DE 1° INST EN LO CIVIL Y COM 1° NOM SEC 4 JUJU",
+        "roW_VERSION": "AAAAAADO3wM="
+      },
+      {
+        "iD_JUZGADO_DGI": 56,
+        "coD_JUZGADO_DGI": "0056",
+        "desC_JUZGADO_DGI": "JDO. CIVIL Y CCIAL NRO 8-S PEDRO JUJUY",
+        "secretaria": 16,
+        "coD_DGI": "0056",
+        "observaciones": "JUZGADO CIVIL Y COMERCIAL NRO 8 - SAN PEDRO JUJUY",
+        "roW_VERSION": "AAAAAADO3wQ="
+      },
+      {
+        "iD_JUZGADO_DGI": 57,
+        "coD_JUZGADO_DGI": "0057",
+        "desC_JUZGADO_DGI": "JUZ DE 1° INST Y 17° CIVIL Y COM - CORDO",
+        "secretaria": 33,
+        "coD_DGI": "0057",
+        "observaciones": "JUZ DE 1° INST Y 17° NOM EN LO CIVIL Y COM - CORDO",
+        "roW_VERSION": "AAAAAADO3wU="
+      },
+      {
+        "iD_JUZGADO_DGI": 58,
+        "coD_JUZGADO_DGI": "0058",
+        "desC_JUZGADO_DGI": "JDO. 1°INST,CIVIL,CCIAL,LABORAL-CHUBUT",
+        "secretaria": 1,
+        "coD_DGI": "0058",
+        "observaciones": "JDO. LETRADO 1°INST,CIVIL,CCIAL,LABORAL-CHUBUT",
+        "roW_VERSION": "AAAAAADO3wY="
+      },
+      {
+        "iD_JUZGADO_DGI": 59,
+        "coD_JUZGADO_DGI": "0059",
+        "desC_JUZGADO_DGI": "JDO. 1°INST.CIVIL/CCIAL/LABORAL-CHUBUT",
+        "secretaria": 2,
+        "coD_DGI": "0059",
+        "observaciones": "JDO.LETRADO 1°INST. CIVIL, CCIAL, LABORAL-CHUBUT",
+        "roW_VERSION": "AAAAAADO3wc="
+      },
+      {
+        "iD_JUZGADO_DGI": 60,
+        "coD_JUZGADO_DGI": "0060",
+        "desC_JUZGADO_DGI": "JDO. CIVIL Y CCIAL N°1 - OBERA",
+        "secretaria": 2,
+        "coD_DGI": "0060",
+        "observaciones": "JUZGADO CIVIL Y COMERCIAL N°1 - OBERA",
+        "roW_VERSION": "AAAAAADO3wg="
+      },
+      {
+        "iD_JUZGADO_DGI": 61,
+        "coD_JUZGADO_DGI": "0061",
+        "desC_JUZGADO_DGI": "5º JDO. DE FLIA S/SECRETARIA - MZA.",
+        "secretaria": 1,
+        "coD_DGI": "0061",
+        "observaciones": "QUINTO JUZGADO DE FAMILIA S/SECRETARIA - MENDOZA",
+        "roW_VERSION": "AAAAAADO3wk="
+      },
+      {
+        "iD_JUZGADO_DGI": 62,
+        "coD_JUZGADO_DGI": "0062",
+        "desC_JUZGADO_DGI": "TRIB. COLEGIADO N°3 DE FLIA- STA FE",
+        "secretaria": 1,
+        "coD_DGI": "0062",
+        "observaciones": "TRIBUNAL COLEGIADO N°3 DE FAMILIA- SANTA FE",
+        "roW_VERSION": "AAAAAADO3wo="
+      },
+      {
+        "iD_JUZGADO_DGI": 63,
+        "coD_JUZGADO_DGI": "0063",
+        "desC_JUZGADO_DGI": "JDO. CIVIL,CCIAL-BELL VILLE",
+        "secretaria": 1,
+        "coD_DGI": "0063",
+        "observaciones": "JUZGADO CIVIL,COMERCIAL-BELL VILLE",
+        "roW_VERSION": "AAAAAADO3ws="
+      },
+      {
+        "iD_JUZGADO_DGI": 64,
+        "coD_JUZGADO_DGI": "0064",
+        "desC_JUZGADO_DGI": "TRIB. DE MENOR. N°2 - MORON",
+        "secretaria": 3,
+        "coD_DGI": "0064",
+        "observaciones": "TRIBUNAL DE MENORES N°2 - MORON",
+        "roW_VERSION": "AAAAAADO3ww="
+      },
+      {
+        "iD_JUZGADO_DGI": 65,
+        "coD_JUZGADO_DGI": "0065",
+        "desC_JUZGADO_DGI": "TRIB. DE MENOR. N°2 - MORON",
+        "secretaria": 4,
+        "coD_DGI": "0064",
+        "observaciones": "TRIBUNAL DE MENORES N°2 - MORON",
+        "roW_VERSION": "AAAAAADO3w0="
+      },
+      {
+        "iD_JUZGADO_DGI": 66,
+        "coD_JUZGADO_DGI": "0066",
+        "desC_JUZGADO_DGI": "TRIB COL DE INST  FLIA N°2 - SAN MARTIN",
+        "secretaria": 1,
+        "coD_DGI": "0065",
+        "observaciones": "TRIB COL DE INST.UNICA FUERO FLIA N°2 - SAN MARTIN",
+        "roW_VERSION": "AAAAAADO3w4="
+      },
+      {
+        "iD_JUZGADO_DGI": 67,
+        "coD_JUZGADO_DGI": "0067",
+        "desC_JUZGADO_DGI": "JDO. CIVIL Y CCIAL 1°INST.",
+        "secretaria": 1,
+        "coD_DGI": "0066",
+        "observaciones": "JUZGADO CIVIL Y COMERCIAL 1°INST.-A#ATUYA",
+        "roW_VERSION": "AAAAAADO3w8="
+      },
+      {
+        "iD_JUZGADO_DGI": 68,
+        "coD_JUZGADO_DGI": "0068",
+        "desC_JUZGADO_DGI": "JDO. N°5 -SEC. A. VAZQUEZ - SAN ISIDRO",
+        "secretaria": 1,
+        "coD_DGI": "0067",
+        "observaciones": "JUZGADO N°5 -SEC. ANTONIO VAZQUEZ - SAN ISIDRO",
+        "roW_VERSION": "AAAAAADO3xA="
+      },
+      {
+        "iD_JUZGADO_DGI": 69,
+        "coD_JUZGADO_DGI": "0069",
+        "desC_JUZGADO_DGI": "JDO. CIVIL/CCIAL/MINERIA N°3 -RIO NEGRO",
+        "secretaria": 1,
+        "coD_DGI": "0068",
+        "observaciones": "JUZGADO CIVIL,COMERCIAL Y MINERIA N°3 -RIO NEGRO",
+        "roW_VERSION": "AAAAAADO3xE="
+      },
+      {
+        "iD_JUZGADO_DGI": 70,
+        "coD_JUZGADO_DGI": "0070",
+        "desC_JUZGADO_DGI": "TRIB. DE MENOR. N°2-LA PLATA",
+        "secretaria": 4,
+        "coD_DGI": "0068",
+        "observaciones": "TRIBUNAL DE MENORES N°2-LA PLATA",
+        "roW_VERSION": "AAAAAADO3xI="
+      },
+      {
+        "iD_JUZGADO_DGI": 71,
+        "coD_JUZGADO_DGI": "0071",
+        "desC_JUZGADO_DGI": "TRIB. DE MENOR. N°2-MAR DEL PLATA",
+        "secretaria": 1,
+        "coD_DGI": "0069",
+        "observaciones": "JUZGADO 1° INST. CIVIL Y CCIAL N°3 -SAN ISIDRO",
+        "roW_VERSION": "AAAAAADO3xM="
+      },
+      {
+        "iD_JUZGADO_DGI": 72,
+        "coD_JUZGADO_DGI": "0072",
+        "desC_JUZGADO_DGI": "JDO. 1° INST. CIVIL/CCIAL N°3-SAN ISIDRO",
+        "secretaria": 6,
+        "coD_DGI": "0069",
+        "observaciones": "TRIBUNAL DE MENORES N°2 S/SEC. -MAR DEL PLATA",
+        "roW_VERSION": "AAAAAADO3xQ="
+      },
+      {
+        "iD_JUZGADO_DGI": 73,
+        "coD_JUZGADO_DGI": "0073",
+        "desC_JUZGADO_DGI": "JDO. DE MENOR. N°1 - SAN MARTIN",
+        "secretaria": 2,
+        "coD_DGI": "0070",
+        "observaciones": "JUZGADO DE MENORES N°1 - SAN MARTIN",
+        "roW_VERSION": "AAAAAADO3xU="
+      },
+      {
+        "iD_JUZGADO_DGI": 74,
+        "coD_JUZGADO_DGI": "0074",
+        "desC_JUZGADO_DGI": "JDO. 1°INST.  CIVIL Y CCIAL N°2-POSADA",
+        "secretaria": 1,
+        "coD_DGI": "0071",
+        "observaciones": "JUZGADO 1°INST. EN LO CIVIL Y COMERCIAL N°2-POSADA",
+        "roW_VERSION": "AAAAAADO3xY="
+      },
+      {
+        "iD_JUZGADO_DGI": 75,
+        "coD_JUZGADO_DGI": "0075",
+        "desC_JUZGADO_DGI": "DEF. FUERO UNIV. N°2-L.N.ALEM-MISION",
+        "secretaria": 1,
+        "coD_DGI": "0072",
+        "observaciones": "DEFENSORIA DEL FUERO UNIVERSAL N°2-L.N.ALEM-MISION",
+        "roW_VERSION": "AAAAAADO3xc="
+      },
+      {
+        "iD_JUZGADO_DGI": 76,
+        "coD_JUZGADO_DGI": "0076",
+        "desC_JUZGADO_DGI": "JDO.  CIVIL Y CCIAL N°13 MAR DEL PLATA",
+        "secretaria": 13,
+        "coD_DGI": "0073",
+        "observaciones": "JUZGADO EN LO CIVIL Y COMERCIAL N°13 MAR DEL PLATA",
+        "roW_VERSION": "AAAAAADO3xg="
+      },
+      {
+        "iD_JUZGADO_DGI": 77,
+        "coD_JUZGADO_DGI": "0077",
+        "desC_JUZGADO_DGI": "JUZ CIVIL/CCIAL/TRAB 3ª NOM - STA FE",
+        "secretaria": 1,
+        "coD_DGI": "0074",
+        "observaciones": "JUZ CIVIL COMERCIAL Y DE TRABAJO 3ª NOM - STA FE",
+        "roW_VERSION": "AAAAAADO3xk="
+      },
+      {
+        "iD_JUZGADO_DGI": 78,
+        "coD_JUZGADO_DGI": "0078",
+        "desC_JUZGADO_DGI": "JDO. DE MENOR. N°2 -DE LA MATANZA",
+        "secretaria": 4,
+        "coD_DGI": "0075",
+        "observaciones": "JUZGADO DE MENORES N°2 -DPTO JUD. DE LA MATANZA",
+        "roW_VERSION": "AAAAAADO3xo="
+      },
+      {
+        "iD_JUZGADO_DGI": 79,
+        "coD_JUZGADO_DGI": "0079",
+        "desC_JUZGADO_DGI": "JDO 1°INST  CIVIL/CCIAL N°1-MAR DEL PLAT",
+        "secretaria": 1,
+        "coD_DGI": "0076",
+        "observaciones": "JDO EN 1°INST EN LO CIVIL Y CCIAL N°1-MAR DEL PLAT",
+        "roW_VERSION": "AAAAAADO3xs="
+      },
+      {
+        "iD_JUZGADO_DGI": 80,
+        "coD_JUZGADO_DGI": "0080",
+        "desC_JUZGADO_DGI": "JDO. N°4 DE MENOR. - MAR DEL PLATA",
+        "secretaria": 1,
+        "coD_DGI": "0077",
+        "observaciones": "JDO. N°4 DE MENORES DEPARTAMENTAL - MAR DEL PLATA",
+        "roW_VERSION": "AAAAAADO3xw="
+      },
+      {
+        "iD_JUZGADO_DGI": 81,
+        "coD_JUZGADO_DGI": "0081",
+        "desC_JUZGADO_DGI": "JDO. DE 1° INST DIST DE MENOR.-RAFAELA",
+        "secretaria": 1,
+        "coD_DGI": "0078",
+        "observaciones": "JUZGADO DE 1° INST DE DIST DE MENORES - RAFAELA",
+        "roW_VERSION": "AAAAAADO3x0="
+      },
+      {
+        "iD_JUZGADO_DGI": 82,
+        "coD_JUZGADO_DGI": "0082",
+        "desC_JUZGADO_DGI": "JUZ 5°  CIVIL CCIAL Y MINAS - MZA.",
+        "secretaria": 1,
+        "coD_DGI": "0079",
+        "observaciones": "JUZ 5° EN LO CIVIL COMERCIAL Y MINAS - MENDOZA",
+        "roW_VERSION": "AAAAAADO3x4="
+      },
+      {
+        "iD_JUZGADO_DGI": 83,
+        "coD_JUZGADO_DGI": "0083",
+        "desC_JUZGADO_DGI": "JUZ DE 1° INST  CIVIL/COM N° 3-POSADAS",
+        "secretaria": 2,
+        "coD_DGI": "0080",
+        "observaciones": "JUZ DE 1° INST EN LO CIVIL Y COM N° 3 - POSADAS",
+        "roW_VERSION": "AAAAAADO3x8="
+      },
+      {
+        "iD_JUZGADO_DGI": 84,
+        "coD_JUZGADO_DGI": "0084",
+        "desC_JUZGADO_DGI": "JUZ 1° INST CIVIL Y COM 2°-CATAMARCA",
+        "secretaria": 1,
+        "coD_DGI": "0081",
+        "observaciones": "JUZ DE 1° INST EN LO CIVIL Y COM 2°NOM - CATAMARCA",
+        "roW_VERSION": "AAAAAADO3yA="
+      },
+      {
+        "iD_JUZGADO_DGI": 85,
+        "coD_JUZGADO_DGI": "0085",
+        "desC_JUZGADO_DGI": "CAMARA DE FLIA 2° NOM- CBA",
+        "secretaria": 1,
+        "coD_DGI": "0082",
+        "observaciones": "CAMARA DE FAMILIA 2° NOMINACION - CORDOBA",
+        "roW_VERSION": "AAAAAADO3yE="
+      },
+      {
+        "iD_JUZGADO_DGI": 86,
+        "coD_JUZGADO_DGI": "0086",
+        "desC_JUZGADO_DGI": "JDO. DE MENOR. NRO. 2 - NEUQUEN",
+        "secretaria": 1,
+        "coD_DGI": "0083",
+        "observaciones": "JUZGADO DE MENORES NRO. 2 - NEUQUEN",
+        "roW_VERSION": "AAAAAADO3yI="
+      },
+      {
+        "iD_JUZGADO_DGI": 87,
+        "coD_JUZGADO_DGI": "0087",
+        "desC_JUZGADO_DGI": "TRIB. DE FLIA-JUJUY",
+        "secretaria": 1,
+        "coD_DGI": "0084",
+        "observaciones": "TRIBUNAL DE FAMILIA-JUJUY",
+        "roW_VERSION": "AAAAAADO3yM="
+      },
+      {
+        "iD_JUZGADO_DGI": 88,
+        "coD_JUZGADO_DGI": "0088",
+        "desC_JUZGADO_DGI": "JUZ DE 1° INST  CIVIL/COM N°1 - MORON",
+        "secretaria": 1,
+        "coD_DGI": "0085",
+        "observaciones": "JUZ DE 1° INST EN LO CIVIL Y COM N°1 - MORON",
+        "roW_VERSION": "AAAAAADO3yQ="
+      },
+      {
+        "iD_JUZGADO_DGI": 89,
+        "coD_JUZGADO_DGI": "0089",
+        "desC_JUZGADO_DGI": "CAMDE FLIA-1° NOM. SEC. VELEZ -CBA",
+        "secretaria": 1,
+        "coD_DGI": "0086",
+        "observaciones": "CAMARA DE FLIA-1° NOM. SEC. C.A.VELEZ -CORDOBA",
+        "roW_VERSION": "AAAAAADO3yU="
+      },
+      {
+        "iD_JUZGADO_DGI": 90,
+        "coD_JUZGADO_DGI": "0090",
+        "desC_JUZGADO_DGI": "TRIB. DE FLIA N°2 DPTO JUD-LA PLATA",
+        "secretaria": 1,
+        "coD_DGI": "0087",
+        "observaciones": "TRIBUNAL DE FAMILIA N°2 DPTO JUD. - LA PLATA",
+        "roW_VERSION": "AAAAAADO3yY="
+      },
+      {
+        "iD_JUZGADO_DGI": 91,
+        "coD_JUZGADO_DGI": "0091",
+        "desC_JUZGADO_DGI": "JDO INST. FALTAS Y MENOR.-RIO 3º",
+        "secretaria": 1,
+        "coD_DGI": "0088",
+        "observaciones": "JDO DE INST. FALTAS Y MENORES-S/SEC-RIO TERCERO",
+        "roW_VERSION": "AAAAAADO3yc="
+      },
+      {
+        "iD_JUZGADO_DGI": 92,
+        "coD_JUZGADO_DGI": "0092",
+        "desC_JUZGADO_DGI": "JDO. INST.MENOR/FALTAS-ALTA GRACIA",
+        "secretaria": 1,
+        "coD_DGI": "0089",
+        "observaciones": "JDO. DE INST.MENORES Y FALTAS-S/SEC-ALTA GRACIA",
+        "roW_VERSION": "AAAAAADO3yg="
+      },
+      {
+        "iD_JUZGADO_DGI": 93,
+        "coD_JUZGADO_DGI": "0093",
+        "desC_JUZGADO_DGI": "DEF. DE MENOR. N°1 - SAN LUIS",
+        "secretaria": 1,
+        "coD_DGI": "0090",
+        "observaciones": "DEFENSORIA DE MENORES N°1 - SAN LUIS",
+        "roW_VERSION": "AAAAAADO3yk="
+      },
+      {
+        "iD_JUZGADO_DGI": 94,
+        "coD_JUZGADO_DGI": "0094",
+        "desC_JUZGADO_DGI": "JUZ  CIVIL Y CCIAL N°10 - MERCEDES",
+        "secretaria": 1,
+        "coD_DGI": "0091",
+        "observaciones": "JUZ EN LO CIVIL Y COMERCIAL N°10 - MERCEDES",
+        "roW_VERSION": "AAAAAADO3yo="
+      },
+      {
+        "iD_JUZGADO_DGI": 95,
+        "coD_JUZGADO_DGI": "0095",
+        "desC_JUZGADO_DGI": "JUZ CIVIL/COM/TRABAJO 1° NOM-RAFAELA",
+        "secretaria": 1,
+        "coD_DGI": "0092",
+        "observaciones": "JUZ CIVIL COM Y DEL TRABAJO DE 1° NOM - RAFAELA",
+        "roW_VERSION": "AAAAAADO3ys="
+      },
+      {
+        "iD_JUZGADO_DGI": 96,
+        "coD_JUZGADO_DGI": "0096",
+        "desC_JUZGADO_DGI": "JUZ NACIONAL DE 1° INST  CIVIL N°10 - CF",
+        "secretaria": 1,
+        "coD_DGI": "0093",
+        "observaciones": "JUZ NACIONAL DE 1° INST EN LO CIVIL N°10 - CAP FED",
+        "roW_VERSION": "AAAAAADO3yw="
+      },
+      {
+        "iD_JUZGADO_DGI": 97,
+        "coD_JUZGADO_DGI": "0097",
+        "desC_JUZGADO_DGI": "JUZ NACIONAL DE 1ª INST  CIVIL Nª86 - CF",
+        "secretaria": 1,
+        "coD_DGI": "0094",
+        "observaciones": "JUZ NACIONAL DE 1ª INST EN LO CIVIL Nª86 - CAP FED",
+        "roW_VERSION": "AAAAAADO3y0="
+      },
+      {
+        "iD_JUZGADO_DGI": 98,
+        "coD_JUZGADO_DGI": "0098",
+        "desC_JUZGADO_DGI": "JUZ 1ª INST Y 2ª  N. CIVIL/ COM - RIO 3ª",
+        "secretaria": 3,
+        "coD_DGI": "0095",
+        "observaciones": "JUZ DE 1ª INST Y 2ª NOM EN LO CIVIL Y COM - RIO 3ª",
+        "roW_VERSION": "AAAAAADO3y4="
+      },
+      {
+        "iD_JUZGADO_DGI": 99,
+        "coD_JUZGADO_DGI": "0099",
+        "desC_JUZGADO_DGI": "JUZ DE 1ª INST  CIVIL Y COM Nº1 - CHACO",
+        "secretaria": 2,
+        "coD_DGI": "0096",
+        "observaciones": "JUZ DE 1ª INST EN LO CIVIL Y COM Nº1 - CHACO",
+        "roW_VERSION": "AAAAAADO3y8="
+      },
+      {
+        "iD_JUZGADO_DGI": 100,
+        "coD_JUZGADO_DGI": "0100",
+        "desC_JUZGADO_DGI": "JUZ CIVIL Y CCIAL 12° NOM1° INST-CBA",
+        "secretaria": 23,
+        "coD_DGI": "0097",
+        "observaciones": "JUZ CIVIL Y COMERCIAL 12° NOM DE 1° INST - CORDOBA",
+        "roW_VERSION": "AAAAAADO3zA="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

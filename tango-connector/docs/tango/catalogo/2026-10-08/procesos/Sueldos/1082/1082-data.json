@@ -1,0 +1,27 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_LUGAR_TRABAJO": 1,
+        "iD_ACTIVIDAD_DGI": 63,
+        "coD_LUGAR_TRABAJO": "001",
+        "desC_LUGAR_TRABAJO": "LMB",
+        "nrO_LUGAR_TRABAJO": 1,
+        "ddjJ_TRABAJO": "NI",
+        "tipO_DOMICILIO": "Explotación",
+        "iD_PROVINCIA": 2,
+        "roW_VERSION": "AAAAAADfrsY="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

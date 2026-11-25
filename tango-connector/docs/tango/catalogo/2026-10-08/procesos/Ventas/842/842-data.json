@@ -1,0 +1,101 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_GVA05": 1,
+        "coD_GVA05": "AR",
+        "nombrE_ZON": "ARGENTINA",
+        "coD_ZONA": "AR",
+        "comiS_ZONA": 0,
+        "codigo": "AR",
+        "roW_VERSION": "AAAAAADO1Hk="
+      },
+      {
+        "iD_GVA05": 2,
+        "coD_GVA05": "BR",
+        "nombrE_ZON": "BRASIL",
+        "coD_ZONA": "BR",
+        "comiS_ZONA": 0,
+        "codigo": "BR",
+        "roW_VERSION": "AAAAAADO1Ho="
+      },
+      {
+        "iD_GVA05": 3,
+        "coD_GVA05": "MX",
+        "nombrE_ZON": "MEXICO",
+        "coD_ZONA": "MX",
+        "comiS_ZONA": 0,
+        "codigo": "MX",
+        "roW_VERSION": "AAAAAADO1H4="
+      },
+      {
+        "iD_GVA05": 4,
+        "coD_GVA05": "US",
+        "nombrE_ZON": "ESTADOS UNIDOS",
+        "coD_ZONA": "US",
+        "comiS_ZONA": 0,
+        "codigo": "US",
+        "roW_VERSION": "AAAAAADO1IA="
+      },
+      {
+        "iD_GVA05": 5,
+        "coD_GVA05": "IT",
+        "nombrE_ZON": "ITALIA",
+        "coD_ZONA": "IT",
+        "comiS_ZONA": 0,
+        "observaciones": "",
+        "codigo": "IT",
+        "roW_VERSION": "AAAAAADO1H0="
+      },
+      {
+        "iD_GVA05": 6,
+        "coD_GVA05": "ES",
+        "nombrE_ZON": "ESPAÑA",
+        "coD_ZONA": "ES",
+        "comiS_ZONA": 0,
+        "observaciones": "",
+        "codigo": "ES",
+        "roW_VERSION": "AAAAAADO1Hw="
+      },
+      {
+        "iD_GVA05": 7,
+        "coD_GVA05": "CO",
+        "nombrE_ZON": "COLOMBIA",
+        "coD_ZONA": "CO",
+        "comiS_ZONA": 0,
+        "observaciones": "",
+        "codigo": "CO",
+        "roW_VERSION": "AAAAAADO1Hs="
+      },
+      {
+        "iD_GVA05": 8,
+        "coD_GVA05": "UK",
+        "nombrE_ZON": "REINO UNIDO",
+        "coD_ZONA": "UK",
+        "comiS_ZONA": 0,
+        "observaciones": "",
+        "codigo": "UK",
+        "roW_VERSION": "AAAAAADO1H8="
+      },
+      {
+        "iD_GVA05": 9,
+        "coD_GVA05": "UR",
+        "nombrE_ZON": "URUGUAY",
+        "coD_ZONA": "UR",
+        "comiS_ZONA": 0,
+        "codigo": "UR",
+        "roW_VERSION": "AAAAAADUsqU="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

@@ -1,0 +1,747 @@
+{
+  "modulo": "Stock",
+  "capturado": "2026-10-08T17:17:43.219Z",
+  "procesos": {
+    "56": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "ARTICULO_CUENTA",
+        "APROPIACION_ARTICULO",
+        "AUXILIAR_REGLA_ARTICULO",
+        "SUBAUXILIAR_REGLA_ARTICULO"
+      ],
+      "titulo": "Parametrización contable de artículos"
+    },
+    "87": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_ARTICULO"
+      ],
+      "titulo": "Artículos"
+    },
+    "357": {
+      "estado": "sin-api",
+      "tablas": [
+        "ActualizacionMasivaDeArticulosApiParams",
+        "STA_ARTICULO_UNIDAD_COMPRA",
+        "CPA15",
+        "GVA11"
+      ],
+      "titulo": "Actualización masiva de artículos"
+    },
+    "360": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_ARTICULO_DEFECTO"
+      ],
+      "titulo": "Plantillas para artículos"
+    },
+    "370": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "DEFECTO_ARTICULO_CUENTA",
+        "APROPIACION_DEFECTO_ARTICULO",
+        "AUXILIAR_REGLA_DEFECTO_ARTICULO",
+        "SUBAUXILIAR_REGLA_DEFECTO_ARTICULO"
+      ],
+      "titulo": "Parametrización contable de plantillas para artículos"
+    },
+    "568": {
+      "estado": "error",
+      "detalle": "Se detectó una situación inesperada",
+      "titulo": null
+    },
+    "2109": {
+      "estado": "sin-api",
+      "tablas": [
+        "STA16"
+      ],
+      "titulo": "Parámetros de Stock"
+    },
+    "2908": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "STA04"
+      ],
+      "titulo": "Componentes de costos"
+    },
+    "2916": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "STA29"
+      ],
+      "titulo": "Agrupaciones de artículos"
+    },
+    "2933": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "STA12"
+      ],
+      "titulo": "Precios para costos"
+    },
+    "2941": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "STA22"
+      ],
+      "titulo": "Depósitos"
+    },
+    "3297": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "STA13"
+      ],
+      "titulo": "Tipos de comprobante"
+    },
+    "3309": {
+      "estado": "sin-api",
+      "tablas": [
+        "STA113"
+      ],
+      "titulo": "Claves de autorización"
+    },
+    "3367": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TRA82"
+      ],
+      "titulo": "Categorías para kits"
+    },
+    "3457": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "STA08"
+      ],
+      "titulo": "Modificación de datos de partidas"
+    },
+    "11349": {
+      "estado": "error",
+      "detalle": "Se detectó una situación inesperada",
+      "titulo": null
+    },
+    "12567": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockDetalleDeMovimientosDeStockModel"
+      ],
+      "titulo": "Detalle de movimientos de stock"
+    },
+    "12574": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockMovimientosDetalladosPorSerieModel"
+      ],
+      "titulo": "Movimientos detallados por serie."
+    },
+    "12575": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockMovimientosDeSeriesDetalladosPorPartidaModel"
+      ],
+      "titulo": "Movimientos de series detallados por partida."
+    },
+    "12576": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockSeriesActivasSinPartidasRelacionadasModel"
+      ],
+      "titulo": "Series activas sin partidas relacionadas."
+    },
+    "12577": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockPartidasConSaldoSinSeriesRelacionadasModel"
+      ],
+      "titulo": "Partidas con saldo sin series relacionadas."
+    },
+    "12996": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockCostosEvolucionDeCostosBaseModel"
+      ],
+      "titulo": "Evolución de costos"
+    },
+    "13094": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockCostosCostosActualesModel"
+      ],
+      "titulo": "Costos actuales"
+    },
+    "14198": {
+      "estado": "sin-api",
+      "tablas": [
+        "ARTICULO",
+        "SALDOS",
+        "PRECIOS",
+        "PRECIOS_HISTORICO",
+        "COSTOS",
+        "PARTIDAS",
+        "SERIES",
+        "CLIENTES",
+        "PROVEEDORES",
+        "SALDO_SUCURSALES",
+        "VENTAS",
+        "DATOS_ADJUNTOS"
+      ],
+      "titulo": "Ficha Live de artículos"
+    },
+    "14200": {
+      "estado": "sin-api",
+      "tablas": [
+        "PARTIDAS",
+        "SALDOS",
+        "SERIES"
+      ],
+      "titulo": "Ficha Live de partidas"
+    },
+    "14201": {
+      "estado": "sin-api",
+      "tablas": [
+        "SERIES",
+        "RENGLONES_SERIES"
+      ],
+      "titulo": "Ficha Live de series"
+    },
+    "14202": {
+      "estado": "sin-api",
+      "tablas": [
+        "COMPROBANTES",
+        "RENGLONES",
+        "PARTIDAS",
+        "SERIES",
+        "LIVE_FN_StockMovimientos_ComprobantesRelacionados",
+        "Conteos de Colectoras"
+      ],
+      "titulo": "Ficha Live de movimientos"
+    },
+    "17667": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockStockFaltanteModel"
+      ],
+      "titulo": "Stock faltante"
+    },
+    "17668": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockSaldosModel"
+      ],
+      "titulo": "Saldos"
+    },
+    "17669": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockSaldosPorArticuloClienteModel"
+      ],
+      "titulo": "Saldos por artículo-Cliente"
+    },
+    "17670": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockSaldosPorArticuloProveedorModel"
+      ],
+      "titulo": "Saldos por artículo-proveedor"
+    },
+    "17671": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockArticulosNominaDeArticulosModel"
+      ],
+      "titulo": "Nómina de artículos"
+    },
+    "17674": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockRentabilidadBrutaPorPrecioDeReposicionModel"
+      ],
+      "titulo": "Por precio de reposición"
+    },
+    "17675": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockRentabilidadBrutaPorPrecioDeultimaCompraModel"
+      ],
+      "titulo": "Por precio de última compra"
+    },
+    "17677": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockPorPrecioDeReposicionModel"
+      ],
+      "titulo": "Por precio de reposición"
+    },
+    "17678": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockPorPrecioDeultimaCompraModel"
+      ],
+      "titulo": "Por precio de última compra"
+    },
+    "17680": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockIndiceDeRotacionDeArticulosModel"
+      ],
+      "titulo": "Índice de rotación de artículos"
+    },
+    "17681": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockMovimientosDeStockPendientesDeIngresarModel"
+      ],
+      "titulo": "Movimientos de stock pendientes de ingresar"
+    },
+    "17682": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockMovimientosIngresadosAlStockORechazadosModel"
+      ],
+      "titulo": "Movimientos ingresados al stock o rechazados"
+    },
+    "17683": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockMovimientosConsultaModel"
+      ],
+      "titulo": "Consulta"
+    },
+    "17684": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockMovimientosResumenModel"
+      ],
+      "titulo": "Movimientos"
+    },
+    "17686": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockPorPartidaModel"
+      ],
+      "titulo": "Por partida"
+    },
+    "17687": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockMovimientosDePartidasModel"
+      ],
+      "titulo": "Movimientos de partidas"
+    },
+    "17689": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockSeriesActivasDeArticulosModel"
+      ],
+      "titulo": "Series activas"
+    },
+    "17690": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockMovimientosDeSeriesModel"
+      ],
+      "titulo": "Movimientos de series"
+    },
+    "19646": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "STA115"
+      ],
+      "titulo": "Plantillas para escalas"
+    },
+    "19654": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "STA32",
+        "STA33"
+      ],
+      "titulo": "Definición de escalas"
+    },
+    "19704": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "ActualizacionEscalasParams"
+      ],
+      "titulo": "Actualización de artículos y plantillas con escalas"
+    },
+    "19729": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "STA17"
+      ],
+      "titulo": "Talonarios"
+    },
+    "20204": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockAjustesDeTomaInventarioModel"
+      ],
+      "titulo": "Ajustes por toma de inventario"
+    },
+    "20212": {
+      "estado": "sin-api",
+      "tablas": [
+        "TomaDeInventarioParams",
+        "STA26 ",
+        "STA37",
+        "STA22",
+        "STA13"
+      ],
+      "titulo": "Toma de inventario"
+    },
+    "20213": {
+      "estado": "sin-api",
+      "tablas": [
+        "IngresoDeStockParam",
+        "STA100"
+      ],
+      "titulo": "Ingresos de Stock"
+    },
+    "20214": {
+      "estado": "sin-api",
+      "tablas": [
+        "EgresoDeStockParam",
+        "STA103"
+      ],
+      "titulo": "Egresos de Stock"
+    },
+    "20230": {
+      "estado": "sin-api",
+      "tablas": [
+        "COMPROBANTES",
+        "RENGLONES",
+        "Conteos de Colectoras",
+        "COLECTORA_ENCABEZADO",
+        "COMPROBANTES_RELACIONADOS",
+        "PARTIDAS"
+      ],
+      "titulo": "Ficha Live de toma de inventario"
+    },
+    "20231": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "NominaTomaInventarioModel"
+      ],
+      "titulo": "Nómina de toma de inventario"
+    },
+    "20259": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "COLECTORA"
+      ],
+      "titulo": "Colectoras"
+    },
+    "20280": {
+      "estado": "sin-api",
+      "tablas": [
+        "DEPOSITOS",
+        "PARTIDAS",
+        "BLOQUEADOS_POR_TOMA_DE_INVENTARIO"
+      ],
+      "titulo": "Ficha Live de depósitos"
+    },
+    "20304": {
+      "estado": "sin-api",
+      "tablas": [
+        "REGISTROS_MOVIMIENTO",
+        "RENGLONES",
+        "RENGLONES_AUDITORIA",
+        "PARTIDAS",
+        "SERIES"
+      ],
+      "titulo": "Ficha Live de registración de movimientos de stock"
+    },
+    "20306": {
+      "estado": "sin-api",
+      "tablas": [
+        "AjusteMasivoParam",
+        "STA106"
+      ],
+      "titulo": "Ajustes de Stock"
+    },
+    "21248": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "STA14"
+      ],
+      "titulo": "Fraccionamiento de artículos"
+    },
+    "21403": {
+      "estado": "sin-api",
+      "tablas": [
+        "CONTEOS",
+        "RENGLONES",
+        "PARTIDAS",
+        "SERIES"
+      ],
+      "titulo": "Ficha Live de conteos de Tango Colectora"
+    },
+    "21404": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "StockDetalleConteosTangoColectoraModel"
+      ],
+      "titulo": "Detalle de conteos de Tango Colectora"
+    }
+  }
+}

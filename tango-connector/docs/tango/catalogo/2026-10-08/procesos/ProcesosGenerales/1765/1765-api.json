@@ -1,0 +1,225 @@
+{
+  "title": "Listado de auxiliares contables",
+  "moduleId": 11,
+  "paths": [
+    {
+      "title": "Process",
+      "name": "Api/Process",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"ListadoAuxiliaresContablesParams\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"properties\": {\r\n    \"Orientation\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"Format\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"Destination\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"PrintIssueDate\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"PrintHeader\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"PrintHeaderCompany\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ReserveSpace\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ReportType\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"PrintTitle\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ReportTitle\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"PrintBody\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"EnumeratePages\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"FirstPage\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"LastPage\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"IssueDate\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"ReportTemplate\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"IdCompanies\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"type\": \"integer\",\r\n        \"format\": \"int32\"\r\n      }\r\n    },\r\n    \"INCLUYE_AUXILIAR_SIN_ASIGNAR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"TIPO_AUXILIAR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"TIPO_AUXILIAR_AUTOMATICO\": {\r\n      \"oneOf\": [\r\n        {\r\n          \"type\": \"null\"\r\n        },\r\n        {\r\n          \"$ref\": \"#/definitions/TIPO_AUXILIAR_AUTOMATICO\"\r\n        }\r\n      ]\r\n    },\r\n    \"SOLO_HABILITADOS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"DETALLA_CUENTAS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"CORTE_POR_HOJA_TIPO_AUXILIAR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"INHABILITACION_DESFE_AUX\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"INHABILITACION_HASFE_AUX\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"DETALLA_SUBAUXILIARES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"INHABILITACION_DESFE_SUBAUX\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"INHABILITACION_HASFE_SUBAUX\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"TIPO_AUXILIAR_LIST\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TIPO_AUXILIAR\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"TIPO_AUXILIAR_AUTOMATICO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"COD_TIPO_AUXILIAR_AUTOMATICO\",\r\n        \"DESC_TIPO_AUXILIAR_AUTOMATICO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_TIPO_AUXILIAR_AUTOMATICO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_TIPO_AUXILIAR_AUTOMATICO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 10,\r\n          \"minLength\": 0\r\n        },\r\n        \"DESC_TIPO_AUXILIAR_AUTOMATICO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 40,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"TIPO_AUXILIAR\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"COD_TIPO_AUXILIAR\",\r\n        \"TIPO_AUXILIAR1\",\r\n        \"USA_SUBAUXILIARES_CONTABLES\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_TIPO_AUXILIAR\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_TIPO_AUXILIAR\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 10,\r\n          \"minLength\": 0\r\n        },\r\n        \"DESC_TIPO_AUXILIAR\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 40,\r\n          \"minLength\": 0\r\n        },\r\n        \"TIPO_AUXILIAR1\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"ID_TIPO_AUXILIAR_AUTOMATICO\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"USA_SUBAUXILIARES_CONTABLES\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"OBSERVACIONES\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1000,\r\n          \"minLength\": 0\r\n        },\r\n        \"COD_DESCRIP\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"CHECK\": {\r\n          \"type\": \"boolean\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TIPO_AUXILIAR_AUTOMATICO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_AUXILIAR_AUTOMATICO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TIPO_AUXILIAR_AUTOMATICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_TIPO_AUXILIAR_AUTOMATICO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_TIPO_AUXILIAR_AUTOMATICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_TIPO_AUXILIAR_AUTOMATICO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_TIPO_AUXILIAR_AUTOMATICO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TIPO_AUXILIAR\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_AUXILIAR\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TIPO_AUXILIAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_TIPO_AUXILIAR\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_TIPO_AUXILIAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_TIPO_AUXILIAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_TIPO_AUXILIAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_AUXILIAR1\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string TIPO_AUXILIAR1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_AUXILIAR_AUTOMATICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_AUXILIAR_AUTOMATICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_SUBAUXILIARES_CONTABLES\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string USA_SUBAUXILIARES_CONTABLES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_DESCRIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string COD_DESCRIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CHECK\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool CHECK { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class ListadoAuxiliaresContablesParams\n    {\n        [Newtonsoft.Json.JsonProperty(\"Orientation\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Orientation { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Format\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Format { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Destination\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Destination { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrintIssueDate\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PrintIssueDate { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrintHeader\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PrintHeader { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrintHeaderCompany\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PrintHeaderCompany { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ReserveSpace\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ReserveSpace { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ReportType\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ReportType { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrintTitle\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PrintTitle { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ReportTitle\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ReportTitle { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrintBody\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PrintBody { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EnumeratePages\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool EnumeratePages { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FirstPage\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? FirstPage { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LastPage\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? LastPage { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IssueDate\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? IssueDate { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ReportTemplate\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ReportTemplate { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IdCompanies\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<int> IdCompanies { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INCLUYE_AUXILIAR_SIN_ASIGNAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string INCLUYE_AUXILIAR_SIN_ASIGNAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_AUXILIAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string TIPO_AUXILIAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_AUXILIAR_AUTOMATICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public TIPO_AUXILIAR_AUTOMATICO TIPO_AUXILIAR_AUTOMATICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SOLO_HABILITADOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string SOLO_HABILITADOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DETALLA_CUENTAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string DETALLA_CUENTAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CORTE_POR_HOJA_TIPO_AUXILIAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string CORTE_POR_HOJA_TIPO_AUXILIAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INHABILITACION_DESFE_AUX\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? INHABILITACION_DESFE_AUX { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INHABILITACION_HASFE_AUX\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? INHABILITACION_HASFE_AUX { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DETALLA_SUBAUXILIARES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string DETALLA_SUBAUXILIARES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INHABILITACION_DESFE_SUBAUX\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? INHABILITACION_DESFE_SUBAUX { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INHABILITACION_HASFE_SUBAUX\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? INHABILITACION_HASFE_SUBAUX { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_AUXILIAR_LIST\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TIPO_AUXILIAR> TIPO_AUXILIAR_LIST { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface TIPO_AUXILIAR_AUTOMATICO {\n    ID_TIPO_AUXILIAR_AUTOMATICO: number;\n    COD_TIPO_AUXILIAR_AUTOMATICO: string;\n    DESC_TIPO_AUXILIAR_AUTOMATICO: string;\n}\n\nexport interface TIPO_AUXILIAR {\n    ID_TIPO_AUXILIAR: number;\n    COD_TIPO_AUXILIAR: string;\n    DESC_TIPO_AUXILIAR: string | undefined;\n    TIPO_AUXILIAR1: string;\n    ID_TIPO_AUXILIAR_AUTOMATICO: number | undefined;\n    USA_SUBAUXILIARES_CONTABLES: string;\n    OBSERVACIONES: string | undefined;\n    COD_DESCRIP: string | undefined;\n    CHECK: boolean;\n}\n\nexport interface ListadoAuxiliaresContablesParams {\n    Orientation: string | undefined;\n    Format: string | undefined;\n    Destination: string | undefined;\n    PrintIssueDate: boolean;\n    PrintHeader: boolean;\n    PrintHeaderCompany: boolean;\n    ReserveSpace: boolean;\n    ReportType: string | undefined;\n    PrintTitle: boolean;\n    ReportTitle: string | undefined;\n    PrintBody: boolean;\n    EnumeratePages: boolean;\n    FirstPage: number | undefined;\n    LastPage: number | undefined;\n    IssueDate: Date | undefined;\n    ReportTemplate: string | undefined;\n    IdCompanies: number[] | undefined;\n    INCLUYE_AUXILIAR_SIN_ASIGNAR: string | undefined;\n    TIPO_AUXILIAR: string | undefined;\n    TIPO_AUXILIAR_AUTOMATICO: TIPO_AUXILIAR_AUTOMATICO | undefined;\n    SOLO_HABILITADOS: string | undefined;\n    DETALLA_CUENTAS: string | undefined;\n    CORTE_POR_HOJA_TIPO_AUXILIAR: string | undefined;\n    INHABILITACION_DESFE_AUX: Date | undefined;\n    INHABILITACION_HASFE_AUX: Date | undefined;\n    DETALLA_SUBAUXILIARES: string | undefined;\n    INHABILITACION_DESFE_SUBAUX: Date | undefined;\n    INHABILITACION_HASFE_SUBAUX: Date | undefined;\n    TIPO_AUXILIAR_LIST: TIPO_AUXILIAR[] | undefined;\n}",
+          "example": {
+            "Orientation": null,
+            "Format": null,
+            "Destination": null,
+            "PrintIssueDate": false,
+            "PrintHeader": false,
+            "PrintHeaderCompany": false,
+            "ReserveSpace": false,
+            "ReportType": null,
+            "PrintTitle": false,
+            "ReportTitle": null,
+            "PrintBody": false,
+            "EnumeratePages": false,
+            "FirstPage": 0,
+            "LastPage": 0,
+            "IssueDate": "0001-01-01T00:00:00",
+            "ReportTemplate": null,
+            "INCLUYE_AUXILIAR_SIN_ASIGNAR": null,
+            "TIPO_AUXILIAR": null,
+            "TIPO_AUXILIAR_AUTOMATICO": {
+              "ID_TIPO_AUXILIAR_AUTOMATICO": 0,
+              "COD_TIPO_AUXILIAR_AUTOMATICO": null,
+              "DESC_TIPO_AUXILIAR_AUTOMATICO": null
+            },
+            "SOLO_HABILITADOS": null,
+            "DETALLA_CUENTAS": null,
+            "CORTE_POR_HOJA_TIPO_AUXILIAR": null,
+            "INHABILITACION_DESFE_AUX": "0001-01-01T00:00:00",
+            "INHABILITACION_HASFE_AUX": "0001-01-01T00:00:00",
+            "DETALLA_SUBAUXILIARES": null,
+            "INHABILITACION_DESFE_SUBAUX": "0001-01-01T00:00:00",
+            "INHABILITACION_HASFE_SUBAUX": "0001-01-01T00:00:00",
+            "IdCompanies": [
+              0
+            ],
+            "TIPO_AUXILIAR_LIST": [
+              {
+                "ID_TIPO_AUXILIAR": 0,
+                "COD_TIPO_AUXILIAR": null,
+                "DESC_TIPO_AUXILIAR": null,
+                "TIPO_AUXILIAR1": null,
+                "ID_TIPO_AUXILIAR_AUTOMATICO": 0,
+                "USA_SUBAUXILIARES_CONTABLES": null,
+                "OBSERVACIONES": null,
+                "COD_DESCRIP": "",
+                "CHECK": false
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Custom",
+      "name": "Api/Custom",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "method",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"ListadoAuxiliaresContablesParams\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"properties\": {\r\n    \"Orientation\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"Format\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"Destination\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"PrintIssueDate\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"PrintHeader\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"PrintHeaderCompany\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ReserveSpace\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ReportType\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"PrintTitle\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ReportTitle\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"PrintBody\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"EnumeratePages\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"FirstPage\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"LastPage\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"IssueDate\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"ReportTemplate\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"IdCompanies\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"type\": \"integer\",\r\n        \"format\": \"int32\"\r\n      }\r\n    },\r\n    \"INCLUYE_AUXILIAR_SIN_ASIGNAR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"TIPO_AUXILIAR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"TIPO_AUXILIAR_AUTOMATICO\": {\r\n      \"oneOf\": [\r\n        {\r\n          \"type\": \"null\"\r\n        },\r\n        {\r\n          \"$ref\": \"#/definitions/TIPO_AUXILIAR_AUTOMATICO\"\r\n        }\r\n      ]\r\n    },\r\n    \"SOLO_HABILITADOS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"DETALLA_CUENTAS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"CORTE_POR_HOJA_TIPO_AUXILIAR\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"INHABILITACION_DESFE_AUX\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"INHABILITACION_HASFE_AUX\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"DETALLA_SUBAUXILIARES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"INHABILITACION_DESFE_SUBAUX\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"INHABILITACION_HASFE_SUBAUX\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"format\": \"date-time\"\r\n    },\r\n    \"TIPO_AUXILIAR_LIST\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TIPO_AUXILIAR\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"TIPO_AUXILIAR_AUTOMATICO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"COD_TIPO_AUXILIAR_AUTOMATICO\",\r\n        \"DESC_TIPO_AUXILIAR_AUTOMATICO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_TIPO_AUXILIAR_AUTOMATICO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_TIPO_AUXILIAR_AUTOMATICO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 10,\r\n          \"minLength\": 0\r\n        },\r\n        \"DESC_TIPO_AUXILIAR_AUTOMATICO\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 40,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"TIPO_AUXILIAR\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"COD_TIPO_AUXILIAR\",\r\n        \"TIPO_AUXILIAR1\",\r\n        \"USA_SUBAUXILIARES_CONTABLES\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_TIPO_AUXILIAR\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_TIPO_AUXILIAR\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 10,\r\n          \"minLength\": 0\r\n        },\r\n        \"DESC_TIPO_AUXILIAR\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 40,\r\n          \"minLength\": 0\r\n        },\r\n        \"TIPO_AUXILIAR1\": {\r\n          \"type\": \"string\",\r\n          \"minLength\": 1\r\n        },\r\n        \"ID_TIPO_AUXILIAR_AUTOMATICO\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"USA_SUBAUXILIARES_CONTABLES\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"OBSERVACIONES\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1000,\r\n          \"minLength\": 0\r\n        },\r\n        \"COD_DESCRIP\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ]\r\n        },\r\n        \"CHECK\": {\r\n          \"type\": \"boolean\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TIPO_AUXILIAR_AUTOMATICO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_AUXILIAR_AUTOMATICO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TIPO_AUXILIAR_AUTOMATICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_TIPO_AUXILIAR_AUTOMATICO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_TIPO_AUXILIAR_AUTOMATICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_TIPO_AUXILIAR_AUTOMATICO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_TIPO_AUXILIAR_AUTOMATICO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TIPO_AUXILIAR\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_AUXILIAR\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TIPO_AUXILIAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_TIPO_AUXILIAR\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_TIPO_AUXILIAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_TIPO_AUXILIAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_TIPO_AUXILIAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_AUXILIAR1\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required]\n        public string TIPO_AUXILIAR1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TIPO_AUXILIAR_AUTOMATICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TIPO_AUXILIAR_AUTOMATICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"USA_SUBAUXILIARES_CONTABLES\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string USA_SUBAUXILIARES_CONTABLES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_DESCRIP\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string COD_DESCRIP { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CHECK\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool CHECK { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class ListadoAuxiliaresContablesParams\n    {\n        [Newtonsoft.Json.JsonProperty(\"Orientation\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Orientation { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Format\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Format { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"Destination\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string Destination { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrintIssueDate\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PrintIssueDate { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrintHeader\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PrintHeader { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrintHeaderCompany\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PrintHeaderCompany { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ReserveSpace\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool ReserveSpace { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ReportType\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ReportType { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrintTitle\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PrintTitle { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ReportTitle\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ReportTitle { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PrintBody\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PrintBody { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EnumeratePages\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool EnumeratePages { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FirstPage\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? FirstPage { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LastPage\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? LastPage { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IssueDate\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? IssueDate { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ReportTemplate\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string ReportTemplate { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IdCompanies\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<int> IdCompanies { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INCLUYE_AUXILIAR_SIN_ASIGNAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string INCLUYE_AUXILIAR_SIN_ASIGNAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_AUXILIAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string TIPO_AUXILIAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_AUXILIAR_AUTOMATICO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public TIPO_AUXILIAR_AUTOMATICO TIPO_AUXILIAR_AUTOMATICO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SOLO_HABILITADOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string SOLO_HABILITADOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DETALLA_CUENTAS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string DETALLA_CUENTAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CORTE_POR_HOJA_TIPO_AUXILIAR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string CORTE_POR_HOJA_TIPO_AUXILIAR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INHABILITACION_DESFE_AUX\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? INHABILITACION_DESFE_AUX { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INHABILITACION_HASFE_AUX\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? INHABILITACION_HASFE_AUX { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DETALLA_SUBAUXILIARES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string DETALLA_SUBAUXILIARES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INHABILITACION_DESFE_SUBAUX\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? INHABILITACION_DESFE_SUBAUX { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"INHABILITACION_HASFE_SUBAUX\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.DateTimeOffset? INHABILITACION_HASFE_SUBAUX { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_AUXILIAR_LIST\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TIPO_AUXILIAR> TIPO_AUXILIAR_LIST { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface TIPO_AUXILIAR_AUTOMATICO {\n    ID_TIPO_AUXILIAR_AUTOMATICO: number;\n    COD_TIPO_AUXILIAR_AUTOMATICO: string;\n    DESC_TIPO_AUXILIAR_AUTOMATICO: string;\n}\n\nexport interface TIPO_AUXILIAR {\n    ID_TIPO_AUXILIAR: number;\n    COD_TIPO_AUXILIAR: string;\n    DESC_TIPO_AUXILIAR: string | undefined;\n    TIPO_AUXILIAR1: string;\n    ID_TIPO_AUXILIAR_AUTOMATICO: number | undefined;\n    USA_SUBAUXILIARES_CONTABLES: string;\n    OBSERVACIONES: string | undefined;\n    COD_DESCRIP: string | undefined;\n    CHECK: boolean;\n}\n\nexport interface ListadoAuxiliaresContablesParams {\n    Orientation: string | undefined;\n    Format: string | undefined;\n    Destination: string | undefined;\n    PrintIssueDate: boolean;\n    PrintHeader: boolean;\n    PrintHeaderCompany: boolean;\n    ReserveSpace: boolean;\n    ReportType: string | undefined;\n    PrintTitle: boolean;\n    ReportTitle: string | undefined;\n    PrintBody: boolean;\n    EnumeratePages: boolean;\n    FirstPage: number | undefined;\n    LastPage: number | undefined;\n    IssueDate: Date | undefined;\n    ReportTemplate: string | undefined;\n    IdCompanies: number[] | undefined;\n    INCLUYE_AUXILIAR_SIN_ASIGNAR: string | undefined;\n    TIPO_AUXILIAR: string | undefined;\n    TIPO_AUXILIAR_AUTOMATICO: TIPO_AUXILIAR_AUTOMATICO | undefined;\n    SOLO_HABILITADOS: string | undefined;\n    DETALLA_CUENTAS: string | undefined;\n    CORTE_POR_HOJA_TIPO_AUXILIAR: string | undefined;\n    INHABILITACION_DESFE_AUX: Date | undefined;\n    INHABILITACION_HASFE_AUX: Date | undefined;\n    DETALLA_SUBAUXILIARES: string | undefined;\n    INHABILITACION_DESFE_SUBAUX: Date | undefined;\n    INHABILITACION_HASFE_SUBAUX: Date | undefined;\n    TIPO_AUXILIAR_LIST: TIPO_AUXILIAR[] | undefined;\n}",
+          "example": {
+            "Orientation": null,
+            "Format": null,
+            "Destination": null,
+            "PrintIssueDate": false,
+            "PrintHeader": false,
+            "PrintHeaderCompany": false,
+            "ReserveSpace": false,
+            "ReportType": null,
+            "PrintTitle": false,
+            "ReportTitle": null,
+            "PrintBody": false,
+            "EnumeratePages": false,
+            "FirstPage": 0,
+            "LastPage": 0,
+            "IssueDate": "0001-01-01T00:00:00",
+            "ReportTemplate": null,
+            "INCLUYE_AUXILIAR_SIN_ASIGNAR": null,
+            "TIPO_AUXILIAR": null,
+            "TIPO_AUXILIAR_AUTOMATICO": {
+              "ID_TIPO_AUXILIAR_AUTOMATICO": 0,
+              "COD_TIPO_AUXILIAR_AUTOMATICO": null,
+              "DESC_TIPO_AUXILIAR_AUTOMATICO": null
+            },
+            "SOLO_HABILITADOS": null,
+            "DETALLA_CUENTAS": null,
+            "CORTE_POR_HOJA_TIPO_AUXILIAR": null,
+            "INHABILITACION_DESFE_AUX": "0001-01-01T00:00:00",
+            "INHABILITACION_HASFE_AUX": "0001-01-01T00:00:00",
+            "DETALLA_SUBAUXILIARES": null,
+            "INHABILITACION_DESFE_SUBAUX": "0001-01-01T00:00:00",
+            "INHABILITACION_HASFE_SUBAUX": "0001-01-01T00:00:00",
+            "IdCompanies": [
+              0
+            ],
+            "TIPO_AUXILIAR_LIST": [
+              {
+                "ID_TIPO_AUXILIAR": 0,
+                "COD_TIPO_AUXILIAR": null,
+                "DESC_TIPO_AUXILIAR": null,
+                "TIPO_AUXILIAR1": null,
+                "ID_TIPO_AUXILIAR_AUTOMATICO": 0,
+                "USA_SUBAUXILIARES_CONTABLES": null,
+                "OBSERVACIONES": null,
+                "COD_DESCRIP": "",
+                "CHECK": false
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "ListadoAuxiliaresContablesParams": [
+      "INCLUYE_AUXILIAR_SIN_ASIGNAR",
+      "TIPO_AUXILIAR",
+      "TIPO_AUXILIAR_AUTOMATICO",
+      "SOLO_HABILITADOS",
+      "DETALLA_CUENTAS",
+      "CORTE_POR_HOJA_TIPO_AUXILIAR",
+      "INHABILITACION_DESFE_AUX",
+      "INHABILITACION_HASFE_AUX",
+      "DETALLA_SUBAUXILIARES",
+      "INHABILITACION_DESFE_SUBAUX",
+      "INHABILITACION_HASFE_SUBAUX",
+      "TIPO_AUXILIAR_LIST",
+      "Orientation",
+      "Format",
+      "Destination",
+      "IdCompanies",
+      "PrintIssueDate",
+      "PrintHeader",
+      "PrintHeaderCompany",
+      "ReserveSpace",
+      "ReportType",
+      "PrintTitle",
+      "ReportTitle",
+      "PrintBody",
+      "EnumeratePages",
+      "FirstPage",
+      "LastPage",
+      "IssueDate",
+      "ReportTemplate"
+    ],
+    "TIPO_AUXILIAR_AUTOMATICO": [
+      "COD_TIPO_AUXILIAR_AUTOMATICO",
+      "DESC_TIPO_AUXILIAR_AUTOMATICO"
+    ],
+    "TIPO_AUXILIAR": [
+      "CHECK",
+      "COD_TIPO_AUXILIAR",
+      "DESC_TIPO_AUXILIAR",
+      "TIPO_AUXILIAR",
+      "ID_TIPO_AUXILIAR_AUTOMATICO",
+      "USA_SUBAUXILIARES_CONTABLES",
+      "OBSERVACIONES"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

@@ -1,0 +1,290 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_PROVINCIA": 1,
+        "provinciA1": "Capital Federal",
+        "iD_PAIS": 1,
+        "coD_ANSES": "00",
+        "coD_SICORE": "00",
+        "coD_JURISDICCION": "901",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "00",
+        "roW_VERSION": "AAAAAADPPQg="
+      },
+      {
+        "iD_PROVINCIA": 2,
+        "provinciA1": "Buenos Aires",
+        "iD_PAIS": 1,
+        "coD_ANSES": "01",
+        "coD_SICORE": "01",
+        "coD_JURISDICCION": "902",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "01",
+        "roW_VERSION": "AAAAAADPPQc="
+      },
+      {
+        "iD_PROVINCIA": 3,
+        "provinciA1": "Catamarca",
+        "iD_PAIS": 1,
+        "coD_ANSES": "02",
+        "coD_SICORE": "02",
+        "coD_JURISDICCION": "903",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "02",
+        "roW_VERSION": "AAAAAADPPQk="
+      },
+      {
+        "iD_PROVINCIA": 4,
+        "provinciA1": "Córdoba",
+        "iD_PAIS": 1,
+        "coD_ANSES": "03",
+        "coD_SICORE": "03",
+        "coD_JURISDICCION": "904",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "03",
+        "roW_VERSION": "AAAAAADPPQw="
+      },
+      {
+        "iD_PROVINCIA": 5,
+        "provinciA1": "Corrientes",
+        "iD_PAIS": 1,
+        "coD_ANSES": "04",
+        "coD_SICORE": "04",
+        "coD_JURISDICCION": "905",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "04",
+        "roW_VERSION": "AAAAAADPPQ0="
+      },
+      {
+        "iD_PROVINCIA": 6,
+        "provinciA1": "Entre Ríos",
+        "iD_PAIS": 1,
+        "coD_ANSES": "05",
+        "coD_SICORE": "05",
+        "coD_JURISDICCION": "908",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "05",
+        "roW_VERSION": "AAAAAADPPQ4="
+      },
+      {
+        "iD_PROVINCIA": 7,
+        "provinciA1": "Jujuy",
+        "iD_PAIS": 1,
+        "coD_ANSES": "06",
+        "coD_SICORE": "06",
+        "coD_JURISDICCION": "910",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "06",
+        "roW_VERSION": "AAAAAADPPRE="
+      },
+      {
+        "iD_PROVINCIA": 8,
+        "provinciA1": "La Rioja",
+        "iD_PAIS": 1,
+        "coD_ANSES": "08",
+        "coD_SICORE": "08",
+        "coD_JURISDICCION": "912",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "08",
+        "roW_VERSION": "AAAAAADPPRM="
+      },
+      {
+        "iD_PROVINCIA": 9,
+        "provinciA1": "Mendoza",
+        "iD_PAIS": 1,
+        "coD_ANSES": "07",
+        "coD_SICORE": "07",
+        "coD_JURISDICCION": "913",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "07",
+        "roW_VERSION": "AAAAAADPPRQ="
+      },
+      {
+        "iD_PROVINCIA": 10,
+        "provinciA1": "Salta",
+        "iD_PAIS": 1,
+        "coD_ANSES": "09",
+        "coD_SICORE": "09",
+        "coD_JURISDICCION": "917",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "09",
+        "roW_VERSION": "AAAAAADPPRg="
+      },
+      {
+        "iD_PROVINCIA": 11,
+        "provinciA1": "San Juan",
+        "iD_PAIS": 1,
+        "coD_ANSES": "10",
+        "coD_SICORE": "10",
+        "coD_JURISDICCION": "918",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "10",
+        "roW_VERSION": "AAAAAADPPRk="
+      },
+      {
+        "iD_PROVINCIA": 12,
+        "provinciA1": "San Luis",
+        "iD_PAIS": 1,
+        "coD_ANSES": "11",
+        "coD_SICORE": "11",
+        "coD_JURISDICCION": "919",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "11",
+        "roW_VERSION": "AAAAAADPPRo="
+      },
+      {
+        "iD_PROVINCIA": 13,
+        "provinciA1": "Santa Fe",
+        "iD_PAIS": 1,
+        "coD_ANSES": "12",
+        "coD_SICORE": "12",
+        "coD_JURISDICCION": "921",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "12",
+        "roW_VERSION": "AAAAAADPPRw="
+      },
+      {
+        "iD_PROVINCIA": 14,
+        "provinciA1": "Santiago del Estero",
+        "iD_PAIS": 1,
+        "coD_ANSES": "13",
+        "coD_SICORE": "13",
+        "coD_JURISDICCION": "922",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "13",
+        "roW_VERSION": "AAAAAADPPR0="
+      },
+      {
+        "iD_PROVINCIA": 15,
+        "provinciA1": "Tucumán",
+        "iD_PAIS": 1,
+        "coD_ANSES": "14",
+        "coD_SICORE": "14",
+        "coD_JURISDICCION": "924",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "14",
+        "roW_VERSION": "AAAAAADPPR8="
+      },
+      {
+        "iD_PROVINCIA": 16,
+        "provinciA1": "Chaco",
+        "iD_PAIS": 1,
+        "coD_ANSES": "16",
+        "coD_SICORE": "16",
+        "coD_JURISDICCION": "906",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "16",
+        "roW_VERSION": "AAAAAADPPQo="
+      },
+      {
+        "iD_PROVINCIA": 17,
+        "provinciA1": "Chubut",
+        "iD_PAIS": 1,
+        "coD_ANSES": "17",
+        "coD_SICORE": "17",
+        "coD_JURISDICCION": "907",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "17",
+        "roW_VERSION": "AAAAAADPPQs="
+      },
+      {
+        "iD_PROVINCIA": 18,
+        "provinciA1": "Formosa",
+        "iD_PAIS": 1,
+        "coD_ANSES": "18",
+        "coD_SICORE": "18",
+        "coD_JURISDICCION": "909",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "18",
+        "roW_VERSION": "AAAAAADPPRA="
+      },
+      {
+        "iD_PROVINCIA": 19,
+        "provinciA1": "La Pampa",
+        "iD_PAIS": 1,
+        "coD_ANSES": "21",
+        "coD_SICORE": "21",
+        "coD_JURISDICCION": "911",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "21",
+        "roW_VERSION": "AAAAAADPPRI="
+      },
+      {
+        "iD_PROVINCIA": 20,
+        "provinciA1": "Misiones",
+        "iD_PAIS": 1,
+        "coD_ANSES": "19",
+        "coD_SICORE": "19",
+        "coD_JURISDICCION": "914",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "19",
+        "roW_VERSION": "AAAAAADPPRU="
+      },
+      {
+        "iD_PROVINCIA": 21,
+        "provinciA1": "Neuquén",
+        "iD_PAIS": 1,
+        "coD_ANSES": "20",
+        "coD_SICORE": "20",
+        "coD_JURISDICCION": "915",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "20",
+        "roW_VERSION": "AAAAAADPPRY="
+      },
+      {
+        "iD_PROVINCIA": 22,
+        "provinciA1": "Río Negro",
+        "iD_PAIS": 1,
+        "coD_ANSES": "22",
+        "coD_SICORE": "22",
+        "coD_JURISDICCION": "916",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "22",
+        "roW_VERSION": "AAAAAADPPRc="
+      },
+      {
+        "iD_PROVINCIA": 23,
+        "provinciA1": "Santa Cruz",
+        "iD_PAIS": 1,
+        "coD_ANSES": "23",
+        "coD_SICORE": "23",
+        "coD_JURISDICCION": "920",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "23",
+        "roW_VERSION": "AAAAAADPPRs="
+      },
+      {
+        "iD_PROVINCIA": 24,
+        "provinciA1": "Tierra del Fuego",
+        "iD_PAIS": 1,
+        "coD_ANSES": "24",
+        "coD_SICORE": "24",
+        "coD_JURISDICCION": "923",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "24",
+        "roW_VERSION": "AAAAAADPPR4="
+      },
+      {
+        "iD_PROVINCIA": 25,
+        "provinciA1": "Exterior",
+        "iD_PAIS": 1,
+        "coD_SICORE": "99",
+        "coD_JURISDICCION": "0",
+        "minimO_IB": 0,
+        "coD_SIRADIG": "99",
+        "roW_VERSION": "AAAAAADPPQ8="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

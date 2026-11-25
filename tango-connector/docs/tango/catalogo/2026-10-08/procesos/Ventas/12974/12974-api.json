@@ -1,0 +1,133 @@
+{
+  "title": "Cierres Z",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "VentasCierresZModel": [
+      "CONTROLADOR_FISCAL",
+      "CIERRE_Z",
+      "FECHA_DE_CIERRE",
+      "HORA_DE_CIERRE",
+      "VENTA_DIARIA",
+      "IVA_DIARIO",
+      "PERCEPCIONES",
+      "CONCEPTOS_NO_GRAVADOS",
+      "CREDITOS_DIARIOS",
+      "IVA_CREDITOS",
+      "PERCEPCIONES_CREDITOS",
+      "CONCEPTOS_NO_GRAVADOS_CREDITOS",
+      "PRIMER_COMPROBANTE_BC",
+      "ULTIMO_COMPROBANTE_BC",
+      "PRIMER_COMPROBANTE_A",
+      "ULTIMO_COMPROBANTE_A",
+      "ULTIMO_COMPROBANTE_T",
+      "PRIMER_NOTA_DE_CREDITO_A",
+      "ULTIMA_NOTA_DE_CREDITO_A",
+      "PRIMER_NOTA_DE_CREDITO_BC",
+      "ULTIMA_NOTA_DE_CREDITO_BC",
+      "ULTIMA_NOTA_DE_DEBITO_A",
+      "ULTIMA_NOTA_DE_DEBITO_BC",
+      "PRIMER_NOTA_DE_DEBITO_A",
+      "PRIMER_NOTA_DE_DEBITO_BC",
+      "CANT_COMPROBANTES_BC",
+      "CANT_COMPROBANTES_A",
+      "CANT_COMPROBANTES_T",
+      "CANT_NOTA_DE_CREDITO_A",
+      "CANT_NOTA_DE_CREDITO_BC",
+      "CANT_NOTA_DE_DEBITO_A",
+      "CANT_NOTA_DE_DEBITO_BC",
+      "CANT_DOCUMENTOS_FISCALES_CANCELADOS",
+      "CANT_DOCUMENTOS_NO_FISCALES_HOMOLOGADOS",
+      "CANT_DOCUMENTOS_NO_FISCALES",
+      "COD_CAJA",
+      "DESCRIPCION_CAJA",
+      "USUARIO",
+      "TERMINAL",
+      "MODELO_DE_CONTROLADOR_FISCAL",
+      "FECHA_COMERCIAL"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

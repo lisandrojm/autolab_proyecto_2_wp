@@ -1,0 +1,26 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_SBA52": 9,
+        "iD_SBA01": 492,
+        "coD_CTA": 99999999999,
+        "tipO_DEFEC": "P",
+        "porC_DEFEC": 12,
+        "tipO_EXCEP": "I",
+        "impO_EXCEP": 123,
+        "roW_VERSION": "AAAAAADf458="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

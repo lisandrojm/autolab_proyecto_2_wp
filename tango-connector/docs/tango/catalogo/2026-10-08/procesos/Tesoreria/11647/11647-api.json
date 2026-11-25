@@ -1,0 +1,110 @@
+{
+  "title": "Consulta de liquidaciones",
+  "moduleId": 10005,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "TesoreriaCuponesConsultaDeLiquidacionesModel": [
+      "ID_RESUMEN_TARJETA",
+      "ID_SBA04",
+      "T_T_TITULO_T_T",
+      "NRO_RESUMEN",
+      "FECHA_REAL_DE_ACREDITACION",
+      "TARJETA",
+      "COMPROBANTE_DE_EMISION",
+      "IMPORTE_LIQUIDADO",
+      "IMPORTE_ACREDITADO",
+      "IMPORTE_RECHAZADO",
+      "IMPORTE_ARANCEL",
+      "IMPORTE_RECARGO_FINANCIERO",
+      "IMPORTE_DESCUENTO_PROMOCION",
+      "IMPORTE_REINTEGRO_PROMOCION",
+      "TIPO",
+      "NRO_COMPROBANTE",
+      "BARRA",
+      "FECHA_COMPROBANTE"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

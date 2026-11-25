@@ -1,0 +1,31 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_SUCURSAL": 1,
+        "nrO_SUCURSAL": 1,
+        "desC_SUCURSAL": "FZERO",
+        "cuit": "30-71029583-9",
+        "fechA_INC_BOLETA": "1800-01-01T00:00:00",
+        "coD_DESCRIP": "1 - FZERO",
+        "calle": "Ruiz Huidobro",
+        "nrO_DOMIC": "4365",
+        "localidad": "Saavedra",
+        "codigO_POSTAL": "1428",
+        "iD_PROVINCIA": 1,
+        "weB_SITE": "https://www.frame.com.ar/",
+        "roW_VERSION": "AAAAAADf7Qs="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

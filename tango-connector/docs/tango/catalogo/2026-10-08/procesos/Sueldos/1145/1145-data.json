@@ -1,0 +1,26 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_FORMULA": 1,
+        "nrO_FORMULA": 99999,
+        "calculO_IMPORTE": "IMPGAN",
+        "imprimE_CANTIDAD": "N",
+        "formatO_CANTIDAD": "Entero",
+        "imprimE_VALOR": "N",
+        "coD_CONCEPTOS": "90000, 91000, 90001, 91001",
+        "roW_VERSION": "AAAAAADgAwY="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

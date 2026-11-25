@@ -1,0 +1,23 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_SALARIO_MINIMO_VITAL_MOVIL": 1,
+        "periodO_DESDE": "2024-01-01T00:00:00",
+        "importe": 0,
+        "afectA_IMPUESTO_GANANCIAS": "S",
+        "roW_VERSION": "AAAAAADUpEg="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

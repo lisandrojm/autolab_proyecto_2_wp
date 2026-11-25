@@ -1,0 +1,27 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_ITEM_SUELDO": 1,
+        "coD_ITEM_SUELDO": "ADICEMPRE",
+        "desC_ITEM_SUELDO": "Adicional Empresa",
+        "habilitado": "S",
+        "edita": "S",
+        "tipO_VALOR": "Importe",
+        "aplicA_TOPE_ITEM": "N",
+        "iD_TIPO_ITEM_SUELDO": 1,
+        "roW_VERSION": "AAAAAADQWuQ="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

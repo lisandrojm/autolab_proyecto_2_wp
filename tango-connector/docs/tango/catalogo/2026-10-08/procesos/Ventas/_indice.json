@@ -1,0 +1,2470 @@
+{
+  "modulo": "Ventas",
+  "capturado": "2026-10-08T17:17:15.860Z",
+  "procesos": {
+    "85": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "CLIENTE",
+        "APROPIACION_CLIENTE",
+        "AUXILIAR_REGLA_CLIENTE",
+        "SUBAUXILIAR_REGLA_CLIENTE"
+      ],
+      "titulo": "Parametrización contable de clientes"
+    },
+    "90": {
+      "estado": "sin-api",
+      "tablas": [
+        "PARAMETRO_GV"
+      ],
+      "titulo": "Parámetros contables"
+    },
+    "106": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "ASIENTO_MODELO_GV",
+        "RENGLON_MODELO_GV",
+        "TIPO_AUXILIAR_MODELO_GV"
+      ],
+      "titulo": "Modelos de asientos"
+    },
+    "122": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TIPO_COMPROBANTE_GV"
+      ],
+      "titulo": "Parametrización contable de tipos de comprobantes"
+    },
+    "624": {
+      "estado": "error",
+      "detalle": "Se detectó una situación inesperada",
+      "titulo": null
+    },
+    "665": {
+      "estado": "sin-api",
+      "tablas": [
+        "GVA16",
+        "ARCHIVO_SHOPPING_TERMINAL",
+        "CUENTA_NEXO_COBRANZAS_CONTADO",
+        "CANTIDAD_ASIGNACION_FOLIO_GV",
+        "PARAMETRO_ASIGNACION_FOLIO_GV",
+        "TALONARIO_EXCLUIDO_ACTUALIZACION_PRECIOS",
+        "SIRCIP_CLIENTES_FUERA_DEL_PADRON",
+        "SIRCIP_CLIENTES_CON_SOBRETASA"
+      ],
+      "titulo": "Parámetros de Ventas"
+    },
+    "747": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "INTERES_POR_MORA"
+      ],
+      "titulo": "Políticas de interés por mora"
+    },
+    "751": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_PERFIL_NOTA_CREDITO"
+      ],
+      "titulo": "Perfiles de notas de crédito"
+    },
+    "767": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MOTIVO_NOTA_CREDITO"
+      ],
+      "titulo": "Motivos para notas de crédito"
+    },
+    "842": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA05"
+      ],
+      "titulo": "Zonas"
+    },
+    "852": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA18"
+      ],
+      "titulo": "Provincias"
+    },
+    "864": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA151"
+      ],
+      "titulo": "Rubros comerciales"
+    },
+    "876": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA28"
+      ],
+      "titulo": "Agrupaciones de clientes"
+    },
+    "884": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA121"
+      ],
+      "titulo": "Motivos para pedidos"
+    },
+    "896": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA150"
+      ],
+      "titulo": "Clasificación para percepciones"
+    },
+    "908": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA66"
+      ],
+      "titulo": "Códigos de retención"
+    },
+    "920": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA22"
+      ],
+      "titulo": "Actividades Ingresos Brutos"
+    },
+    "932": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA133"
+      ],
+      "titulo": "Países"
+    },
+    "940": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA65"
+      ],
+      "titulo": "Motivos"
+    },
+    "944": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA34"
+      ],
+      "titulo": "Clasificación de cotización 1"
+    },
+    "952": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA23"
+      ],
+      "titulo": "Vendedores"
+    },
+    "960": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA24"
+      ],
+      "titulo": "Transportes"
+    },
+    "972": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA62",
+        "GVA14"
+      ],
+      "titulo": "Grupos empresarios"
+    },
+    "984": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA10",
+        "GVA10_PARAMETROS_AUTOMATIZACION",
+        "CTA_LISTA_VENTA_POR_SUCURSAL"
+      ],
+      "titulo": "Listas de precios"
+    },
+    "996": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA78",
+        "GVA79",
+        "GVA80",
+        "GVA85",
+        "SUCURSAL_PERFIL_PRECIOS_SALDOS"
+      ],
+      "titulo": "Perfiles de consulta de precios y saldos de stock"
+    },
+    "1910": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA75",
+        "GVA76"
+      ],
+      "titulo": "Perfiles de aprobación"
+    },
+    "1921": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA34"
+      ],
+      "titulo": "Clasificación de cotización 2"
+    },
+    "2016": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_PROMOCION"
+      ],
+      "titulo": "Promociones AxB"
+    },
+    "2035": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_PROMOCION"
+      ],
+      "titulo": "Promociones A+B"
+    },
+    "2047": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_PROMOCION"
+      ],
+      "titulo": "Promociones por porcentaje fijo"
+    },
+    "2059": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_PROMOCION"
+      ],
+      "titulo": "Promociones por cantidad"
+    },
+    "2071": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_PROMOCION"
+      ],
+      "titulo": "Promociones por porcentaje en unidad"
+    },
+    "2117": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_CLIENTE"
+      ],
+      "titulo": "Clientes"
+    },
+    "2147": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_PROMOCION"
+      ],
+      "titulo": "Promociones por tarjetas de beneficios"
+    },
+    "2497": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA01",
+        "RENGLON_CONDICION_VENTA"
+      ],
+      "titulo": "Condiciones de venta"
+    },
+    "2552": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA15"
+      ],
+      "titulo": "Tipos de comprobante"
+    },
+    "2589": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_PROMOCION"
+      ],
+      "titulo": "Promociones por precio especial"
+    },
+    "2642": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_PROMOCION"
+      ],
+      "titulo": "Promociones por descuento por monto"
+    },
+    "2672": {
+      "estado": "sin-api",
+      "tablas": [
+        "ActualizacionMasivaDeClientesApiParams",
+        "GVA144_DEFECTO"
+      ],
+      "titulo": "Actualización masiva de clientes"
+    },
+    "2700": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_CLIENTE_DEFECTO"
+      ],
+      "titulo": "Plantillas para clientes"
+    },
+    "2824": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "DEFECTO_CLIENTE_CUENTA",
+        "APROPIACION_DEFECTO_CLIENTE",
+        "AUXILIAR_REGLA_DEFECTO_CLIENTE",
+        "SUBAUXILIAR_REGLA_DEFECTO_CLIENTE"
+      ],
+      "titulo": "Parametrización contable de plantillas para clientes"
+    },
+    "2990": {
+      "estado": "sin-api",
+      "tablas": [
+        "GVA40"
+      ],
+      "titulo": "Parámetros de balanza"
+    },
+    "3010": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA41"
+      ],
+      "titulo": "Alícuotas"
+    },
+    "3049": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "ActualizacionGlobalPreciosVentasParams"
+      ],
+      "titulo": "Actualización global de precios"
+    },
+    "3325": {
+      "estado": "sin-api",
+      "tablas": [
+        "GVA120"
+      ],
+      "titulo": "Claves de autorización"
+    },
+    "3347": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA31"
+      ],
+      "titulo": "Textos"
+    },
+    "3471": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA_PARAMETROS_PEDIDOS_TIENDAS",
+        "GVA_PARAMETROS_PEDIDOS_TIENDAS_COBRO",
+        "GVA_PARAMETROS_PEDIDOS_TIENDAS_TALONARIO_FACTURA",
+        "GVA_PARAMETROS_PEDIDOS_TIENDAS_CATEGORIAS_A_REVISAR"
+      ],
+      "titulo": "Parámetros de pedidos de Tango Tiendas"
+    },
+    "10081": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosDetalleDePedidosModel"
+      ],
+      "titulo": "Detalle de pedidos"
+    },
+    "10083": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasConsolidadoDeComprobantesVentasYComprasModel"
+      ],
+      "titulo": "Consolidado de comprobantes ventas y compras"
+    },
+    "10348": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPreciosPreciosPorArticuloModel"
+      ],
+      "titulo": "Precios por artículo"
+    },
+    "10921": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasFacturasDeCreditoModel"
+      ],
+      "titulo": "Facturas de crédito"
+    },
+    "10948": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasInteresPorMoraModel"
+      ],
+      "titulo": "Interés por mora"
+    },
+    "11440": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasContabilidadDetallePorComprobanteModel"
+      ],
+      "titulo": "Detalle por comprobante"
+    },
+    "11443": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasDetallePorCuentaModel"
+      ],
+      "titulo": "Detalle por cuenta"
+    },
+    "11444": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasDetallePorAuxiliarModel"
+      ],
+      "titulo": "Detalle por auxiliar"
+    },
+    "11445": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasDetallePorSubauxiliarModel"
+      ],
+      "titulo": "Detalle por subauxiliar"
+    },
+    "11446": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasContabilizacionDeComprobantesModel"
+      ],
+      "titulo": "Contabilización de comprobantes"
+    },
+    "11586": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosPlanesDeEntregaPactadosRealesModel"
+      ],
+      "titulo": "Planes de entrega pactados / reales"
+    },
+    "11645": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasMultidimensionalDeAsientosModel"
+      ],
+      "titulo": "Multidimensional de asientos"
+    },
+    "12158": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasFacturacionResumenPorKitsModel"
+      ],
+      "titulo": "Resumen por kits"
+    },
+    "12205": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "SaldosDeClientesModel"
+      ],
+      "titulo": "Saldos de clientes"
+    },
+    "12263": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_PERFIL_FACTURACION"
+      ],
+      "titulo": "Perfiles de facturación"
+    },
+    "12289": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MODELO_PEDIDO",
+        "KitVariableSelectorDto",
+        "KitVariableDetailDto",
+        "MODELO_PEDIDO_RENGLON",
+        "MODELO_PEDIDO_DESCRIPCION_ADICIONAL",
+        "MODELO_PEDIDO_CLIENTE"
+      ],
+      "titulo": "Modelos de pedidos"
+    },
+    "12290": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_NOVEDAD_PEDIDO"
+      ],
+      "titulo": "Novedades para pedidos"
+    },
+    "12291": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "GeneracionPedidosAutomaticosApiParams"
+      ],
+      "titulo": "Generación de pedidos"
+    },
+    "12304": {
+      "estado": "sin-api",
+      "tablas": [
+        "PRECIOS_SALDOS_STOCK",
+        "PRECIOS_SALDOS_STOCK_DETAIL_PRECIOS",
+        "PRECIOS_SALDOS_STOCK_DETAIL_STOCK_DEPOSITO",
+        "PRECIOS_SALDOS_STOCK_DETAIL_STOCK_2_DEPOSITO",
+        "PRECIOS_SALDOS_STOCK_DETAIL_STOCK_SUCURSAL",
+        "PRECIOS_SALDOS_STOCK_DETAIL_STOCK_2_SUCURSAL",
+        "PRECIOS_SALDOS_STOCK_DETAIL_PROMOCIONES",
+        "PRECIOS_SALDOS_STOCK_DETAIL_PARTIDAS",
+        "PRECIOS_SALDOS_STOCK_DETAIL_PANELES"
+      ],
+      "titulo": "Consulta de Precios y Saldos de Stock"
+    },
+    "12321": {
+      "estado": "sin-api",
+      "tablas": [
+        "ConsultaIntegralCliente",
+        "SituacionFinancieraDeudas",
+        "SituacionFinancieraChequesRechazados",
+        "Contactos"
+      ],
+      "titulo": "Gestión de clientes"
+    },
+    "12330": {
+      "estado": "error",
+      "detalle": "Se detectó una situación inesperada",
+      "titulo": null
+    },
+    "12331": {
+      "estado": "error",
+      "detalle": "Se detectó una situación inesperada",
+      "titulo": null
+    },
+    "12481": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasCotizacionesDetalleDeCotizacionesModel"
+      ],
+      "titulo": "Detalle de Cotizaciones"
+    },
+    "12517": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPreciosPromocionesModel"
+      ],
+      "titulo": "Promociones"
+    },
+    "12520": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasComprobantesLeidosModel"
+      ],
+      "titulo": "Comprobantes leídos"
+    },
+    "12522": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasComprobantesPendientesDeLeerModel"
+      ],
+      "titulo": "Comprobantes pendientes de leer"
+    },
+    "12529": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPromocionesDefinidasPorSucursalesModel"
+      ],
+      "titulo": "Promociones definidas por sucursales"
+    },
+    "12534": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasNotasDeCreditoPorPromocionDeTarjetasEnResumenModel"
+      ],
+      "titulo": "Notas de crédito por promoción de tarjetas en resumen"
+    },
+    "12540": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasDetalleDeCobranzasNoProcesadasModel"
+      ],
+      "titulo": "Detalle de cobranzas no procesadas"
+    },
+    "12542": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasDetalleDeFacturasNoExportadasAEntidadesRecaudadorasModel"
+      ],
+      "titulo": "Detalle de facturas no exportadas a entidades recaudadoras"
+    },
+    "12544": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasDetalleDeGeneracionMasivaDeRecibosModel"
+      ],
+      "titulo": "Detalle de generación masiva de recibos"
+    },
+    "12546": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasDetalleDeExportacionDeFacturasAEntidadesRecaudadorasModel"
+      ],
+      "titulo": "Detalle de exportación de facturas a entidades recaudadoras"
+    },
+    "12553": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasClientesQueNoPublicanEnTangoNexoModel"
+      ],
+      "titulo": "Clientes que no publican en Tango nexo"
+    },
+    "12554": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasClientesQuePublicanEnTangoNexoModel"
+      ],
+      "titulo": "Clientes que publican en Tango nexo"
+    },
+    "12555": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasDetalleDeResumenDeCuentaModel"
+      ],
+      "titulo": "Detalle de resumen de cuenta"
+    },
+    "12566": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasCobranzasPorEntidadRecaudadoraModel"
+      ],
+      "titulo": "Cobranzas por entidad recaudadora"
+    },
+    "12616": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasNotasDeCreditoPendientesDeGenerarPorPagoConTarjetaDeRegaloModel"
+      ],
+      "titulo": "Notas de crédito pendientes de generar por pago con tarjeta de regalo"
+    },
+    "12648": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosResumenPorKitsModel"
+      ],
+      "titulo": "Resumen por kits"
+    },
+    "12651": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosPedidosConKitsSinDetalleDeComposicionModel"
+      ],
+      "titulo": "Pedidos con kits sin detalle de composición"
+    },
+    "12657": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPromocionesFacturadasPorCodigoDePromocionModel"
+      ],
+      "titulo": "Promociones facturadas por código de promoción"
+    },
+    "12658": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPromocionesFacturadasPorTipoDePromocionModel"
+      ],
+      "titulo": "Promociones facturadas por tipo de promoción"
+    },
+    "12662": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPromocionesPorFechaModel"
+      ],
+      "titulo": "Promociones por fecha"
+    },
+    "12663": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasResumenDeVentasPorArticulosConPromocionesModel"
+      ],
+      "titulo": "Resumen de ventas por artículos con promociones"
+    },
+    "12664": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasResumenDePagosDeFacturasConTarjetasDeRegaloModel"
+      ],
+      "titulo": "Resumen de pagos de facturas con tarjetas de regalo"
+    },
+    "12716": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasOrdenesModel"
+      ],
+      "titulo": "Ordenes"
+    },
+    "12720": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasHistorialDePreciosModel"
+      ],
+      "titulo": "Historial de precios"
+    },
+    "12729": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasAuditoriaAuditoriaDePreciosEnComprobantesModel"
+      ],
+      "titulo": "Auditoría de precios en comprobantes"
+    },
+    "12734": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasAuditoriaAuditoriaDePreciosEnCotizacionesModel"
+      ],
+      "titulo": "Auditoría de precios en cotizaciones"
+    },
+    "12738": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasAuditoriaAuditoriaDePreciosEnPedidosModel"
+      ],
+      "titulo": "Auditoría de precios en pedidos"
+    },
+    "12742": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPreciosPreciosVigentesAUnaFechaModel"
+      ],
+      "titulo": "Precios vigentes a una fecha"
+    },
+    "12813": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosDeTangoTiendasPagosDeordenesDePedidoModel"
+      ],
+      "titulo": "Pagos de órdenes de pedido"
+    },
+    "12889": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasResumenSemanalDeVentasModel"
+      ],
+      "titulo": "Resumen semanal de ventas"
+    },
+    "12895": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasResumenSemanalDeVentasPorMediosDePagoModel"
+      ],
+      "titulo": "Resumen semanal de ventas por medios de pago"
+    },
+    "12898": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasFacturacionResumenSemanalDeComprobantesConMasDeUnaVentaModel"
+      ],
+      "titulo": "Resumen semanal de comprobantes con más de una venta"
+    },
+    "12916": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasTicketPromedioDiarioModel"
+      ],
+      "titulo": "Ticket promedio diario"
+    },
+    "12919": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasCuentaCorrienteCobranzasImputadasModel"
+      ],
+      "titulo": "Cobranzas Imputadas"
+    },
+    "12974": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasCierresZModel"
+      ],
+      "titulo": "Cierres Z"
+    },
+    "12975": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasDiferenciasConCierresZModel"
+      ],
+      "titulo": "Diferencias con cierres Z"
+    },
+    "13106": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPagosEnLineaNoProcesadosModel"
+      ],
+      "titulo": "Pagos en línea no procesados"
+    },
+    "13112": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasSolicitudesDePagoElectronicoModel"
+      ],
+      "titulo": "Solicitudes de pago electrónico"
+    },
+    "13118": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetPdf",
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasReportesFiscalesModel"
+      ],
+      "titulo": "Reportes fiscales’"
+    },
+    "13157": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosPedidosPorOrigenModel"
+      ],
+      "titulo": "Pedidos por Origen"
+    },
+    "13183": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasDetalleDeComprobantesModel"
+      ],
+      "titulo": "Detalle de comprobantes"
+    },
+    "13749": {
+      "estado": "sin-api",
+      "tablas": [
+        "CLIENTE_LIVE",
+        "DIRECCIONES_ENTREGA",
+        "CONTACTOS",
+        "CUENTA_CORRIENTE_CLIENTES",
+        "VALORES_CLIENTES",
+        "JURISDICCIONES_CONVENIO_MULTILATERAL",
+        "ARTICULOS_CLIENTE",
+        "PRECIOS_ARTICULO",
+        "ULTIMOS_COMPROBANTES_CLIENTES",
+        "CUENTA_CORRIENTE_OTRAS_SUCURSALES_CLIENTE",
+        "SALDOS_FECHA_ALTERNATIVA",
+        "DEUDAS_DOCUMENTADAS",
+        "MODELO_PEDIDO_CLIENTE",
+        "NOVEDAD_PEDIDO",
+        "HISTORIAL_GENERACION"
+      ],
+      "titulo": "Ficha Live de clientes"
+    },
+    "14000": {
+      "estado": "sin-api",
+      "tablas": [
+        "VENDEDOR",
+        "CLIENTES"
+      ],
+      "titulo": "Ficha Live de vendedores"
+    },
+    "14062": {
+      "estado": "api",
+      "tipo": "PDF",
+      "endpoints": [
+        "GET Api/GetPdf"
+      ],
+      "tablas": [
+        "COTIZACION",
+        "LIVE_FN_Cotizaciones_ComprobantesRelacionados",
+        "RENGLONES",
+        "PLAN_ENTREGA",
+        "TEXTOS",
+        "DIRECCION_ENTREGA_REMITO",
+        "TOTALES"
+      ],
+      "titulo": "Ficha Live de cotizaciones"
+    },
+    "14070": {
+      "estado": "sin-api",
+      "tablas": [
+        "PEDIDOS",
+        "GVA43",
+        "LIVE_FN_Pedido_ComprobantesRelacionados",
+        "LIVE_FN_DetallePedidos",
+        "ENTREGAS_PACTADAS",
+        "ENTREGAS_REALES",
+        "DIRECION_ENTREGA",
+        "TOTALES",
+        "PROMOCIONES",
+        "TARJETAS_DE_BENEFICIO",
+        "MEDIOS_DE_PAGO"
+      ],
+      "titulo": "Ficha Live de pedidos"
+    },
+    "14077": {
+      "estado": "api",
+      "tipo": "PDF",
+      "endpoints": [
+        "GET Api/GetPdf"
+      ],
+      "tablas": [
+        "FACTURA_CREDITO_DEBITO",
+        "TODOS_CLASIFICACION_COMPROBANTES",
+        "RENGLONES",
+        "VENCIMIENTOS",
+        "IMPUESTOS",
+        "IMPUTACION_CONTABLE",
+        "VALORES",
+        "COMPROBANTE_ELECTRONICO",
+        "INFORMACION_ADICIONAL_AFIP",
+        "TOTALES"
+      ],
+      "titulo": "Ficha Live de facturas, créditos y débitos"
+    },
+    "14093": {
+      "estado": "api",
+      "tipo": "PDF",
+      "endpoints": [
+        "GET Api/GetPdf"
+      ],
+      "tablas": [
+        "REMITO",
+        "LIVE_FN_VentasRemito_ComprobantesRelacionados",
+        "RENGLONES",
+        "DIRECCION_ENTREGA_REMITO"
+      ],
+      "titulo": "Ficha Live de remitos"
+    },
+    "14105": {
+      "estado": "api",
+      "tipo": "PDF",
+      "endpoints": [
+        "GET Api/GetPdf"
+      ],
+      "tablas": [
+        "RECIBOS",
+        "VALORES",
+        "LIVE_FN_Recibo_ComprobantesRelacionados",
+        "IMPUTACIONES",
+        "RETENCIONES",
+        "DOCUMENTOS"
+      ],
+      "titulo": "Ficha Live de recibos"
+    },
+    "17926": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosPendientesDeAprobarModel"
+      ],
+      "titulo": "Pendientes de aprobar"
+    },
+    "17927": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosPendientesDeRemitirModel"
+      ],
+      "titulo": "Pendientes de remitir"
+    },
+    "17928": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosPendientesDeFacturarModel"
+      ],
+      "titulo": "Pendientes de facturar"
+    },
+    "17929": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosResumenModel"
+      ],
+      "titulo": "Resumen"
+    },
+    "17930": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosConsultaModel"
+      ],
+      "titulo": "Pedidos"
+    },
+    "17931": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosResumenPorArticuloModel"
+      ],
+      "titulo": "Resumen por artículo"
+    },
+    "17933": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasFacturacionResumenModel"
+      ],
+      "titulo": "Resumen"
+    },
+    "17934": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasFacturacionResumenPorArticuloModel"
+      ],
+      "titulo": "Resumen por artículo"
+    },
+    "17935": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasFacturacionRankingPorArticuloModel"
+      ],
+      "titulo": "Ranking por artículo"
+    },
+    "17936": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasFacturasPendientesDeRemitirModel"
+      ],
+      "titulo": "Facturas pendientes de remitir"
+    },
+    "17937": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasFacturacionComparativoModel"
+      ],
+      "titulo": "Comparativo"
+    },
+    "17938": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasFacturacionRankingDeVentasModel"
+      ],
+      "titulo": "Ranking de ventas"
+    },
+    "17939": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPorMesAnioModel"
+      ],
+      "titulo": "Por Mes / Año"
+    },
+    "17940": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasFacturacionPorMedioDePagoModel"
+      ],
+      "titulo": "Facturación Por Medio de Pago"
+    },
+    "17941": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasComparativoPorArticuloModel"
+      ],
+      "titulo": "Comparativo por artículo"
+    },
+    "17942": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasFacturacionFacturacionModel"
+      ],
+      "titulo": "Facturación"
+    },
+    "17943": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasFacturacionDetalleDeComprobantesModel"
+      ],
+      "titulo": "Detalle de comprobantes"
+    },
+    "17945": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasCotizacionesResumenModel"
+      ],
+      "titulo": "Resumen"
+    },
+    "17946": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasCotizacionesComparativoModel"
+      ],
+      "titulo": "Comparativo"
+    },
+    "17947": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasCotizacionesPorMesAnioModel"
+      ],
+      "titulo": "Por Mes / Año"
+    },
+    "17948": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasCotizacionesConsultaModel"
+      ],
+      "titulo": "Cotizaciones"
+    },
+    "17949": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasCotizacionesResumenPorArticuloModel"
+      ],
+      "titulo": "Resumen por artículo"
+    },
+    "17951": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasRankingDeDeudoresModel"
+      ],
+      "titulo": "Ranking de deudores"
+    },
+    "17952": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasCuentaCorrienteCobranzasARealizarModel"
+      ],
+      "titulo": "Cobranzas a realizar"
+    },
+    "17953": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasDeudasVencidasModel"
+      ],
+      "titulo": "Deudas vencidas"
+    },
+    "17954": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasRankingDeMorososModel"
+      ],
+      "titulo": "Ranking de morosos"
+    },
+    "17955": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasDeudasAVencerModel"
+      ],
+      "titulo": "Deudas a vencer"
+    },
+    "17956": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasCuentaCorrienteDiferenciasDeCambioPendientesDeEmitirModel"
+      ],
+      "titulo": "Diferencias de cambio pendientes de emitir"
+    },
+    "17957": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasCuentaCorrienteCprPendientesModel"
+      ],
+      "titulo": "C. P. R. Pendientes"
+    },
+    "17958": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasCobranzasRealizadasModel"
+      ],
+      "titulo": "Cobranzas Realizadas"
+    },
+    "17959": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasCuentaCorrienteRecibosModel"
+      ],
+      "titulo": "Recibos"
+    },
+    "17961": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ClientesModel"
+      ],
+      "titulo": "Clientes"
+    },
+    "17963": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasRemitosPendientesDeFacturarModel"
+      ],
+      "titulo": "Remitos pendientes de facturar"
+    },
+    "17964": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasRemitosElectronicos_COTModel"
+      ],
+      "titulo": "Remitos electrónicos / C.O.T"
+    },
+    "17965": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasRemitosConsultaModel"
+      ],
+      "titulo": "Consulta"
+    },
+    "17969": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasCuentaCorrienteCobranzaPorMedioDePagoModel"
+      ],
+      "titulo": "Cobranza Por Medio de Pago"
+    },
+    "19677": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "PERCEPCION_VENTAS",
+        "PERCEPCION_VENTAS_BASE_CALCULO",
+        "PERCEPCION_VENTAS_ALICUOTA"
+      ],
+      "titulo": "Percepciones"
+    },
+    "19687": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasComprobantesMiPymesModel"
+      ],
+      "titulo": "Comprobantes MiPymes"
+    },
+    "19744": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA117",
+        "GVA118"
+      ],
+      "titulo": "Parámetros para códigos de barra"
+    },
+    "19845": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_PEDIDO"
+      ],
+      "titulo": "Pedidos"
+    },
+    "19912": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasOrdenesPendientesDeFacturarModel"
+      ],
+      "titulo": "Ordenes pendientes de facturar"
+    },
+    "19914": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasOrdenesPendientesDeRemitirModel"
+      ],
+      "titulo": "Ordenes pendientes de remitir"
+    },
+    "19924": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasDetalleOrdenesPendientesDeFacturarModel"
+      ],
+      "titulo": "Ordenes pendientes de facturar"
+    },
+    "19926": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasDetalleOrdenesPendientesDeRemitirModel"
+      ],
+      "titulo": "Ordenes pendientes de remitir"
+    },
+    "19928": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasSeguimientoDeOrdenesDetalladoModel"
+      ],
+      "titulo": "Seguimiento de órdenes detallado"
+    },
+    "19930": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasOrdenesPorTiendaModel"
+      ],
+      "titulo": "Órdenes por tienda"
+    },
+    "19932": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasDetalleDeOrdenesDeTangoTiendasModel"
+      ],
+      "titulo": "Detalle de ordenes de Tango Tiendas"
+    },
+    "19933": {
+      "estado": "sin-api",
+      "tablas": [
+        "ORDEN_TANGO_TIENDA",
+        "DETALLE_ORDEN_TANGO_TIENDA",
+        "DIRECCION_ENTREGA_ORDEN_TANGO_TIENDA",
+        "LIVE_FN_Orden_ComprobantesRelacionados",
+        "PAGOS",
+        "TOTALES"
+      ],
+      "titulo": "Ficha Live de órdenes de Tango Tiendas"
+    },
+    "19936": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasFacturacionVentasPorOrigenModel"
+      ],
+      "titulo": "Ventas por Origen"
+    },
+    "19965": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasResultadosDeFacturacionAutomaticaDePedidosDeTangoTiendasModel"
+      ],
+      "titulo": "Resultados de facturación automática de pedidos de Tango Tiendas"
+    },
+    "20008": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MAESTRO_GVA17",
+        "GVA17",
+        "GVA13"
+      ],
+      "titulo": "Actualización individual de precios por artículo"
+    },
+    "20020": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_PERFIL_PEDIDO"
+      ],
+      "titulo": "Perfiles de pedidos"
+    },
+    "20091": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_PRECIO_INDIVIDUAL"
+      ],
+      "titulo": "Actualización individual de precios"
+    },
+    "20104": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "CRITERIO_ACTUALIZACION_PRECIOS",
+        "CRITERIO_ACTUALIZACION_RANGOS"
+      ],
+      "titulo": "Criterios de actualización de precios"
+    },
+    "20123": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "POLITICA_REDONDEO",
+        "POLITICA_REDONDEO_RANGOS"
+      ],
+      "titulo": "Políticas de redondeo"
+    },
+    "20190": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasOrdenesCanceladasModel"
+      ],
+      "titulo": "Órdenes canceladas"
+    },
+    "20192": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasCantidadDeComprobantesPorTipoDeTalonarioModel"
+      ],
+      "titulo": "Cantidad de comprobantes por tipo de talonario"
+    },
+    "20295": {
+      "estado": "sin-api",
+      "tablas": [
+        "POTENCIAL",
+        "CONTACTOS",
+        "ULTIMOS_COMPROBANTES"
+      ],
+      "titulo": "Ficha Live de cliente potencial"
+    },
+    "20318": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosAutomaticosClientesBaseModel"
+      ],
+      "titulo": "Modelos por cliente"
+    },
+    "20320": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosNovedadesParaPedidosModel"
+      ],
+      "titulo": "Detalle de novedades"
+    },
+    "20326": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosGeneracionDePedidosModel"
+      ],
+      "titulo": "Historial de generación de pedidos"
+    },
+    "20330": {
+      "estado": "sin-api",
+      "tablas": [
+        "MODELOS",
+        "MODELO_PEDIDO_RENGLONES",
+        "MODELO_PEDIDO_CLIENTES",
+        "MODELO_PEDIDO_NOVEDADES",
+        "MODELO_PEDIDO_GENERACIONES",
+        "MODELO_PEDIDO_HISTORIAL_GENERACION"
+      ],
+      "titulo": "Ficha Live de modelos de pedidos"
+    },
+    "20342": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MODELO_PERCEPCION_VENTAS",
+        "MODELO_PERCEPCION_VENTAS_ALICUOTA"
+      ],
+      "titulo": "Modelos de percepciones para artículos"
+    },
+    "20372": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosPendientesDeGenerarModel"
+      ],
+      "titulo": "Pendientes de generar"
+    },
+    "20393": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosPedidosConPromocionesBaseModel"
+      ],
+      "titulo": "Pedidos con promociones fuera de vigencia"
+    },
+    "20394": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosPedidosConPromocionesBaseModel"
+      ],
+      "titulo": "Pedidos con promociones pendientes de facturar"
+    },
+    "20395": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosPedidosConPromocionesBaseModel"
+      ],
+      "titulo": "Pedidos con promociones por estado"
+    },
+    "20396": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosPedidosConPromocionesBaseModel"
+      ],
+      "titulo": "Pedidos con promociones por tipo"
+    },
+    "20413": {
+      "estado": "sin-api",
+      "tablas": [
+        "NEXO_RELACION_ARTICULO_TIENDA_MAESTRO",
+        "NEXO_RELACION_ARTICULO_TIENDA"
+      ],
+      "titulo": "Relacionar artículos con publicaciones"
+    },
+    "20416": {
+      "estado": "sin-api",
+      "tablas": [
+        "NEXO_RELACION_CLIENTE_TIENDA_MAESTRO",
+        "NEXO_RELACION_CLIENTE_TIENDA"
+      ],
+      "titulo": "Relacionar clientes con órdenes"
+    },
+    "20422": {
+      "estado": "sin-api",
+      "tablas": [
+        "AXV_REVISION_PEDIDOS"
+      ],
+      "titulo": "Revisión de órdenes"
+    },
+    "20426": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosDetalleDeModelosModel"
+      ],
+      "titulo": "Detalle de modelos"
+    },
+    "20431": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "SolicitarOrdenesApiParam",
+        "TIENDA",
+        "TIENDA_CUENTA"
+      ],
+      "titulo": "Descarga on demand de órdenes"
+    },
+    "20440": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosClientesSinModeloModel"
+      ],
+      "titulo": "Clientes sin asignar a modelos"
+    },
+    "20441": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosAutomaticosClientesBaseModel"
+      ],
+      "titulo": "Clientes sin modelo vigente"
+    },
+    "21185": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "GestionMasivaPedidosParams",
+        "PedidosApiDto"
+      ],
+      "titulo": "Gestión masiva de pedidos"
+    },
+    "21197": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "ActualizacionPreciosDePedidosApiParams"
+      ],
+      "titulo": "Actualización de precios de pedidos no actualizados"
+    },
+    "21207": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_PERFIL_CIERRE_CAJA"
+      ],
+      "titulo": "Perfiles de cierre de caja"
+    },
+    "21215": {
+      "estado": "sin-api",
+      "tablas": [
+        "PARAMETRO_CIERRE_CAJA"
+      ],
+      "titulo": "Parámetros de cierre de caja"
+    },
+    "21225": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "PERFIL_MEDIO_PAGO",
+        "PERFIL_MEDIO_PAGO_CUENTA"
+      ],
+      "titulo": "Perfiles de medios de pago para facturas y pedidos"
+    },
+    "21234": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaDetalleSaldosCajasModel"
+      ],
+      "titulo": "Detalle del saldo de las cajas"
+    },
+    "21237": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetPdf",
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "TesoreriaResumenDeCierresDeCajaModel"
+      ],
+      "titulo": "Resumen de cierres de caja"
+    },
+    "21277": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasPedidosResumenPorTotalesModel"
+      ],
+      "titulo": "Resumen por totales"
+    },
+    "21434": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_PERFILES_GESTION_DE_CLIENTES"
+      ],
+      "titulo": "Perfiles de gestión de clientes"
+    },
+    "21483": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "VentasContabilizacionDeComprobantesPendientesExportarModel"
+      ],
+      "titulo": "Contabilización de comprobantes pendientes de exportar"
+    }
+  }
+}

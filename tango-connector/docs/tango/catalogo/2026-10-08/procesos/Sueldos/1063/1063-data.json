@@ -1,0 +1,25 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_SERVICIO_EVENTUAL": 1,
+        "coD_SERVICIO_EVENTUAL": "0",
+        "desC_SERVICIO_EVENTUAL": "LMB",
+        "cuit": "",
+        "tipO_TELEFONO1": "Trabajo",
+        "tipO_TELEFONO2": "Móvil",
+        "roW_VERSION": "AAAAAADfrsU="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

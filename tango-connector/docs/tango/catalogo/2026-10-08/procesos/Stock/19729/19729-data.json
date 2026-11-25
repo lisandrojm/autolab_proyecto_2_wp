@@ -1,0 +1,58 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "numerO_SUCURSAL": "00000",
+        "numerO_DESDE": "00000001",
+        "numerO_HASTA": "99999999",
+        "proximO_NUMERO": "00000004",
+        "iD_STA17": 1,
+        "talonario": 1,
+        "descrip": "INGRESO DE STOCK",
+        "editA_NRO": false,
+        "renglones": 1000,
+        "destino": "",
+        "iD_TYPS": 61,
+        "n_TYP": "INGEG",
+        "nrO_DESDE": 1,
+        "nrO_HASTA": 99999999,
+        "proximo": 4,
+        "sucursal": 0,
+        "filler": "",
+        "utilizA_FORMULARIO_GRAFICO": false,
+        "roW_VERSION": "AAAAAADQWvE="
+      },
+      {
+        "numerO_SUCURSAL": "00000",
+        "numerO_DESDE": "00000001",
+        "numerO_HASTA": "99999999",
+        "proximO_NUMERO": "00000001",
+        "iD_STA17": 2,
+        "talonario": 2,
+        "descrip": "EGRESO DE STOCK",
+        "editA_NRO": false,
+        "renglones": 1000,
+        "destino": "",
+        "iD_TYPS": 61,
+        "n_TYP": "INGEG",
+        "nrO_DESDE": 1,
+        "nrO_HASTA": 99999999,
+        "proximo": 1,
+        "sucursal": 0,
+        "filler": "",
+        "utilizA_FORMULARIO_GRAFICO": false,
+        "roW_VERSION": "AAAAAADQWvA="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

@@ -1,0 +1,234 @@
+{
+ "data": {
+  "iD_CPA01": 4516,
+  "iD_CPA20": null,
+  "iD_SUCURSAL": 1,
+  "iD_SUCURSAL_DESTINO": null,
+  "proveedoR_RAZON_SOCI": "005239 - PELLEGRINI HERNAN MARCELO",
+  "t_COMP": "FAC",
+  "n_COMP": "C0000200000017",
+  "razoN_SOCI": "PELLEGRINI HERNAN MARCELO",
+  "proveedor": "005239",
+  "proveedoR_OCASIONAL": "000000 - ",
+  "sucursal": "1 - 2030 SRL",
+  "sucursaL_EXPLOSION": "1 - 2030 SRL",
+  "fecha": "2026-10-06T00:00:00",
+  "fechA_CONTABLE": "2026-10-06T00:00:00",
+  "condicioN_COMPRA": "2 - CUENTA CORRIENTE 30D",
+  "moneda": "CTE (Cotización: 1505.0000000)",
+  "concepto": " - ",
+  "sucursaL_DESTINO": " - ",
+  "sucursaL_DESTINO_EXPLOSION": " - ",
+  "exportado": false,
+  "diferencia": "N",
+  "sector": " - ",
+  "porcentajE_BONIFICACION": 0,
+  "observaciones": "",
+  "clasificacion": "2 - CUENTA CORRIENTE",
+  "nrO_INTERNO": 899,
+  "tipO_OPERACION": "Operación Gravada",
+  "clasificacioN_CITI": "Bienes y Servicios",
+  "incluyE_IVA_COMPRAS": "S",
+  "situacioN_IVA": "",
+  "codigO_NO_RECUPERABLE": "",
+  "estadO_CTE": "CAN",
+  "estadO_EXT": "CAN",
+  "tipO_OPERACION_RG_3685_4597": "0 - Operaciones gravadas",
+  "comprobantE_AFIP": "011 - Facturas C",
+  "datoS_CONTABLES": "Asiento generado",
+  "asiento": "01 - FACTURAS Y NOTAS DE DEBITO",
+  "nrO_ASIENTO": null,
+  "tipO_TRANSACCION_VENTA": "",
+  "tipO_TRANSACCION_COMPRA": "",
+  "caI_CAE": "86406401966925",
+  "fechA_VENCIMIENTO": "2026-10-16T00:00:00",
+  "creditO_FISCAL": "0",
+  "fechA_INGRESO": "07/10/26 - 13:08",
+  "usuariO_INGRESO": "SUPERVISOR",
+  "terminaL_INGRESO": "SRVRDP",
+  "fechA_ULTIMA_MODIFICACION": "09/10/26 - 10:02",
+  "usuA_ULTIMA_MODIFICACION": "SUPERVISOR",
+  "terM_ULTIMA_MODIFICACION": "VMTANGO02",
+  "subtotaL_VALUE": 6000000,
+  "otroS_IMPUESTOS": 0,
+  "ivA_VALUE": 0,
+  "bonificacioN_VALUE": 0,
+  "fletE_VALUE": 0,
+  "intereseS_VALUE": 0,
+  "anticipo": 0,
+  "netO_GRAVADO": 0,
+  "netO_NO_GRAVADO": 6000000,
+  "totaL_CTE_VALUE": 6000000,
+  "totaL_EXT_VALUE": 3986.71,
+  "totaL_VALUE": 6000000,
+  "totaL_VALUE_HEADER": 6000000,
+  "datoS_ADJUNTOS_FAC_COMPRAS": [
+   {
+    "iD_DATO_ADJUNTO_CPA04": 0,
+    "iD_CPA04": 0,
+    "nombrE_DATO_ADJUNTO": "20261165768_011_00002_00000017.pdf",
+    "desC_DATO_ADJUNTO": "20261165768_011_00002_00000017.pdf",
+    "tamanio": 86064,
+    "archivO_BINARIO": "255044462D312E340A25E2E3CFD30A352030206F626A0A3C3C2F436F6C6F7253…(recortado)",
+    "modificado": "2026-10-07T13:09:04.927"
+   }
+  ],
+  "articulos": [
+   {
+    "iD_RENGLONES": 0,
+    "iD_CPA04": 1785,
+    "iD_STA11": 178,
+    "iD_STA22": 1,
+    "coD_ARTICULO": "010210101",
+    "descripcion": "SERVICIOS PROFESIONALES",
+    "deposito": "01",
+    "descripcioN_DEPOSITO": "DEPOSITOS",
+    "uM_RENGLON": "UC",
+    "cantidaD_RENGLON": 1,
+    "precio": 6000000,
+    "porcentajE_DESCUENTO": 0,
+    "importE_FLETE": 0,
+    "importe": 6000000,
+    "uM_STOCK": "***",
+    "cantidad": 1,
+    "uM_STOCK_2": null,
+    "cantidaD_2": 0,
+    "clasificacion": "2 - CUENTA CORRIENTE"
+   }
+  ],
+  "conceptos": [],
+  "vencimientos": [
+   {
+    "iD_VENCIMIENTOS": 0,
+    "iD_CPA04": 1785,
+    "fechA_DE_VENCIMIENTO": "2026-11-05T00:00:00",
+    "importE_CTE": 6000000,
+    "estadO_CTE": "Pagado",
+    "importE_EXT": 3986.71,
+    "estadO_EXT": "Pagado"
+   }
+  ],
+  "imputacioN_CONTABLE": [
+   {
+    "iD_IMPUTACION_CONTABLE": 0,
+    "iD_CPA04": 0,
+    "iD_ASIENTO": 2329,
+    "coD_CUENTA": "2010010101",
+    "desC_CUENTA": "PROVEEDORES",
+    "debe": null,
+    "haber": 6000000,
+    "tcomP_IN_C": "FP",
+    "ncomP_IN_C": 899,
+    "auxiliares": "Ver detalle"
+   },
+   {
+    "iD_IMPUTACION_CONTABLE": 0,
+    "iD_CPA04": 0,
+    "iD_ASIENTO": 2330,
+    "coD_CUENTA": "5010210101",
+    "desC_CUENTA": "SERVICIOS PROFESIONALES",
+    "debe": 6000000,
+    "haber": null,
+    "tcomP_IN_C": "FP",
+    "ncomP_IN_C": 899,
+    "auxiliares": "Ver detalle"
+   }
+  ],
+  "valores": [],
+  "clasificacioN_AFIP": [],
+  "diferencias": [],
+  "comprobanteS_RELACIONADOS": [
+   {
+    "tipo": "Orden de pago",
+    "fecha": "2026-10-07T00:00:00",
+    "numero": "O/P -  0000100000795",
+    "sucursal": "1 - 2030 SRL",
+    "iD_CPA35": null,
+    "iD_CPA110": null,
+    "iD_STA14": null,
+    "iD_CPA04_FACCREDEB": null,
+    "iD_CPA04_OP": 1787
+   }
+  ],
+  "totales": [
+   {
+    "iD_TOTALES": 0,
+    "iD_CPA04": 0,
+    "concepto": "Subtotal",
+    "importe": 6000000,
+    "importE_EXT": null
+   },
+   {
+    "iD_TOTALES": 0,
+    "iD_CPA04": 0,
+    "concepto": "Bonificación",
+    "importe": 0,
+    "importE_EXT": null
+   },
+   {
+    "iD_TOTALES": 0,
+    "iD_CPA04": 0,
+    "concepto": "Flete",
+    "importe": 0,
+    "importE_EXT": null
+   },
+   {
+    "iD_TOTALES": 0,
+    "iD_CPA04": 0,
+    "concepto": "Intereses",
+    "importe": 0,
+    "importE_EXT": null
+   },
+   {
+    "iD_TOTALES": 0,
+    "iD_CPA04": 0,
+    "concepto": "IVA",
+    "importe": 0,
+    "importE_EXT": null
+   },
+   {
+    "iD_TOTALES": 0,
+    "iD_CPA04": 0,
+    "concepto": "Otros impuestos",
+    "importe": 0,
+    "importE_EXT": null
+   },
+   {
+    "iD_TOTALES": 0,
+    "iD_CPA04": 0,
+    "concepto": "Anticipo",
+    "importe": 0,
+    "importE_EXT": null
+   },
+   {
+    "iD_TOTALES": 0,
+    "iD_CPA04": 0,
+    "concepto": "Neto gravado",
+    "importe": 0,
+    "importE_EXT": null
+   },
+   {
+    "iD_TOTALES": 0,
+    "iD_CPA04": 0,
+    "concepto": "Neto no gravado",
+    "importe": 6000000,
+    "importE_EXT": null
+   },
+   {
+    "iD_TOTALES": 0,
+    "iD_CPA04": 0,
+    "concepto": "Total",
+    "importe": 6000000,
+    "importE_EXT": 3986.71
+   }
+  ],
+  "triggerToExecuteGetData": true
+ },
+ "markAsDirty": true,
+ "selfAssignment": false,
+ "showMessage": false,
+ "kind": 2,
+ "message": null,
+ "exceptionInfo": null,
+ "succeeded": true
+}

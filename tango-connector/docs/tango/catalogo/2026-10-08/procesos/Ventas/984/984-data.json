@@ -1,0 +1,48 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_GVA10": 1,
+        "nrO_DE_LIS": 1,
+        "nombrE_LIS": "LISTA GENERAL",
+        "habilitada": true,
+        "moN_CTE": true,
+        "decimales": 2,
+        "incluY_IVA": false,
+        "incluY_IMP": false,
+        "publicadA_WEB_CLIENTES": "N",
+        "sincronizA_WEB_PEDIDO": "N",
+        "observaciones": "",
+        "filler": "",
+        "coD_DESCRIP": "1 - LISTA GENERAL",
+        "roW_VERSION": "AAAAAADQWvk="
+      },
+      {
+        "iD_GVA10": 3,
+        "nrO_DE_LIS": 2,
+        "nombrE_LIS": "LISTA GENERAL DOLAR",
+        "habilitada": true,
+        "moN_CTE": false,
+        "decimales": 2,
+        "incluY_IVA": false,
+        "incluY_IMP": false,
+        "publicadA_WEBCLIENTES": "N",
+        "publicadA_WEB_CLIENTES": "N",
+        "sincronizA_WEB_PEDIDO": "N",
+        "filler": "",
+        "coD_DESCRIP": "2 - LISTA GENERAL DOLAR",
+        "roW_VERSION": "AAAAAADQWvo="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

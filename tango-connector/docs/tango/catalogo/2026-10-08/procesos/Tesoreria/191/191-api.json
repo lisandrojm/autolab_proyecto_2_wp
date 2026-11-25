@@ -1,0 +1,349 @@
+{
+  "title": "Terminales POS",
+  "moduleId": 10005,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"TERMINAL_POS\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"TERM_ID\"\r\n  ],\r\n  \"properties\": {\r\n    \"MODO_IMPRESION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"TERM_ID\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 8,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_TERMINAL_POS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_COMERCIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 15,\r\n      \"minLength\": 0\r\n    },\r\n    \"HABILITADO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"NUMERO_SERIE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"PERMITE_PAGOS_QR\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"TIPO_TERMINAL_API_EXCEL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO_GENERACION_LOTE_API_EXCEL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO_GENERACION_CUPON_API_EXCEL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"TERMINAL_POS_HOST\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TERMINAL_POS_HOST\"\r\n      }\r\n    },\r\n    \"TERMINAL_POS_TARJETA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TERMINAL_POS_TARJETA\"\r\n      }\r\n    },\r\n    \"TERMINAL_POS_NO_INTEGRADO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TERMINAL_POS_NO_INTEGRADO\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"TERMINAL_POS_HOST\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_HOST\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_HOST\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"PROXIMO_NRO_LOTE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"double\"\r\n        },\r\n        \"PROXIMO_NRO_CUPON\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"double\"\r\n        },\r\n        \"HABILITADO_HOST\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"TERMINAL_POS_TARJETA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_SBA22\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_SBA22\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_HOST\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_COMERCIO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 15,\r\n          \"minLength\": 0\r\n        },\r\n        \"HABILITADO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_MEDIO_PAGO_SPS\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"TERMINAL_POS_TARJETA1\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 4,\r\n          \"minLength\": 0\r\n        },\r\n        \"TARJETA_POS\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 4,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"TERMINAL_POS_NO_INTEGRADO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"TERMINAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 30,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TERMINAL_POS_HOST\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_HOST\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_HOST { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROXIMO_NRO_LOTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? PROXIMO_NRO_LOTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROXIMO_NRO_CUPON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? PROXIMO_NRO_CUPON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO_HOST\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABILITADO_HOST { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TERMINAL_POS_TARJETA\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA22\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_SBA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_HOST\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_HOST { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_COMERCIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string COD_COMERCIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MEDIO_PAGO_SPS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MEDIO_PAGO_SPS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TERMINAL_POS_TARJETA1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(4)]\n        public string TERMINAL_POS_TARJETA1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJETA_POS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(4)]\n        public string TARJETA_POS { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TERMINAL_POS_NO_INTEGRADO\n    {\n        [Newtonsoft.Json.JsonProperty(\"TERMINAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string TERMINAL { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TERMINAL_POS\n    {\n        [Newtonsoft.Json.JsonProperty(\"MODO_IMPRESION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string MODO_IMPRESION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TERM_ID\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(8)]\n        public string TERM_ID { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_TERMINAL_POS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_TERMINAL_POS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_COMERCIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string COD_COMERCIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NUMERO_SERIE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string NUMERO_SERIE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERMITE_PAGOS_QR\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PERMITE_PAGOS_QR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_TERMINAL_API_EXCEL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_TERMINAL_API_EXCEL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_GENERACION_LOTE_API_EXCEL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_GENERACION_LOTE_API_EXCEL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_GENERACION_CUPON_API_EXCEL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_GENERACION_CUPON_API_EXCEL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TERMINAL_POS_HOST\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TERMINAL_POS_HOST> TERMINAL_POS_HOST { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TERMINAL_POS_TARJETA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TERMINAL_POS_TARJETA> TERMINAL_POS_TARJETA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TERMINAL_POS_NO_INTEGRADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TERMINAL_POS_NO_INTEGRADO> TERMINAL_POS_NO_INTEGRADO { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface TERMINAL_POS_HOST {\n    ID_HOST: number;\n    PROXIMO_NRO_LOTE: number | undefined;\n    PROXIMO_NRO_CUPON: number | undefined;\n    HABILITADO_HOST: string | undefined;\n}\n\nexport interface TERMINAL_POS_TARJETA {\n    ID_SBA22: number;\n    ID_HOST: number | undefined;\n    COD_COMERCIO: string | undefined;\n    HABILITADO: string | undefined;\n    ID_MEDIO_PAGO_SPS: number | undefined;\n    TERMINAL_POS_TARJETA1: string | undefined;\n    TARJETA_POS: string | undefined;\n}\n\nexport interface TERMINAL_POS_NO_INTEGRADO {\n    TERMINAL: string | undefined;\n}\n\nexport interface TERMINAL_POS {\n    MODO_IMPRESION: string | undefined;\n    TERM_ID: string;\n    DESC_TERMINAL_POS: string | undefined;\n    COD_COMERCIO: string | undefined;\n    HABILITADO: string | undefined;\n    NUMERO_SERIE: string | undefined;\n    OBSERVACIONES: string | undefined;\n    PERMITE_PAGOS_QR: boolean;\n    TIPO_TERMINAL_API_EXCEL: string | undefined;\n    TIPO_GENERACION_LOTE_API_EXCEL: string | undefined;\n    TIPO_GENERACION_CUPON_API_EXCEL: string | undefined;\n    TERMINAL_POS_HOST: TERMINAL_POS_HOST[] | undefined;\n    TERMINAL_POS_TARJETA: TERMINAL_POS_TARJETA[] | undefined;\n    TERMINAL_POS_NO_INTEGRADO: TERMINAL_POS_NO_INTEGRADO[] | undefined;\n}",
+          "example": {
+            "MODO_IMPRESION": "N",
+            "TERM_ID": null,
+            "DESC_TERMINAL_POS": null,
+            "COD_COMERCIO": null,
+            "HABILITADO": "S",
+            "TIPO_TERMINAL_API_EXCEL": null,
+            "TIPO_GENERACION_LOTE_API_EXCEL": null,
+            "TIPO_GENERACION_CUPON_API_EXCEL": null,
+            "NUMERO_SERIE": null,
+            "OBSERVACIONES": null,
+            "PERMITE_PAGOS_QR": false,
+            "TERMINAL_POS_HOST": [
+              {
+                "ID_HOST": 0,
+                "PROXIMO_NRO_LOTE": 0,
+                "PROXIMO_NRO_CUPON": 0,
+                "HABILITADO_HOST": null
+              }
+            ],
+            "TERMINAL_POS_TARJETA": [
+              {
+                "ID_SBA22": 0,
+                "ID_HOST": 0,
+                "COD_COMERCIO": null,
+                "HABILITADO": null,
+                "ID_MEDIO_PAGO_SPS": 0,
+                "TERMINAL_POS_TARJETA1": null,
+                "TARJETA_POS": null
+              }
+            ],
+            "TERMINAL_POS_NO_INTEGRADO": [
+              {
+                "TERMINAL": null
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"TERMINAL_POS\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"TERM_ID\"\r\n  ],\r\n  \"properties\": {\r\n    \"MODO_IMPRESION\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"TERM_ID\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 8,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESC_TERMINAL_POS\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 40,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_COMERCIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 15,\r\n      \"minLength\": 0\r\n    },\r\n    \"HABILITADO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"NUMERO_SERIE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ]\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_TERMINAL_POS\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"PERMITE_PAGOS_QR\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"TIPO_TERMINAL_API_EXCEL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO_GENERACION_LOTE_API_EXCEL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO_GENERACION_CUPON_API_EXCEL\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"TERMINAL_POS_HOST\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TERMINAL_POS_HOST\"\r\n      }\r\n    },\r\n    \"TERMINAL_POS_TARJETA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TERMINAL_POS_TARJETA\"\r\n      }\r\n    },\r\n    \"TERMINAL_POS_NO_INTEGRADO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/TERMINAL_POS_NO_INTEGRADO\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"TERMINAL_POS_HOST\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_HOST\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_HOST\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"PROXIMO_NRO_LOTE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"double\"\r\n        },\r\n        \"PROXIMO_NRO_CUPON\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"number\"\r\n          ],\r\n          \"format\": \"double\"\r\n        },\r\n        \"HABILITADO_HOST\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_TERMINAL_POS_HOST\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_TERMINAL_POS\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        }\r\n      }\r\n    },\r\n    \"TERMINAL_POS_TARJETA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_SBA22\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_SBA22\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_HOST\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"COD_COMERCIO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 15,\r\n          \"minLength\": 0\r\n        },\r\n        \"HABILITADO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"ID_MEDIO_PAGO_SPS\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ],\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_TERMINAL_POS_TARJETA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_TERMINAL_POS\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"TERMINAL_POS_TARJETA1\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 4,\r\n          \"minLength\": 0\r\n        },\r\n        \"TARJETA_POS\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 4,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"TERMINAL_POS_NO_INTEGRADO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_TERMINAL_POS_NO_INTEGRADO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_TERMINAL_POS\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"TERMINAL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 30,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TERMINAL_POS_HOST\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_HOST\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_HOST { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROXIMO_NRO_LOTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? PROXIMO_NRO_LOTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PROXIMO_NRO_CUPON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public double? PROXIMO_NRO_CUPON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO_HOST\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABILITADO_HOST { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TERMINAL_POS_HOST\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TERMINAL_POS_HOST { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TERMINAL_POS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TERMINAL_POS { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TERMINAL_POS_TARJETA\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_SBA22\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_SBA22 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_HOST\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_HOST { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_COMERCIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string COD_COMERCIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MEDIO_PAGO_SPS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MEDIO_PAGO_SPS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TERMINAL_POS_TARJETA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TERMINAL_POS_TARJETA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TERMINAL_POS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TERMINAL_POS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TERMINAL_POS_TARJETA1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(4)]\n        public string TERMINAL_POS_TARJETA1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TARJETA_POS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(4)]\n        public string TARJETA_POS { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TERMINAL_POS_NO_INTEGRADO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_TERMINAL_POS_NO_INTEGRADO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TERMINAL_POS_NO_INTEGRADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TERMINAL_POS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TERMINAL_POS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TERMINAL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string TERMINAL { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class TERMINAL_POS\n    {\n        [Newtonsoft.Json.JsonProperty(\"MODO_IMPRESION\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string MODO_IMPRESION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TERM_ID\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(8)]\n        public string TERM_ID { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESC_TERMINAL_POS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(40)]\n        public string DESC_TERMINAL_POS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_COMERCIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(15)]\n        public string COD_COMERCIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HABILITADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string HABILITADO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NUMERO_SERIE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public string NUMERO_SERIE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TERMINAL_POS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_TERMINAL_POS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PERMITE_PAGOS_QR\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool PERMITE_PAGOS_QR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_TERMINAL_API_EXCEL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_TERMINAL_API_EXCEL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_GENERACION_LOTE_API_EXCEL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_GENERACION_LOTE_API_EXCEL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_GENERACION_CUPON_API_EXCEL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_GENERACION_CUPON_API_EXCEL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TERMINAL_POS_HOST\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TERMINAL_POS_HOST> TERMINAL_POS_HOST { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TERMINAL_POS_TARJETA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TERMINAL_POS_TARJETA> TERMINAL_POS_TARJETA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TERMINAL_POS_NO_INTEGRADO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<TERMINAL_POS_NO_INTEGRADO> TERMINAL_POS_NO_INTEGRADO { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface TERMINAL_POS_HOST {\n    ID_HOST: number;\n    PROXIMO_NRO_LOTE: number | undefined;\n    PROXIMO_NRO_CUPON: number | undefined;\n    HABILITADO_HOST: string | undefined;\n    ID_TERMINAL_POS_HOST: number;\n    ID_TERMINAL_POS: number;\n}\n\nexport interface TERMINAL_POS_TARJETA {\n    ID_SBA22: number;\n    ID_HOST: number | undefined;\n    COD_COMERCIO: string | undefined;\n    HABILITADO: string | undefined;\n    ID_MEDIO_PAGO_SPS: number | undefined;\n    ID_TERMINAL_POS_TARJETA: number;\n    ID_TERMINAL_POS: number;\n    TERMINAL_POS_TARJETA1: string | undefined;\n    TARJETA_POS: string | undefined;\n}\n\nexport interface TERMINAL_POS_NO_INTEGRADO {\n    ID_TERMINAL_POS_NO_INTEGRADO: number;\n    ID_TERMINAL_POS: number;\n    TERMINAL: string | undefined;\n}\n\nexport interface TERMINAL_POS {\n    MODO_IMPRESION: string | undefined;\n    TERM_ID: string;\n    DESC_TERMINAL_POS: string | undefined;\n    COD_COMERCIO: string | undefined;\n    HABILITADO: string | undefined;\n    NUMERO_SERIE: string | undefined;\n    OBSERVACIONES: string | undefined;\n    ID_TERMINAL_POS: number;\n    PERMITE_PAGOS_QR: boolean;\n    TIPO_TERMINAL_API_EXCEL: string | undefined;\n    TIPO_GENERACION_LOTE_API_EXCEL: string | undefined;\n    TIPO_GENERACION_CUPON_API_EXCEL: string | undefined;\n    TERMINAL_POS_HOST: TERMINAL_POS_HOST[] | undefined;\n    TERMINAL_POS_TARJETA: TERMINAL_POS_TARJETA[] | undefined;\n    TERMINAL_POS_NO_INTEGRADO: TERMINAL_POS_NO_INTEGRADO[] | undefined;\n}",
+          "example": {
+            "MODO_IMPRESION": "N",
+            "TERM_ID": null,
+            "DESC_TERMINAL_POS": null,
+            "COD_COMERCIO": null,
+            "HABILITADO": "S",
+            "TIPO_TERMINAL_API_EXCEL": null,
+            "TIPO_GENERACION_LOTE_API_EXCEL": null,
+            "TIPO_GENERACION_CUPON_API_EXCEL": null,
+            "NUMERO_SERIE": null,
+            "OBSERVACIONES": null,
+            "ID_TERMINAL_POS": 0,
+            "PERMITE_PAGOS_QR": false,
+            "TERMINAL_POS_HOST": [
+              {
+                "ID_HOST": 0,
+                "PROXIMO_NRO_LOTE": 0,
+                "PROXIMO_NRO_CUPON": 0,
+                "HABILITADO_HOST": null,
+                "ID_TERMINAL_POS_HOST": 0,
+                "ID_TERMINAL_POS": 0
+              }
+            ],
+            "TERMINAL_POS_TARJETA": [
+              {
+                "ID_SBA22": 0,
+                "ID_HOST": 0,
+                "COD_COMERCIO": null,
+                "HABILITADO": null,
+                "ID_MEDIO_PAGO_SPS": 0,
+                "ID_TERMINAL_POS_TARJETA": 0,
+                "ID_TERMINAL_POS": 0,
+                "TERMINAL_POS_TARJETA1": null,
+                "TARJETA_POS": null
+              }
+            ],
+            "TERMINAL_POS_NO_INTEGRADO": [
+              {
+                "ID_TERMINAL_POS_NO_INTEGRADO": 0,
+                "ID_TERMINAL_POS": 0,
+                "TERMINAL": null
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "TERMINAL_POS": [
+      "TERMINAL_POS_HOST",
+      "TERMINAL_POS_TARJETA",
+      "TERMINAL_POS_NO_INTEGRADO",
+      "TIPO_GENERACION_LOTE_API_EXCEL",
+      "TIPO_GENERACION_CUPON_API_EXCEL",
+      "TIPO_TERMINAL_API_EXCEL",
+      "TERM_ID",
+      "DESC_TERMINAL_POS",
+      "COD_COMERCIO",
+      "HABILITADO",
+      "OBSERVACIONES",
+      "PERMITE_PAGOS_QR",
+      "NUMERO_SERIE",
+      "MODO_IMPRESION"
+    ],
+    "TERMINAL_POS_HOST": [
+      "ID_HOST",
+      "ID_TERMINAL_POS",
+      "PROXIMO_NRO_LOTE",
+      "PROXIMO_NRO_CUPON",
+      "HABILITADO"
+    ],
+    "TERMINAL_POS_TARJETA": [
+      "ID_TERMINAL_POS",
+      "ID_SBA22",
+      "HABILITADO",
+      "TERMINAL_POS_TARJETA",
+      "ID_HOST",
+      "TARJETA_POS",
+      "COD_COMERCIO",
+      "ID_MEDIO_PAGO_SPS"
+    ],
+    "TERMINAL_POS_NO_INTEGRADO": [
+      "ID_TERMINAL_POS",
+      "TERMINAL"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

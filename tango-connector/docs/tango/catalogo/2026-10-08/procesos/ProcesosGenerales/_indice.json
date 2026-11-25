@@ -1,0 +1,1331 @@
+{
+  "modulo": "ProcesosGenerales",
+  "capturado": "2026-10-08T17:19:16.826Z",
+  "procesos": {
+    "301": {
+      "estado": "sin-api",
+      "tablas": [
+        "ArticulosParams",
+        "SucursalDetail"
+      ],
+      "titulo": "Artículos"
+    },
+    "302": {
+      "estado": "sin-api",
+      "tablas": [
+        "ClientesParams",
+        "SucursalDetail"
+      ],
+      "titulo": "Clientes"
+    },
+    "303": {
+      "estado": "sin-api",
+      "tablas": [
+        "PreciosVentaParams",
+        "SucursalDetail"
+      ],
+      "titulo": "Precios de venta"
+    },
+    "326": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "GVA81"
+      ],
+      "titulo": "Clasificación de comprobantes"
+    },
+    "334": {
+      "estado": "sin-api",
+      "tablas": [
+        "DatosContablesParams",
+        "SucursalDetail"
+      ],
+      "titulo": "Datos contables"
+    },
+    "342": {
+      "estado": "sin-api",
+      "tablas": [
+        "ArticulosClasifCentralParams",
+        "SucursalDetail"
+      ],
+      "titulo": "Artículos para el clasificador central"
+    },
+    "344": {
+      "estado": "sin-api",
+      "tablas": [
+        "ClientesClasifCentralParams",
+        "SucursalDetail"
+      ],
+      "titulo": "Clientes para el clasificador central"
+    },
+    "408": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "FechasCierreParams"
+      ],
+      "titulo": "Fechas de cierre"
+    },
+    "439": {
+      "estado": "sin-api",
+      "tablas": [
+        "ProveedoresParams",
+        "SucursalDetail"
+      ],
+      "titulo": "Proveedores"
+    },
+    "443": {
+      "estado": "sin-api",
+      "tablas": [
+        "PreciosCompraParams",
+        "SucursalDetail"
+      ],
+      "titulo": "Precios de compra"
+    },
+    "447": {
+      "estado": "sin-api",
+      "tablas": [
+        "PreciosCostoParams",
+        "SucursalDetail"
+      ],
+      "titulo": "Precios de costos"
+    },
+    "455": {
+      "estado": "sin-api",
+      "tablas": [
+        "TablasGeneralesParams",
+        "SucursalDetail"
+      ],
+      "titulo": "Tablas Generales"
+    },
+    "464": {
+      "estado": "sin-api",
+      "tablas": [
+        "ComprobantesInformesParams",
+        "SucursalDetail"
+      ],
+      "titulo": "Informe de comprobantes"
+    },
+    "468": {
+      "estado": "sin-api",
+      "tablas": [
+        "SaldosActualesParams",
+        "SucursalDetail"
+      ],
+      "titulo": "Saldos actuales"
+    },
+    "474": {
+      "estado": "sin-api",
+      "tablas": [
+        "PedidosParams",
+        "SUCURSAL",
+        "SucursalDetail"
+      ],
+      "titulo": "Pedidos"
+    },
+    "480": {
+      "estado": "sin-api",
+      "tablas": [
+        "RemitosVentasParams",
+        "SUCURSAL",
+        "SucursalDetail"
+      ],
+      "titulo": "Remitos"
+    },
+    "484": {
+      "estado": "sin-api",
+      "tablas": [
+        "ComprobantesFacturacionVentasParams",
+        "SUCURSAL",
+        "SucursalDetail"
+      ],
+      "titulo": "Comprobantes de facturación"
+    },
+    "489": {
+      "estado": "sin-api",
+      "tablas": [
+        "OrdenesCompraParams",
+        "SUCURSAL",
+        "SucursalDetail"
+      ],
+      "titulo": "Ordenes de compra"
+    },
+    "493": {
+      "estado": "sin-api",
+      "tablas": [
+        "RemitosComprasParams",
+        "SUCURSAL",
+        "SucursalDetail"
+      ],
+      "titulo": "Remitos"
+    },
+    "497": {
+      "estado": "sin-api",
+      "tablas": [
+        "ComprobantesFacturacionComprasParams",
+        "SUCURSAL",
+        "SucursalDetail"
+      ],
+      "titulo": "Comprobantes de facturación"
+    },
+    "501": {
+      "estado": "sin-api",
+      "tablas": [
+        "MovimientosStockParams",
+        "SUCURSAL",
+        "SucursalDetail"
+      ],
+      "titulo": "Movimientos de stock"
+    },
+    "505": {
+      "estado": "sin-api",
+      "tablas": [
+        "TransferenciaValoresParams",
+        "SucursalDetail"
+      ],
+      "titulo": "Transferencia de valores"
+    },
+    "510": {
+      "estado": "sin-api",
+      "tablas": [
+        "ImportacionPaquetesParams"
+      ],
+      "titulo": "Importación de paquetes"
+    },
+    "515": {
+      "estado": "sin-api",
+      "tablas": [
+        "ImportacionPaquetesParams"
+      ],
+      "titulo": "Importación de paquetes"
+    },
+    "519": {
+      "estado": "sin-api",
+      "tablas": [
+        "ImportacionPaquetesParams"
+      ],
+      "titulo": "Importación de paquetes"
+    },
+    "540": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "SUCURSAL"
+      ],
+      "titulo": "Sucursales"
+    },
+    "544": {
+      "estado": "sin-api",
+      "tablas": [
+        "CTA_PARAMETRO_TRANSFERENCIA",
+        "CTA_PARAMETRO_TRANSFERENCIA_FOLIO",
+        "CTA_PARAMETRO_TRANSFERENCIA_MAESTRO"
+      ],
+      "titulo": "Parámetros de Transferencias"
+    },
+    "655": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ProcesosgeneralesComprobantesConAsientosExportadosModel"
+      ],
+      "titulo": "Comprobantes con asientos exportados"
+    },
+    "656": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ProcesosgeneralesComprobantesDeAsientosImportadosModel"
+      ],
+      "titulo": "Comprobantes de asientos importados"
+    },
+    "780": {
+      "estado": "sin-api",
+      "tablas": [
+        "PARAMETRO_EMAIL"
+      ],
+      "titulo": "Parámetros de correo electrónico"
+    },
+    "1016": {
+      "estado": "sin-api",
+      "tablas": [
+        "ActualizacionMasivaLegajosApiParams",
+        "LEGAJO_NOVEDAD",
+        "LEGAJO_CBU",
+        "GRUPO_LEGAJO"
+      ],
+      "titulo": "Actualización masiva de legajos"
+    },
+    "1020": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "ACTIVIDAD_DGI"
+      ],
+      "titulo": "Actividades ARCA para empresas"
+    },
+    "1021": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "DEFECTO_LEGAJO",
+        "DEFECTO_LEGAJO_TELEFONO",
+        "DEFECTO_LEGAJO_NOVEDAD",
+        "GRUPO_DEFECTO",
+        "DEF_COMPENSA_POR_RANGO",
+        "DEFECTO_LEGAJO_CBU",
+        "DEFECTO_CONCEPTO_PARTICULAR"
+      ],
+      "titulo": "Plantillas para legajos"
+    },
+    "1023": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "DEPARTAMENTO"
+      ],
+      "titulo": "Departamentos"
+    },
+    "1030": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "PROVINCIA"
+      ],
+      "titulo": "Provincias"
+    },
+    "1050": {
+      "estado": "sin-api",
+      "tablas": [
+        "EMPRESA",
+        "EMPRESA_TELEFONO",
+        "EMPRESA_TELEFONO_LEGAL",
+        "EMPRESA_ACTIVIDAD_SECUNDARIA"
+      ],
+      "titulo": "Datos de la empresa"
+    },
+    "1096": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "PAIS"
+      ],
+      "titulo": "Países"
+    },
+    "1110": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TIPO_DOCUMENTO",
+        "DOC_PROVINCIAL"
+      ],
+      "titulo": "Tipos de documento"
+    },
+    "1115": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "NACIONALIDAD"
+      ],
+      "titulo": "Nacionalidades"
+    },
+    "1118": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MOTIVO_EGRESO",
+        "MOTIVO_EGRESO_CONCEPTO"
+      ],
+      "titulo": "Motivos de egreso"
+    },
+    "1124": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_LEGAJO"
+      ],
+      "titulo": "Legajos"
+    },
+    "1125": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "BANCO",
+        "CUENTA_BANCARIA"
+      ],
+      "titulo": "Bancos"
+    },
+    "1366": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "FERIADO",
+        "MODULO_FERIADO"
+      ],
+      "titulo": "Feriados"
+    },
+    "1443": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MEDIDA",
+        "MODULO_MEDIDA"
+      ],
+      "titulo": "Unidades de medida"
+    },
+    "1575": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AXV_CUENTA"
+      ],
+      "titulo": "Cuentas contables"
+    },
+    "1588": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "LEYENDA_ENCABEZADO"
+      ],
+      "titulo": "Leyendas para encabezados de asientos"
+    },
+    "1598": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "LEYENDA_MOVIMIENTO"
+      ],
+      "titulo": "Leyendas para líneas de asientos"
+    },
+    "1614": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TIPO_COTIZACION"
+      ],
+      "titulo": "Tipos de cotización"
+    },
+    "1622": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TIPO_ASIENTO",
+        "MODULO_TIPO_ASIENTO",
+        "LEYENDA_ENCABEZADO_TIPO_ASIENTO"
+      ],
+      "titulo": "Tipos de asiento"
+    },
+    "1630": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "INDICE",
+        "INDICE_VALOR"
+      ],
+      "titulo": "Índices"
+    },
+    "1634": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "CLASE_CUENTA"
+      ],
+      "titulo": "Clases de cuentas"
+    },
+    "1638": {
+      "estado": "sin-api",
+      "tablas": [
+        "PARAMETRO_GBL"
+      ],
+      "titulo": "Parámetros contables"
+    },
+    "1640": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "AGRUPACION_ASIENTO"
+      ],
+      "titulo": "Agrupaciones de tipos de asiento"
+    },
+    "1648": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "COTIZACION_MONEDA",
+        "RENGLON_COTIZACION_MONEDA"
+      ],
+      "titulo": "Cotizaciones"
+    },
+    "1656": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TIPO_AUXILIAR",
+        "AUXILIAR",
+        "SUBAUXILIAR"
+      ],
+      "titulo": "Tipos de auxiliares"
+    },
+    "1660": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MONEDA",
+        "SBA37",
+        "MONEDA_CONTABLE",
+        "MONEDA_ALTERNATIVA"
+      ],
+      "titulo": "Monedas contables"
+    },
+    "1668": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "REGLA_APROPIACION",
+        "AUXILIAR_REGLA",
+        "SUBAUXILIAR_REGLA",
+        "MODULO_REGLA_APROPIACION"
+      ],
+      "titulo": "Reglas de apropiación"
+    },
+    "1707": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "PUESTO"
+      ],
+      "titulo": "Puestos desempeñados"
+    },
+    "1731": {
+      "estado": "error",
+      "detalle": "Se detectó una situación inesperada",
+      "titulo": null
+    },
+    "1733": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "MAESTRO_CUENTA_TIPO_AUXILIAR",
+        "CUENTA_TIPO_AUXILIAR",
+        "AUXILIAR_CUENTA_TIPO_AUXILIAR"
+      ],
+      "titulo": "Actualización individual de auxiliares contables"
+    },
+    "1746": {
+      "estado": "sin-api",
+      "tablas": [
+        "ActualizacionMasivaDeCuentasApiParams",
+        "LEYENDA_MOVIMIENTO_CUENTA",
+        "MODULO_CUENTA"
+      ],
+      "titulo": "Actualización masiva de cuentas contables"
+    },
+    "1765": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "ListadoAuxiliaresContablesParams",
+        "TIPO_AUXILIAR_AUTOMATICO",
+        "TIPO_AUXILIAR"
+      ],
+      "titulo": "Listado de auxiliares contables"
+    },
+    "1832": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "NOVEDAD",
+        "NOVEDAD_GRUPO",
+        "MODULO_NOVEDAD"
+      ],
+      "titulo": "Novedades de Sueldos"
+    },
+    "1873": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "SBA52"
+      ],
+      "titulo": "Configuración de exportación de cuentas de efectivo"
+    },
+    "2011": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "CentralTransferenciaAuditoriaDeTransferenciaDePromocionesModel"
+      ],
+      "titulo": "Auditoría de transferencia de promociones"
+    },
+    "2132": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "VARIABLE_ADICIONAL"
+      ],
+      "titulo": "Variables de impresión para campos adicionales"
+    },
+    "2704": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "DepuracionDeTransferenciasApiParams"
+      ],
+      "titulo": "Depuración de transferencias"
+    },
+    "2931": {
+      "estado": "sin-api",
+      "tablas": [
+        "ResumenCierreDeCajaParams",
+        "SucursalDetail"
+      ],
+      "titulo": "Resumen de cierres de caja"
+    },
+    "3126": {
+      "estado": "sin-api",
+      "tablas": [
+        "InformacionRG3685Params",
+        "SucursalDetail"
+      ],
+      "titulo": "Informe R.G. 3685 – Registro de operaciones"
+    },
+    "3225": {
+      "estado": "sin-api",
+      "tablas": [
+        "TransferenciaValoresRestoParams",
+        "SucursalDetail"
+      ],
+      "titulo": "Transferencia de valores Restô"
+    },
+    "7310": {
+      "estado": "sin-api",
+      "tablas": [
+        "InformacionRG4597Params",
+        "SucursalDetail"
+      ],
+      "titulo": "Informe R.G. 4597 – Libro de IVA digital"
+    },
+    "9994": {
+      "estado": "sin-api",
+      "tablas": [
+        "PreciosParaCostosParams",
+        "SucursalDetail"
+      ],
+      "titulo": "Precios para costos"
+    },
+    "14230": {
+      "estado": "sin-api",
+      "tablas": [
+        "LEGAJO",
+        "INFORMACION_BANCARIA",
+        "AGRUPACIONES",
+        "LIQUIDACIONES",
+        "TRAMOS_LABORALES",
+        "NOVEDADES",
+        "FAMILIARES",
+        "LICENCIAS",
+        "VACACIONES",
+        "ACREDITACIONES",
+        "FAMILIARES_SIRADIG",
+        "DEDUCCIONES",
+        "PAGOS_A_CUENTA",
+        "EMPLEOS_EXTERNOS",
+        "OTROS_LEGAJOS",
+        "PRESENTACION_SIRADIG",
+        "CONTRATOS",
+        "EMPLEADOS"
+      ],
+      "titulo": "Ficha Live de legajos"
+    },
+    "17974": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "CentralTransferenciaAuditoriaDeTransferenciasModel"
+      ],
+      "titulo": "Auditoría de transferencias"
+    },
+    "19767": {
+      "estado": "sin-api",
+      "tablas": [
+        "LEGAJO_CLOUD_FILTER",
+        "USUARIO_FILTRO_LEGAJO_CLOUD"
+      ],
+      "titulo": "Filtros de seguridad de legajos"
+    },
+    "20082": {
+      "estado": "api",
+      "tipo": "EXEC",
+      "endpoints": [
+        "POST Api/Process",
+        "POST Api/Custom"
+      ],
+      "tablas": [
+        "VinculacionTangonetParams"
+      ],
+      "titulo": "Vinculación a Tangonet"
+    },
+    "20282": {
+      "estado": "sin-api",
+      "tablas": [
+        "SUCURSALES_SHEET",
+        "DEPOSITOS",
+        "MAESTROS"
+      ],
+      "titulo": "Ficha Live de sucursales"
+    },
+    "21254": {
+      "estado": "sin-api",
+      "tablas": [
+        "PARAMETRO_WA",
+        "PARAMETRO_WA_PROCESO",
+        "PARAMETRO_WA_USUARIO"
+      ],
+      "titulo": "Parámetros de envío por WhatsApp"
+    },
+    "21390": {
+      "estado": "sin-api",
+      "tablas": [
+        "FORMULARIO_GRAFICO",
+        "FORMULARIO_GRAFICO_PAGO_ELECTRONICO"
+      ],
+      "titulo": "Formularios gráficos de Ventas"
+    },
+    "21447": {
+      "estado": "sin-api",
+      "tablas": [
+        "FORMULARIO_GRAFICO"
+      ],
+      "titulo": "Formularios gráficos de Compras"
+    },
+    "21472": {
+      "estado": "sin-api",
+      "tablas": [
+        "FORMULARIO_GRAFICO"
+      ],
+      "titulo": "Formularios gráficos de Stock"
+    },
+    "21516": {
+      "estado": "sin-api",
+      "tablas": [
+        "PortalIvaApiParams",
+        "GVA43",
+        "IvaClasificacionSiapGrid",
+        "ClasificacionSiapGrid"
+      ],
+      "titulo": "Generación de archivos para Portal IVA"
+    },
+    "21532": {
+      "estado": "sin-api",
+      "tablas": [
+        "TANGO_AI_ENTITY"
+      ],
+      "titulo": "Chat"
+    },
+    "21535": {
+      "estado": "api",
+      "tipo": "CRUD",
+      "endpoints": [
+        "POST Api/Create",
+        "DELETE Api/Delete",
+        "PUT Api/Update",
+        "GET Api/Get",
+        "GET Api/GetById",
+        "GET Api/GetByFilter"
+      ],
+      "tablas": [
+        "TELEFONO_WA",
+        "TELEFONO_WA_USUARIO"
+      ],
+      "titulo": "Teléfonos (WhatsApp)"
+    },
+    "21539": {
+      "estado": "sin-api",
+      "tablas": [
+        "WHATSAPP_SHEET_DATA"
+      ],
+      "titulo": "Chat"
+    },
+    "21541": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "LiquidadorIvaPercepcionesIvaSimpleMenuModel"
+      ],
+      "titulo": "Percepciones"
+    },
+    "21542": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "LiquidadorIvaPercepcionesAduaIvaSimpleMenuModel"
+      ],
+      "titulo": "Percepciones aduaneras"
+    },
+    "21543": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "LiquidadorIvaRetencionesIvaSimpleMenuModel"
+      ],
+      "titulo": "Retenciones"
+    },
+    "21544": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "LiquidadorIvaOperacionesDebitoFiscalMenuModel"
+      ],
+      "titulo": "Operaciones que generan Débito fiscal"
+    },
+    "21545": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "LiquidadorIvaOperacionesCreditoFiscalWizardModel"
+      ],
+      "titulo": "Operaciones que generan Crédito fiscal"
+    },
+    "21546": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "LiquidadorIvaRestitucionDebitoFiscalMenuModel"
+      ],
+      "titulo": "Operaciones que generan restitución de Débito fiscal"
+    },
+    "21547": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "LiquidadorIvaRestitucionCreditoFiscalMenuModel"
+      ],
+      "titulo": "Operaciones que generan restitución de Crédito fiscal"
+    },
+    "21550": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ProcesosGeneralesIvaSimpleGestionOperacionesDebitoFiscalBaseModel"
+      ],
+      "titulo": "Operaciones que generan Débito fiscal"
+    },
+    "21551": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ProcesosGeneralesIvaSimpleGestionOperacionesRestitucionDebitoFiscalBaseModel"
+      ],
+      "titulo": "Operaciones que generan restitución Débito fiscal"
+    },
+    "21552": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ProcesosGeneralesIvaSimpleGestionOperacionesCreditoFiscalWizardModel"
+      ],
+      "titulo": "Operaciones que generan Crédito fiscal"
+    },
+    "21553": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ProcesosGeneralesIvaSimpleGestionOperacionesRestitucionCreditoFiscalWizardModel"
+      ],
+      "titulo": "Operaciones que generan restitución de Crédito fiscal"
+    },
+    "21554": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "ProcesosGeneralesIvaSimpleGestionRetencionesBaseModel"
+      ],
+      "titulo": "Retenciones"
+    },
+    "21555": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "GestionPercepcionesIvaSimpleMenuModel"
+      ],
+      "titulo": "Percepciones"
+    },
+    "21556": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "GestionPercepcionesAduanerasIvaSimpleMenuModel"
+      ],
+      "titulo": "Percepciones aduaneras"
+    },
+    "21591": {
+      "estado": "sin-api",
+      "tablas": [
+        "FORMULARIO_GRAFICO"
+      ],
+      "titulo": "Formularios gráficos de Sueldos"
+    },
+    "21653": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "CentralIvaSimpleGestionOperacionesDebitoFiscalBaseModel"
+      ],
+      "titulo": "Operaciones que generan Débito fiscal"
+    },
+    "21655": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "CentralIvaSimpleGestionOperacionesRestitucionDebitoFiscalBaseModel"
+      ],
+      "titulo": "Operaciones que generan restitución Débito fiscal"
+    },
+    "21657": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "CentralIvaSimpleGestionRetencionesBaseModel"
+      ],
+      "titulo": "Retenciones"
+    },
+    "21659": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "CentralIvaSimpleGestionOperacionesRestitucionCreditoFiscalBaseModel"
+      ],
+      "titulo": "Operaciones que generan restitución de Crédito fiscal"
+    },
+    "21661": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "CentralIvaSimpleOperacionesCreditoFiscalBaseModel"
+      ],
+      "titulo": "Operaciones que generan Crédito fiscal"
+    },
+    "21663": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "CentralIvaSimplePercepcionesBaseModel"
+      ],
+      "titulo": "Percepciones"
+    },
+    "21665": {
+      "estado": "api",
+      "tipo": "LIVE",
+      "endpoints": [
+        "GET Api/GetApiLiveQueryData"
+      ],
+      "tablas": [
+        "CentralIvaSimplePercepcionesAduanerasBaseModel"
+      ],
+      "titulo": "Percepciones aduaneras"
+    },
+    "21667": {
+      "estado": "sin-api",
+      "tablas": [
+        "PARAMETRO_TANGOAI"
+      ],
+      "titulo": "Parámetros de Tango AI"
+    },
+    "21669": {
+      "estado": "sin-api",
+      "tablas": [
+        "MAESTRO_IVA_RG3685_FORMULA",
+        "IVA_RG3685_FORMULA"
+      ],
+      "titulo": "Configuración de relaciones para libro IVA digital"
+    },
+    "21692": {
+      "estado": "sin-api",
+      "tablas": [
+        "ImportacionPaquetesParams"
+      ],
+      "titulo": "Importación de paquetes"
+    },
+    "21693": {
+      "estado": "sin-api",
+      "tablas": [
+        "ImportacionPaquetesParams"
+      ],
+      "titulo": "Importación de paquetes"
+    },
+    "21694": {
+      "estado": "sin-api",
+      "tablas": [
+        "ImportacionPaquetesParams"
+      ],
+      "titulo": "Importación de paquetes"
+    },
+    "21698": {
+      "estado": "sin-api",
+      "tablas": [
+        "ImportacionPaquetesParams"
+      ],
+      "titulo": "Importación de paquetes"
+    },
+    "21699": {
+      "estado": "sin-api",
+      "tablas": [
+        "ImportacionPaquetesParams"
+      ],
+      "titulo": "Importación de paquetes"
+    },
+    "21700": {
+      "estado": "sin-api",
+      "tablas": [
+        "ImportacionPaquetesParams"
+      ],
+      "titulo": "Importación de paquetes"
+    },
+    "21708": {
+      "estado": "sin-api",
+      "tablas": [
+        "DepuracionPadronesIibbApiParams",
+        "PadronesVigentesGrid"
+      ],
+      "titulo": "Depuración de padrones de IIBB"
+    },
+    "21810": {
+      "estado": "sin-api",
+      "tablas": [
+        "ActualizacionApiSantaFeApiParams"
+      ],
+      "titulo": "Actualización de alícuotas de I.I.B.B. según padrón Santa Fe"
+    }
+  }
+}

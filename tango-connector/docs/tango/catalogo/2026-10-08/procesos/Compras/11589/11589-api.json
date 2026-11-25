@@ -1,0 +1,121 @@
+{
+  "title": "Plan de entrega / recepciones",
+  "moduleId": 10003,
+  "paths": [
+    {
+      "title": "Consulta",
+      "name": "Api/GetApiLiveQueryData",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "fromDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "toDate",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 2,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "customQuery",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": 0
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "CompraseImportacionesPlanDeEntrega_RecepcionesModel": [
+      "ID_STA22",
+      "NRO_ORDEN_DE_COMPRA",
+      "RENGLON",
+      "COD_ARTICULO",
+      "ARTICULO",
+      "DESC_ADICIONAL_ARTICULO",
+      "COD_DEPOSITO",
+      "DEPOSITO",
+      "NRO_SUCURSAL",
+      "DESC_SUCURSAL",
+      "COD_PROVEEDOR",
+      "PROVEEDOR",
+      "CANT_PEDIDA",
+      "FECHA_RECEPCION",
+      "CANT_PROGRAMADA",
+      "CANT_ENTREGADA",
+      "TELEFONO",
+      "TELEFONO_2",
+      "MOVIL",
+      "EMAIL",
+      "EMAIL_COMPROBANTES",
+      "EMAILS_ENVIO_ORDEN_COMPRA",
+      "MOVILES_ENVIO_ORDEN_COMPRA",
+      "EMAILS_ENVIO_ORDEN_PAGOS",
+      "MOVILES_ENVIO_ORDEN_PAGOS",
+      "ID_CPA01",
+      "ID_STA11",
+      "ID_CPA35",
+      "ID_SUCURSAL"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

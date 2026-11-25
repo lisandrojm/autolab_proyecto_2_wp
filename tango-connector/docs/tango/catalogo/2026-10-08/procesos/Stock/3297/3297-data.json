@@ -1,0 +1,62 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "existeN_MOVIMIENTOS_NOTMAPPED": false,
+        "generA_INGRESO_CON_REVISION_ORIGINAL_NOT_MAPPED": false,
+        "iD_STA13": 1,
+        "coD_STA13": "ING",
+        "t_COMP": "ING",
+        "descripcio": "INGRESO",
+        "t_MOVIM": "E",
+        "iD_STA17": 1,
+        "valorizado": false,
+        "reiN_SERIE": true,
+        "ajustA_UNA_UNIDAD_STOCK": false,
+        "acT_PPP": false,
+        "acT_PREC_U": false,
+        "acT_REPOSI": false,
+        "geN_COSTOS": false,
+        "imprimE_ETIQUETA_INGRESO": "N",
+        "talonario": 1,
+        "generA_INGRESO_CON_REVISION": false,
+        "coD_DESCRIP": "ING - INGRESO",
+        "codigo": "ING",
+        "roW_VERSION": "AAAAAADPRzw="
+      },
+      {
+        "existeN_MOVIMIENTOS_NOTMAPPED": false,
+        "generA_INGRESO_CON_REVISION_ORIGINAL_NOT_MAPPED": false,
+        "iD_STA13": 2,
+        "coD_STA13": "EGR",
+        "t_COMP": "EGR",
+        "descripcio": "EGRESOS",
+        "t_MOVIM": "S",
+        "iD_STA17": 2,
+        "valorizado": false,
+        "reiN_SERIE": false,
+        "ajustA_UNA_UNIDAD_STOCK": false,
+        "acT_PPP": false,
+        "acT_PREC_U": false,
+        "acT_REPOSI": false,
+        "geN_COSTOS": false,
+        "imprimE_ETIQUETA_INGRESO": "N",
+        "talonario": 2,
+        "generA_INGRESO_CON_REVISION": false,
+        "coD_DESCRIP": "EGR - EGRESOS",
+        "codigo": "EGR",
+        "roW_VERSION": "AAAAAADPRz4="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

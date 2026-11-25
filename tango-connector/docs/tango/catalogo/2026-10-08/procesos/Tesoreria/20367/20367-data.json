@@ -1,0 +1,26 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_PERFIL_BANKING": 2,
+        "coD_PERFIL_BANKING": "LMB",
+        "desC_PERFIL_BANKING": "Probando cosas",
+        "ultimoS_MOVIMIENTOS_CHECK": true,
+        "muestrA_SALDOS_DIFERENCIA": true,
+        "todaS_LAS_CUENTAS": true,
+        "periodO_MOVIMIENTOS": 5,
+        "roW_VERSION": "AAAAAADfsCU="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

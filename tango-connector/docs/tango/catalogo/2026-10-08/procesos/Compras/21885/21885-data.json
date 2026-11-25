@@ -1,0 +1,22 @@
+{
+  "resultData": {
+    "list": [
+      {
+        "iD_CLASIFICACION_RETENCION": 1,
+        "coD_CLASIFICACION_RETENCION": "SIN",
+        "descripcion": "SIN CLASIFICAR",
+        "roW_VERSION": "AAAAAADgVq8="
+      }
+    ],
+    "pageIndex": 0,
+    "pageSize": 100,
+    "totalCount": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  },
+  "kind": 1,
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

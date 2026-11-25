@@ -1,0 +1,380 @@
+{
+  "title": "Retenciones",
+  "moduleId": 10003,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"RETENCION_COMPRAS\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_RETEN\",\r\n    \"TIPO_RETEN\"\r\n  ],\r\n  \"properties\": {\r\n    \"COD_RETEN\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 2,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESCRIPCIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 30,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO_RETEN\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_CPA57\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_ANEXO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"LEYENDA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_CUENTA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TALONARIO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TALONARIO_CPR\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"TIPO_CALCU\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_MODELO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"PADRON\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"GRUPO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 2,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_BASE_CALCULO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_BASE_ANALISIS_1\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"SUP_IMP1\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"ID_BASE_ANALISIS_2\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"SUP_IMP2\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"ID_ACUMULA_PAGOS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CALC_SOBRE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"MINIMO_BASE_CALCULO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"MINIMO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"NO_IMPONIB\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"PORCENTAJE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"CM_COEFICIENTE_MINIMO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"CALCULA_TOTAL_RETENCION_EN_PRIMER_PAGO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_RETENCION_ASOCIADA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"BASE_CALCULO_POR_CLASIFICACION\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"RETENCION_COMPRAS_ESCALA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/RETENCION_COMPRAS_ESCALA\"\r\n      }\r\n    },\r\n    \"RETENCION_COMPRAS_BASE_CALCULO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/RETENCION_COMPRAS_BASE_CALCULO\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"RETENCION_COMPRAS_ESCALA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"DES_TRA\",\r\n        \"HAS_TRA\",\r\n        \"IMP_EXCEDE\",\r\n        \"IMP_FIJO\",\r\n        \"PORCE_RET\",\r\n        \"APLICA_SOB\"\r\n      ],\r\n      \"properties\": {\r\n        \"DES_TRA\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"HAS_TRA\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"IMP_EXCEDE\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"IMP_FIJO\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"PORCE_RET\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"APLICA_SOB\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"RETENCION_COMPRAS_BASE_CALCULO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_BASE_CALCULO_RETENCION\",\r\n        \"ID_CLASIFICACION_RETENCION\",\r\n        \"MINIMO_BASE_CALCULO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_BASE_CALCULO_RETENCION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_CLASIFICACION_RETENCION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"MINIMO_BASE_CALCULO\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class RETENCION_COMPRAS_ESCALA\n    {\n        [Newtonsoft.Json.JsonProperty(\"DES_TRA\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal DES_TRA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HAS_TRA\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal HAS_TRA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMP_EXCEDE\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal IMP_EXCEDE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMP_FIJO\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal IMP_FIJO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORCE_RET\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal PORCE_RET { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"APLICA_SOB\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string APLICA_SOB { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class RETENCION_COMPRAS_BASE_CALCULO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_BASE_CALCULO_RETENCION\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_BASE_CALCULO_RETENCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CLASIFICACION_RETENCION\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_CLASIFICACION_RETENCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MINIMO_BASE_CALCULO\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal MINIMO_BASE_CALCULO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class RETENCION_COMPRAS\n    {\n        [Newtonsoft.Json.JsonProperty(\"COD_RETEN\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string COD_RETEN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESCRIPCIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string DESCRIPCIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_RETEN\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_RETEN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA57\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CPA57 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_ANEXO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? COD_ANEXO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string LEYENDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TALONARIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TALONARIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TALONARIO_CPR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TALONARIO_CPR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_CALCU\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_CALCU { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MODELO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MODELO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PADRON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? PADRON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GRUPO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string GRUPO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_BASE_CALCULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_BASE_CALCULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_BASE_ANALISIS_1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_BASE_ANALISIS_1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SUP_IMP1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SUP_IMP1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_BASE_ANALISIS_2\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_BASE_ANALISIS_2 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SUP_IMP2\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SUP_IMP2 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ACUMULA_PAGOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_ACUMULA_PAGOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CALC_SOBRE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string CALC_SOBRE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MINIMO_BASE_CALCULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? MINIMO_BASE_CALCULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MINIMO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? MINIMO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NO_IMPONIB\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? NO_IMPONIB { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORCENTAJE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORCENTAJE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CM_COEFICIENTE_MINIMO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CM_COEFICIENTE_MINIMO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CALCULA_TOTAL_RETENCION_EN_PRIMER_PAGO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool CALCULA_TOTAL_RETENCION_EN_PRIMER_PAGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_RETENCION_ASOCIADA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_RETENCION_ASOCIADA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"BASE_CALCULO_POR_CLASIFICACION\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool BASE_CALCULO_POR_CLASIFICACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"RETENCION_COMPRAS_ESCALA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<RETENCION_COMPRAS_ESCALA> RETENCION_COMPRAS_ESCALA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"RETENCION_COMPRAS_BASE_CALCULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<RETENCION_COMPRAS_BASE_CALCULO> RETENCION_COMPRAS_BASE_CALCULO { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface RETENCION_COMPRAS_ESCALA {\n    DES_TRA: number;\n    HAS_TRA: number;\n    IMP_EXCEDE: number;\n    IMP_FIJO: number;\n    PORCE_RET: number;\n    APLICA_SOB: string;\n}\n\nexport interface RETENCION_COMPRAS_BASE_CALCULO {\n    ID_BASE_CALCULO_RETENCION: number;\n    ID_CLASIFICACION_RETENCION: number;\n    MINIMO_BASE_CALCULO: number;\n}\n\nexport interface RETENCION_COMPRAS {\n    COD_RETEN: string;\n    DESCRIPCIO: string | undefined;\n    TIPO_RETEN: string;\n    ID_CPA57: number | undefined;\n    COD_ANEXO: number | undefined;\n    LEYENDA: string | undefined;\n    ID_CUENTA: number | undefined;\n    ID_TALONARIO: number | undefined;\n    ID_TALONARIO_CPR: number | undefined;\n    TIPO_CALCU: string | undefined;\n    ID_MODELO: number | undefined;\n    PADRON: number | undefined;\n    GRUPO: string | undefined;\n    ID_BASE_CALCULO: number | undefined;\n    ID_BASE_ANALISIS_1: number | undefined;\n    SUP_IMP1: number | undefined;\n    ID_BASE_ANALISIS_2: number | undefined;\n    SUP_IMP2: number | undefined;\n    ID_ACUMULA_PAGOS: number | undefined;\n    CALC_SOBRE: string | undefined;\n    MINIMO_BASE_CALCULO: number | undefined;\n    MINIMO: number | undefined;\n    NO_IMPONIB: number | undefined;\n    PORCENTAJE: number | undefined;\n    CM_COEFICIENTE_MINIMO: number | undefined;\n    OBSERVACIONES: string | undefined;\n    CALCULA_TOTAL_RETENCION_EN_PRIMER_PAGO: boolean;\n    ID_RETENCION_ASOCIADA: number | undefined;\n    BASE_CALCULO_POR_CLASIFICACION: boolean;\n    RETENCION_COMPRAS_ESCALA: RETENCION_COMPRAS_ESCALA[] | undefined;\n    RETENCION_COMPRAS_BASE_CALCULO: RETENCION_COMPRAS_BASE_CALCULO[] | undefined;\n}",
+          "example": {
+            "COD_RETEN": null,
+            "DESCRIPCIO": null,
+            "TIPO_RETEN": null,
+            "ID_CPA57": 0,
+            "COD_ANEXO": 0,
+            "LEYENDA": null,
+            "ID_CUENTA": 0,
+            "ID_TALONARIO": 0,
+            "ID_TALONARIO_CPR": 0,
+            "TIPO_CALCU": "A",
+            "ID_MODELO": 0,
+            "PADRON": 0,
+            "GRUPO": null,
+            "ID_BASE_CALCULO": 0,
+            "ID_BASE_ANALISIS_1": 0,
+            "SUP_IMP1": 0,
+            "ID_BASE_ANALISIS_2": 0,
+            "SUP_IMP2": 0,
+            "ID_ACUMULA_PAGOS": 0,
+            "CALC_SOBRE": null,
+            "MINIMO_BASE_CALCULO": 0,
+            "MINIMO": 0,
+            "NO_IMPONIB": 0,
+            "PORCENTAJE": 0,
+            "CM_COEFICIENTE_MINIMO": 0,
+            "OBSERVACIONES": null,
+            "CALCULA_TOTAL_RETENCION_EN_PRIMER_PAGO": false,
+            "ID_RETENCION_ASOCIADA": 0,
+            "BASE_CALCULO_POR_CLASIFICACION": false,
+            "RETENCION_COMPRAS_ESCALA": [
+              {
+                "DES_TRA": 0,
+                "HAS_TRA": 0,
+                "IMP_EXCEDE": 0,
+                "IMP_FIJO": 0,
+                "PORCE_RET": 0,
+                "APLICA_SOB": null
+              }
+            ],
+            "RETENCION_COMPRAS_BASE_CALCULO": [
+              {
+                "ID_BASE_CALCULO_RETENCION": 0,
+                "ID_CLASIFICACION_RETENCION": 0,
+                "MINIMO_BASE_CALCULO": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"RETENCION_COMPRAS\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"COD_RETEN\",\r\n    \"TIPO_RETEN\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_RETENCION_COMPRAS\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_RETEN\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 2,\r\n      \"minLength\": 0\r\n    },\r\n    \"DESCRIPCIO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 30,\r\n      \"minLength\": 0\r\n    },\r\n    \"TIPO_RETEN\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_CPA57\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"COD_ANEXO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"LEYENDA\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 60,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_CUENTA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TALONARIO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_TALONARIO_CPR\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"TIPO_CALCU\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_MODELO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"PADRON\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"GRUPO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 2,\r\n      \"minLength\": 0\r\n    },\r\n    \"ID_BASE_CALCULO\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"ID_BASE_ANALISIS_1\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"SUP_IMP1\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"ID_BASE_ANALISIS_2\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"SUP_IMP2\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"ID_ACUMULA_PAGOS\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"CALC_SOBRE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"MINIMO_BASE_CALCULO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"MINIMO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"NO_IMPONIB\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"PORCENTAJE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"CM_COEFICIENTE_MINIMO\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"number\"\r\n      ],\r\n      \"format\": \"decimal\"\r\n    },\r\n    \"OBSERVACIONES\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1000,\r\n      \"minLength\": 0\r\n    },\r\n    \"CALCULA_TOTAL_RETENCION_EN_PRIMER_PAGO\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"ID_RETENCION_ASOCIADA\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ],\r\n      \"format\": \"int32\"\r\n    },\r\n    \"BASE_CALCULO_POR_CLASIFICACION\": {\r\n      \"type\": \"boolean\"\r\n    },\r\n    \"RETENCION_COMPRAS_ESCALA\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/RETENCION_COMPRAS_ESCALA\"\r\n      }\r\n    },\r\n    \"RETENCION_COMPRAS_BASE_CALCULO\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/RETENCION_COMPRAS_BASE_CALCULO\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"RETENCION_COMPRAS_ESCALA\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"DES_TRA\",\r\n        \"HAS_TRA\",\r\n        \"IMP_EXCEDE\",\r\n        \"IMP_FIJO\",\r\n        \"PORCE_RET\",\r\n        \"APLICA_SOB\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_RETENCION_COMPRAS_ESCALA\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_RETENCION_COMPRAS\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"DES_TRA\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"HAS_TRA\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"IMP_EXCEDE\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"IMP_FIJO\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"PORCE_RET\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        },\r\n        \"APLICA_SOB\": {\r\n          \"type\": \"string\",\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    },\r\n    \"RETENCION_COMPRAS_BASE_CALCULO\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"required\": [\r\n        \"ID_RETENCION_COMPRAS\",\r\n        \"ID_BASE_CALCULO_RETENCION\",\r\n        \"ID_CLASIFICACION_RETENCION\",\r\n        \"MINIMO_BASE_CALCULO\"\r\n      ],\r\n      \"properties\": {\r\n        \"ID_RETENCION_COMPRAS_BASE_CALCULO\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_RETENCION_COMPRAS\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_BASE_CALCULO_RETENCION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"ID_CLASIFICACION_RETENCION\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"MINIMO_BASE_CALCULO\": {\r\n          \"type\": \"number\",\r\n          \"format\": \"decimal\"\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class RETENCION_COMPRAS_ESCALA\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_RETENCION_COMPRAS_ESCALA\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_RETENCION_COMPRAS_ESCALA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_RETENCION_COMPRAS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_RETENCION_COMPRAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DES_TRA\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal DES_TRA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"HAS_TRA\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal HAS_TRA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMP_EXCEDE\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal IMP_EXCEDE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"IMP_FIJO\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal IMP_FIJO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORCE_RET\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal PORCE_RET { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"APLICA_SOB\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string APLICA_SOB { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class RETENCION_COMPRAS_BASE_CALCULO\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_RETENCION_COMPRAS_BASE_CALCULO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_RETENCION_COMPRAS_BASE_CALCULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_RETENCION_COMPRAS\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_RETENCION_COMPRAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_BASE_CALCULO_RETENCION\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_BASE_CALCULO_RETENCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CLASIFICACION_RETENCION\", Required = Newtonsoft.Json.Required.Always)]\n        public int ID_CLASIFICACION_RETENCION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MINIMO_BASE_CALCULO\", Required = Newtonsoft.Json.Required.Always)]\n        public decimal MINIMO_BASE_CALCULO { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class RETENCION_COMPRAS\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_RETENCION_COMPRAS\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_RETENCION_COMPRAS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_RETEN\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string COD_RETEN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESCRIPCIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(30)]\n        public string DESCRIPCIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_RETEN\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_RETEN { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CPA57\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CPA57 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_ANEXO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? COD_ANEXO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYENDA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(60)]\n        public string LEYENDA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_CUENTA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_CUENTA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TALONARIO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TALONARIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_TALONARIO_CPR\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_TALONARIO_CPR { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_CALCU\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_CALCU { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_MODELO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_MODELO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PADRON\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? PADRON { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GRUPO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(2)]\n        public string GRUPO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_BASE_CALCULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_BASE_CALCULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_BASE_ANALISIS_1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_BASE_ANALISIS_1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SUP_IMP1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SUP_IMP1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_BASE_ANALISIS_2\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_BASE_ANALISIS_2 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SUP_IMP2\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? SUP_IMP2 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_ACUMULA_PAGOS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_ACUMULA_PAGOS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CALC_SOBRE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string CALC_SOBRE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MINIMO_BASE_CALCULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? MINIMO_BASE_CALCULO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MINIMO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? MINIMO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"NO_IMPONIB\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? NO_IMPONIB { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"PORCENTAJE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? PORCENTAJE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CM_COEFICIENTE_MINIMO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public decimal? CM_COEFICIENTE_MINIMO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"OBSERVACIONES\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1000)]\n        public string OBSERVACIONES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CALCULA_TOTAL_RETENCION_EN_PRIMER_PAGO\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool CALCULA_TOTAL_RETENCION_EN_PRIMER_PAGO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"ID_RETENCION_ASOCIADA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? ID_RETENCION_ASOCIADA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"BASE_CALCULO_POR_CLASIFICACION\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool BASE_CALCULO_POR_CLASIFICACION { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"RETENCION_COMPRAS_ESCALA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<RETENCION_COMPRAS_ESCALA> RETENCION_COMPRAS_ESCALA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"RETENCION_COMPRAS_BASE_CALCULO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<RETENCION_COMPRAS_BASE_CALCULO> RETENCION_COMPRAS_BASE_CALCULO { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface RETENCION_COMPRAS_ESCALA {\n    ID_RETENCION_COMPRAS_ESCALA: number;\n    ID_RETENCION_COMPRAS: number;\n    DES_TRA: number;\n    HAS_TRA: number;\n    IMP_EXCEDE: number;\n    IMP_FIJO: number;\n    PORCE_RET: number;\n    APLICA_SOB: string;\n}\n\nexport interface RETENCION_COMPRAS_BASE_CALCULO {\n    ID_RETENCION_COMPRAS_BASE_CALCULO: number;\n    ID_RETENCION_COMPRAS: number;\n    ID_BASE_CALCULO_RETENCION: number;\n    ID_CLASIFICACION_RETENCION: number;\n    MINIMO_BASE_CALCULO: number;\n}\n\nexport interface RETENCION_COMPRAS {\n    ID_RETENCION_COMPRAS: number;\n    COD_RETEN: string;\n    DESCRIPCIO: string | undefined;\n    TIPO_RETEN: string;\n    ID_CPA57: number | undefined;\n    COD_ANEXO: number | undefined;\n    LEYENDA: string | undefined;\n    ID_CUENTA: number | undefined;\n    ID_TALONARIO: number | undefined;\n    ID_TALONARIO_CPR: number | undefined;\n    TIPO_CALCU: string | undefined;\n    ID_MODELO: number | undefined;\n    PADRON: number | undefined;\n    GRUPO: string | undefined;\n    ID_BASE_CALCULO: number | undefined;\n    ID_BASE_ANALISIS_1: number | undefined;\n    SUP_IMP1: number | undefined;\n    ID_BASE_ANALISIS_2: number | undefined;\n    SUP_IMP2: number | undefined;\n    ID_ACUMULA_PAGOS: number | undefined;\n    CALC_SOBRE: string | undefined;\n    MINIMO_BASE_CALCULO: number | undefined;\n    MINIMO: number | undefined;\n    NO_IMPONIB: number | undefined;\n    PORCENTAJE: number | undefined;\n    CM_COEFICIENTE_MINIMO: number | undefined;\n    OBSERVACIONES: string | undefined;\n    CALCULA_TOTAL_RETENCION_EN_PRIMER_PAGO: boolean;\n    ID_RETENCION_ASOCIADA: number | undefined;\n    BASE_CALCULO_POR_CLASIFICACION: boolean;\n    RETENCION_COMPRAS_ESCALA: RETENCION_COMPRAS_ESCALA[] | undefined;\n    RETENCION_COMPRAS_BASE_CALCULO: RETENCION_COMPRAS_BASE_CALCULO[] | undefined;\n}",
+          "example": {
+            "ID_RETENCION_COMPRAS": 0,
+            "COD_RETEN": null,
+            "DESCRIPCIO": null,
+            "TIPO_RETEN": null,
+            "ID_CPA57": 0,
+            "COD_ANEXO": 0,
+            "LEYENDA": null,
+            "ID_CUENTA": 0,
+            "ID_TALONARIO": 0,
+            "ID_TALONARIO_CPR": 0,
+            "TIPO_CALCU": "A",
+            "ID_MODELO": 0,
+            "PADRON": 0,
+            "GRUPO": null,
+            "ID_BASE_CALCULO": 0,
+            "ID_BASE_ANALISIS_1": 0,
+            "SUP_IMP1": 0,
+            "ID_BASE_ANALISIS_2": 0,
+            "SUP_IMP2": 0,
+            "ID_ACUMULA_PAGOS": 0,
+            "CALC_SOBRE": null,
+            "MINIMO_BASE_CALCULO": 0,
+            "MINIMO": 0,
+            "NO_IMPONIB": 0,
+            "PORCENTAJE": 0,
+            "CM_COEFICIENTE_MINIMO": 0,
+            "OBSERVACIONES": null,
+            "CALCULA_TOTAL_RETENCION_EN_PRIMER_PAGO": false,
+            "ID_RETENCION_ASOCIADA": 0,
+            "BASE_CALCULO_POR_CLASIFICACION": false,
+            "RETENCION_COMPRAS_ESCALA": [
+              {
+                "ID_RETENCION_COMPRAS_ESCALA": 0,
+                "ID_RETENCION_COMPRAS": 0,
+                "DES_TRA": 0,
+                "HAS_TRA": 0,
+                "IMP_EXCEDE": 0,
+                "IMP_FIJO": 0,
+                "PORCE_RET": 0,
+                "APLICA_SOB": null
+              }
+            ],
+            "RETENCION_COMPRAS_BASE_CALCULO": [
+              {
+                "ID_RETENCION_COMPRAS_BASE_CALCULO": 0,
+                "ID_RETENCION_COMPRAS": 0,
+                "ID_BASE_CALCULO_RETENCION": 0,
+                "ID_CLASIFICACION_RETENCION": 0,
+                "MINIMO_BASE_CALCULO": 0
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "RETENCION_COMPRAS": [
+      "RETENCION_COMPRAS_ESCALA",
+      "RETENCION_COMPRAS_BASE_CALCULO",
+      "COD_RETEN",
+      "DESCRIPCIO",
+      "TIPO_RETEN",
+      "ID_CPA57",
+      "COD_ANEXO",
+      "LEYENDA",
+      "ID_CUENTA",
+      "ID_TALONARIO",
+      "ID_TALONARIO_CPR",
+      "TIPO_CALCU",
+      "ID_MODELO",
+      "PADRON",
+      "GRUPO",
+      "ID_BASE_CALCULO",
+      "ID_BASE_ANALISIS_1",
+      "SUP_IMP1",
+      "ID_BASE_ANALISIS_2",
+      "SUP_IMP2",
+      "ID_ACUMULA_PAGOS",
+      "CALC_SOBRE",
+      "MINIMO_BASE_CALCULO",
+      "MINIMO",
+      "NO_IMPONIB",
+      "PORCENTAJE",
+      "CM_COEFICIENTE_MINIMO",
+      "OBSERVACIONES",
+      "CALCULA_TOTAL_RETENCION_EN_PRIMER_PAGO",
+      "ID_RETENCION_ASOCIADA",
+      "BASE_CALCULO_POR_CLASIFICACION"
+    ],
+    "RETENCION_COMPRAS_ESCALA": [
+      "ID_RETENCION_COMPRAS",
+      "DES_TRA",
+      "HAS_TRA",
+      "IMP_EXCEDE",
+      "IMP_FIJO",
+      "PORCE_RET",
+      "APLICA_SOB"
+    ],
+    "RETENCION_COMPRAS_BASE_CALCULO": [
+      "ID_RETENCION_COMPRAS",
+      "ID_BASE_CALCULO_RETENCION",
+      "ID_CLASIFICACION_RETENCION",
+      "MINIMO_BASE_CALCULO"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}

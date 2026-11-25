@@ -1,0 +1,343 @@
+{
+  "title": "Parámetros para códigos de barra",
+  "moduleId": 10023,
+  "paths": [
+    {
+      "title": "Alta",
+      "name": "Api/Create",
+      "httpMethod": "POST",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"GVA117\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"DESCRIPCIO\",\r\n    \"EMPRESA_DE_COBRO\",\r\n    \"COD_EMPRES\",\r\n    \"MASC_FECHA\",\r\n    \"MASC_NUM\"\r\n  ],\r\n  \"properties\": {\r\n    \"EMP_COBRO1\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"DESCRIPCIO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 20,\r\n      \"minLength\": 0\r\n    },\r\n    \"EMPRESA_DE_COBRO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_EMPRES\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"SEPARA_CAM\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"SIMBOL_CAM\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SEPARA_FEC\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"SIMBOL_FEC\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"MASC_FECHA\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"SEPARA_NUM\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"SIMBOL_NUM\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SEPARA_DEC\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"SIMBOL_DEC\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"CANT_DECI\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"MASC_NUM\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_FAC_A\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_FAC_B\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_FAC_C\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_FAC_E\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_FAC_M\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SIMBOL_CTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SIMBOL_EXT\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"FILLER\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 100,\r\n      \"minLength\": 0\r\n    },\r\n    \"GVA118\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/GVA118\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"GVA118\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"EMP_COBRO\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"COLUMNA\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"VARIABLE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 3,\r\n          \"minLength\": 0\r\n        },\r\n        \"LEYEN_COL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        },\r\n        \"DESDE_POS\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"LONGITUD\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"TIPO_DATO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"FILLER\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA118\n    {\n        [Newtonsoft.Json.JsonProperty(\"EMP_COBRO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? EMP_COBRO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COLUMNA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? COLUMNA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VARIABLE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string VARIABLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYEN_COL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string LEYEN_COL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESDE_POS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? DESDE_POS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LONGITUD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? LONGITUD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_DATO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_DATO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FILLER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string FILLER { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA117\n    {\n        [Newtonsoft.Json.JsonProperty(\"EMP_COBRO1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? EMP_COBRO1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESCRIPCIO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string DESCRIPCIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EMPRESA_DE_COBRO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string EMPRESA_DE_COBRO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_EMPRES\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_EMPRES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SEPARA_CAM\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? SEPARA_CAM { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOL_CAM\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOL_CAM { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SEPARA_FEC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? SEPARA_FEC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOL_FEC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOL_FEC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MASC_FECHA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string MASC_FECHA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SEPARA_NUM\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? SEPARA_NUM { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOL_NUM\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOL_NUM { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SEPARA_DEC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? SEPARA_DEC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOL_DEC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOL_DEC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_DECI\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? CANT_DECI { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MASC_NUM\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string MASC_NUM { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_FAC_A\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string COD_FAC_A { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_FAC_B\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string COD_FAC_B { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_FAC_C\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string COD_FAC_C { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_FAC_E\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string COD_FAC_E { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_FAC_M\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string COD_FAC_M { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOL_CTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOL_CTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOL_EXT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOL_EXT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FILLER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string FILLER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GVA118\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<GVA118> GVA118 { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface GVA118 {\n    EMP_COBRO: number | undefined;\n    COLUMNA: number | undefined;\n    VARIABLE: string | undefined;\n    LEYEN_COL: string | undefined;\n    DESDE_POS: number | undefined;\n    LONGITUD: number | undefined;\n    TIPO_DATO: string | undefined;\n    FILLER: string | undefined;\n}\n\nexport interface GVA117 {\n    EMP_COBRO1: number | undefined;\n    DESCRIPCIO: string;\n    EMPRESA_DE_COBRO: string;\n    COD_EMPRES: string;\n    SEPARA_CAM: boolean | undefined;\n    SIMBOL_CAM: string | undefined;\n    SEPARA_FEC: boolean | undefined;\n    SIMBOL_FEC: string | undefined;\n    MASC_FECHA: string;\n    SEPARA_NUM: boolean | undefined;\n    SIMBOL_NUM: string | undefined;\n    SEPARA_DEC: boolean | undefined;\n    SIMBOL_DEC: string | undefined;\n    CANT_DECI: number | undefined;\n    MASC_NUM: string;\n    COD_FAC_A: string | undefined;\n    COD_FAC_B: string | undefined;\n    COD_FAC_C: string | undefined;\n    COD_FAC_E: string | undefined;\n    COD_FAC_M: string | undefined;\n    SIMBOL_CTE: string | undefined;\n    SIMBOL_EXT: string | undefined;\n    FILLER: string | undefined;\n    GVA118: GVA118[] | undefined;\n}",
+          "example": {
+            "EMP_COBRO1": 0,
+            "DESCRIPCIO": null,
+            "EMPRESA_DE_COBRO": "P",
+            "COD_EMPRES": null,
+            "SEPARA_CAM": false,
+            "SIMBOL_CAM": null,
+            "SEPARA_FEC": false,
+            "SIMBOL_FEC": null,
+            "MASC_FECHA": "dd/mm/aaaa",
+            "SEPARA_NUM": false,
+            "SIMBOL_NUM": null,
+            "SEPARA_DEC": false,
+            "SIMBOL_DEC": null,
+            "CANT_DECI": 2,
+            "MASC_NUM": "C",
+            "COD_FAC_A": "1",
+            "COD_FAC_B": "2",
+            "COD_FAC_C": "3",
+            "COD_FAC_E": null,
+            "COD_FAC_M": null,
+            "SIMBOL_CTE": "0",
+            "SIMBOL_EXT": "1",
+            "FILLER": null,
+            "GVA118": [
+              {
+                "EMP_COBRO": null,
+                "COLUMNA": 1,
+                "VARIABLE": "@CE",
+                "LEYEN_COL": "Código de Empresa",
+                "DESDE_POS": 1,
+                "LONGITUD": 10,
+                "TIPO_DATO": "N",
+                "FILLER": null
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Baja",
+      "name": "Api/Delete",
+      "httpMethod": "DELETE",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Modificación",
+      "name": "Api/Update",
+      "httpMethod": "PUT",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "methodName": null,
+          "sourceId": "Body",
+          "typeName": "JObject",
+          "schema": "{\r\n  \"$schema\": \"http://json-schema.org/draft-04/schema#\",\r\n  \"title\": \"GVA117\",\r\n  \"type\": \"object\",\r\n  \"additionalProperties\": false,\r\n  \"required\": [\r\n    \"DESCRIPCIO\",\r\n    \"EMPRESA_DE_COBRO\",\r\n    \"COD_EMPRES\",\r\n    \"MASC_FECHA\",\r\n    \"MASC_NUM\"\r\n  ],\r\n  \"properties\": {\r\n    \"ID_GVA117\": {\r\n      \"type\": \"integer\",\r\n      \"format\": \"int32\"\r\n    },\r\n    \"EMP_COBRO1\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"DESCRIPCIO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 20,\r\n      \"minLength\": 0\r\n    },\r\n    \"EMPRESA_DE_COBRO\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_EMPRES\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"SEPARA_CAM\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"SIMBOL_CAM\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SEPARA_FEC\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"SIMBOL_FEC\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"MASC_FECHA\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 10,\r\n      \"minLength\": 0\r\n    },\r\n    \"SEPARA_NUM\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"SIMBOL_NUM\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SEPARA_DEC\": {\r\n      \"type\": [\r\n        \"boolean\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"SIMBOL_DEC\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"CANT_DECI\": {\r\n      \"type\": [\r\n        \"integer\",\r\n        \"null\"\r\n      ]\r\n    },\r\n    \"MASC_NUM\": {\r\n      \"type\": \"string\",\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_FAC_A\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_FAC_B\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_FAC_C\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_FAC_E\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"COD_FAC_M\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SIMBOL_CTE\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"SIMBOL_EXT\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 1,\r\n      \"minLength\": 0\r\n    },\r\n    \"FILLER\": {\r\n      \"type\": [\r\n        \"null\",\r\n        \"string\"\r\n      ],\r\n      \"maxLength\": 100,\r\n      \"minLength\": 0\r\n    },\r\n    \"GVA118\": {\r\n      \"type\": [\r\n        \"array\",\r\n        \"null\"\r\n      ],\r\n      \"items\": {\r\n        \"$ref\": \"#/definitions/GVA118\"\r\n      }\r\n    }\r\n  },\r\n  \"definitions\": {\r\n    \"GVA118\": {\r\n      \"type\": \"object\",\r\n      \"additionalProperties\": false,\r\n      \"properties\": {\r\n        \"ID_GVA118\": {\r\n          \"type\": \"integer\",\r\n          \"format\": \"int32\"\r\n        },\r\n        \"EMP_COBRO\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"COLUMNA\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"VARIABLE\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 3,\r\n          \"minLength\": 0\r\n        },\r\n        \"LEYEN_COL\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        },\r\n        \"DESDE_POS\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"LONGITUD\": {\r\n          \"type\": [\r\n            \"integer\",\r\n            \"null\"\r\n          ]\r\n        },\r\n        \"TIPO_DATO\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 1,\r\n          \"minLength\": 0\r\n        },\r\n        \"FILLER\": {\r\n          \"type\": [\r\n            \"null\",\r\n            \"string\"\r\n          ],\r\n          \"maxLength\": 20,\r\n          \"minLength\": 0\r\n        }\r\n      }\r\n    }\r\n  }\r\n}",
+          "csharp": "//----------------------\n// <auto-generated>\n//     Generated using the NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\nnamespace MyNamespace\n{\n    #pragma warning disable // Disable all warnings\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA118\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA118\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_GVA118 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EMP_COBRO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? EMP_COBRO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COLUMNA\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? COLUMNA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"VARIABLE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(3)]\n        public string VARIABLE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LEYEN_COL\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string LEYEN_COL { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESDE_POS\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? DESDE_POS { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"LONGITUD\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? LONGITUD { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"TIPO_DATO\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string TIPO_DATO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FILLER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string FILLER { get; set; }\n\n\n    }\n\n    [System.CodeDom.Compiler.GeneratedCode(\"NJsonSchema\", \"10.9.0.0 (Newtonsoft.Json v13.0.0.0)\")]\n    public partial class GVA117\n    {\n        [Newtonsoft.Json.JsonProperty(\"ID_GVA117\", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int ID_GVA117 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EMP_COBRO1\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? EMP_COBRO1 { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"DESCRIPCIO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(20)]\n        public string DESCRIPCIO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"EMPRESA_DE_COBRO\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string EMPRESA_DE_COBRO { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_EMPRES\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string COD_EMPRES { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SEPARA_CAM\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? SEPARA_CAM { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOL_CAM\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOL_CAM { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SEPARA_FEC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? SEPARA_FEC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOL_FEC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOL_FEC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MASC_FECHA\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(10)]\n        public string MASC_FECHA { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SEPARA_NUM\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? SEPARA_NUM { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOL_NUM\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOL_NUM { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SEPARA_DEC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public bool? SEPARA_DEC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOL_DEC\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOL_DEC { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"CANT_DECI\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public int? CANT_DECI { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"MASC_NUM\", Required = Newtonsoft.Json.Required.Always)]\n        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string MASC_NUM { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_FAC_A\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string COD_FAC_A { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_FAC_B\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string COD_FAC_B { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_FAC_C\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string COD_FAC_C { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_FAC_E\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string COD_FAC_E { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"COD_FAC_M\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string COD_FAC_M { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOL_CTE\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOL_CTE { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"SIMBOL_EXT\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(1)]\n        public string SIMBOL_EXT { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"FILLER\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        [System.ComponentModel.DataAnnotations.StringLength(100)]\n        public string FILLER { get; set; }\n\n        [Newtonsoft.Json.JsonProperty(\"GVA118\", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]\n        public System.Collections.Generic.ICollection<GVA118> GVA118 { get; set; }\n\n\n    }\n}",
+          "typescript": "//----------------------\n// <auto-generated>\n//     Generated using the NSwag toolchain v10.9.0.0 (Newtonsoft.Json v13.0.0.0) (http://NJsonSchema.org)\n// </auto-generated>\n//----------------------\n\n\n\n\n\n\n\nexport interface GVA118 {\n    ID_GVA118: number;\n    EMP_COBRO: number | undefined;\n    COLUMNA: number | undefined;\n    VARIABLE: string | undefined;\n    LEYEN_COL: string | undefined;\n    DESDE_POS: number | undefined;\n    LONGITUD: number | undefined;\n    TIPO_DATO: string | undefined;\n    FILLER: string | undefined;\n}\n\nexport interface GVA117 {\n    ID_GVA117: number;\n    EMP_COBRO1: number | undefined;\n    DESCRIPCIO: string;\n    EMPRESA_DE_COBRO: string;\n    COD_EMPRES: string;\n    SEPARA_CAM: boolean | undefined;\n    SIMBOL_CAM: string | undefined;\n    SEPARA_FEC: boolean | undefined;\n    SIMBOL_FEC: string | undefined;\n    MASC_FECHA: string;\n    SEPARA_NUM: boolean | undefined;\n    SIMBOL_NUM: string | undefined;\n    SEPARA_DEC: boolean | undefined;\n    SIMBOL_DEC: string | undefined;\n    CANT_DECI: number | undefined;\n    MASC_NUM: string;\n    COD_FAC_A: string | undefined;\n    COD_FAC_B: string | undefined;\n    COD_FAC_C: string | undefined;\n    COD_FAC_E: string | undefined;\n    COD_FAC_M: string | undefined;\n    SIMBOL_CTE: string | undefined;\n    SIMBOL_EXT: string | undefined;\n    FILLER: string | undefined;\n    GVA118: GVA118[] | undefined;\n}",
+          "example": {
+            "ID_GVA117": 0,
+            "EMP_COBRO1": 0,
+            "DESCRIPCIO": null,
+            "EMPRESA_DE_COBRO": "P",
+            "COD_EMPRES": null,
+            "SEPARA_CAM": false,
+            "SIMBOL_CAM": null,
+            "SEPARA_FEC": false,
+            "SIMBOL_FEC": null,
+            "MASC_FECHA": "dd/mm/aaaa",
+            "SEPARA_NUM": false,
+            "SIMBOL_NUM": null,
+            "SEPARA_DEC": false,
+            "SIMBOL_DEC": null,
+            "CANT_DECI": 2,
+            "MASC_NUM": "C",
+            "COD_FAC_A": "1",
+            "COD_FAC_B": "2",
+            "COD_FAC_C": "3",
+            "COD_FAC_E": null,
+            "COD_FAC_M": null,
+            "SIMBOL_CTE": "0",
+            "SIMBOL_EXT": "1",
+            "FILLER": null,
+            "GVA118": [
+              {
+                "ID_GVA118": 0,
+                "EMP_COBRO": null,
+                "COLUMNA": 1,
+                "VARIABLE": "@CE",
+                "LEYEN_COL": "Código de Empresa",
+                "DESDE_POS": 1,
+                "LONGITUD": 10,
+                "TIPO_DATO": "N",
+                "FILLER": null
+              }
+            ]
+          },
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Consulta",
+      "name": "Api/Get",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "pageSize",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 10
+        },
+        {
+          "name": "pageIndex",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": 0
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    },
+    {
+      "title": "Registro",
+      "name": "Api/GetById",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "title": "Avanzada",
+      "name": "Api/GetByFilter",
+      "httpMethod": "GET",
+      "parameters": [
+        {
+          "name": "process",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "Int32",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 0,
+          "defaultValue": null
+        },
+        {
+          "name": "view",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        },
+        {
+          "name": "filtroSql",
+          "methodName": null,
+          "sourceId": "Query",
+          "typeName": "String",
+          "schema": null,
+          "csharp": null,
+          "typescript": null,
+          "example": null,
+          "pathKind": 1,
+          "defaultValue": ""
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "GVA117": [
+      "GVA118",
+      "EMP_COBRO",
+      "DESCRIPCIO",
+      "EMPRESA_DE_COBRO",
+      "COD_EMPRES",
+      "SEPARA_CAM",
+      "SIMBOL_CAM",
+      "SEPARA_FEC",
+      "SIMBOL_FEC",
+      "MASC_FECHA",
+      "SEPARA_NUM",
+      "SIMBOL_NUM",
+      "SEPARA_DEC",
+      "SIMBOL_DEC",
+      "CANT_DECI",
+      "MASC_NUM",
+      "COD_FAC_A",
+      "COD_FAC_B",
+      "COD_FAC_C",
+      "COD_FAC_E",
+      "COD_FAC_M",
+      "SIMBOL_CTE",
+      "SIMBOL_EXT",
+      "FILLER"
+    ],
+    "GVA118": [
+      "EMP_COBRO",
+      "COLUMNA",
+      "VARIABLE",
+      "LEYEN_COL",
+      "DESDE_POS",
+      "LONGITUD",
+      "TIPO_DATO",
+      "FILLER"
+    ]
+  },
+  "message": null,
+  "exceptionInfo": null,
+  "succeeded": true
+}
