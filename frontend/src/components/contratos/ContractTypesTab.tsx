@@ -8,7 +8,7 @@ import { InfoModal } from '../ui/InfoModal';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { BloqueEstado } from '../ui/BloqueEstado';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faTrash, faCopy, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo, faFilePdf, faArrowUpRightFromSquare, faTriangleExclamation, faUserShield, faRocket } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faTrash, faCopy, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo, faFilePdf, faArrowUpRightFromSquare, faTriangleExclamation, faUserShield, faRocket, faIdCard } from '@fortawesome/free-solid-svg-icons';
 import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { contratoFrameAPI, ContratoFrameItem, contratosDePlantilla, plantillaEsDeContrato } from '../../api/contratosFrame';
 import { releasesAPI, Release } from '../../api/release';
@@ -21,7 +21,7 @@ import { esEstadoDeFirma, tipoEnviaAFirmar } from '@compartido/estadosFirma';
 import { SelectorCodigoArca } from '../arca/SelectorCodigoArca';
 import { MODALIDADES_OFRECIDAS } from './afipCompleteness';
 import { EstadoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
-import { estadoImpositivoElegido, estadoGeneraAltaTemprana, conImpositivoGarantizado } from './altaTemprana';
+import { estadoImpositivoElegido, estadoGeneraAltaTemprana, estadoPideConstanciaCuit, conImpositivoGarantizado } from './altaTemprana';
 import { usePuedeAbrir } from '../../hooks/usePuedeAbrir';
 import { faGripVertical, faCheck, faMultiply } from '@fortawesome/free-solid-svg-icons';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
@@ -70,6 +70,8 @@ interface FormState {
   requiereFirma: boolean;
   requiereFirmaRelease: boolean;
   requiereFirmaAlta: boolean;
+  /** «Valida el CUIT en ARCA antes de Contratos»: sólo se muestra con un estado de constancia de CUIT. */
+  validaCuit: boolean;
   isActive: boolean;
   /** Estados (no globales) que van a quedar vinculados a TODAS las Plantillas de este Contrato. */
   estadoIds: string[];
@@ -80,7 +82,7 @@ interface FormState {
   generaAlta: boolean;
 }
 
-const FORM_VACIO: FormState = { name: '', descripcion: '', importesEnCero: false, formasPagoIds: [], cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, modoFechas: 'periodo', requiereFirma: true, requiereFirmaRelease: true, requiereFirmaAlta: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
+const FORM_VACIO: FormState = { name: '', descripcion: '', importesEnCero: false, formasPagoIds: [], cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, modoFechas: 'periodo', requiereFirma: true, requiereFirmaRelease: true, requiereFirmaAlta: true, validaCuit: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
 
 const BadgeTiempoIndeterminado: React.FC = () => (
   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
@@ -99,6 +101,14 @@ const BadgeFirma: React.FC<{ activo: boolean; que?: string }> = ({ activo, que =
   >
     <FontAwesomeIcon icon={faFileSignature} className="h-2.5 w-2.5" />
     {activo ? `Se envía a firmar ${que}` : `No se envía a firmar ${que}`}
+  </span>
+);
+
+/** Sólo cuando está apagado: lo normal es validar, y un badge en cada fila diciendo lo normal no aporta. */
+const BadgeSinValidarCuit: React.FC = () => (
+  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border-amber-100 dark:border-amber-800">
+    <FontAwesomeIcon icon={faIdCard} className="h-2.5 w-2.5" />
+    No valida el CUIT
   </span>
 );
 
@@ -424,6 +434,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
    */
   const estadoImpositivo = useMemo(() => estadoImpositivoElegido(estados, form.estadoIds), [estados, form.estadoIds]);
   const generaAlta = estadoGeneraAltaTemprana(estadoImpositivo);
+  const pideConstanciaCuit = estadoPideConstanciaCuit(estadoImpositivo);
   /** Hay algo cargado en los códigos: decide si vale la pena avisar que se conservan. */
   const hayCodigosCargados = !!(form.afipModalidadContrato || form.afipTipoServicio || form.afipModalidadLiquidacion);
   /**
@@ -719,6 +730,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       requiereFirma: contrato.data?.requiereFirma !== false,
       requiereFirmaRelease: contrato.data?.requiereFirmaRelease !== false,
       requiereFirmaAlta: contrato.data?.requiereFirmaAlta !== false,
+      validaCuit: contrato.data?.validaCuit !== false,
       isActive: contrato.isActive !== false,
       // Si el contrato no tenía ninguno —quedaron así los de antes de esta regla— se muestra el
       // default elegido, a la vista y editable, en vez de dejar el formulario a medio llenar.
@@ -913,6 +925,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       requiereFirma: form.requiereFirma,
       requiereFirmaRelease: form.requiereFirmaRelease,
       requiereFirmaAlta: form.requiereFirmaAlta,
+      validaCuit: form.validaCuit,
       isActive: form.isActive,
       afipModalidadContrato: form.afipModalidadContrato.trim(),
       afipTipoServicio: form.afipTipoServicio.trim(),
@@ -1068,6 +1081,19 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
             <span className="text-gray-700 dark:text-gray-300">{x.texto}</span>
           </label>
         ))}
+      {/*
+        «VALIDA EL CUIT EN ARCA ANTES DE CONTRATOS» (25/11/2026). Sólo con un estado de constancia de CUIT
+        (Servicios). Prendido, el contrato pasa por Trámite impositivo › Constancia de CUIT y no llega a
+        Contratos hasta que el padrón diga activo (regla del 14/11). Apagado —Servicios Adicional e
+        Intercambio, donde la persona ya tiene una Jornada vigente y nadie factura—, el que no firma nada
+        nace en Contratos: un CUIT trabado en ARCA no lo deja clavado en el Paso 2.
+      */}
+      {pideConstanciaCuit && (
+        <label className="flex items-center gap-2 text-sm cursor-pointer mt-1.5 pt-1.5 border-t border-gray-200 dark:border-gray-700">
+          <input type="checkbox" checked={form.validaCuit} onChange={(e) => setForm((p) => ({ ...p, validaCuit: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+          <span className="text-gray-700 dark:text-gray-300">Valida el CUIT en ARCA antes de Contratos</span>
+        </label>
+      )}
     </div>
   );
 
@@ -1205,6 +1231,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                     <td className="px-4 py-3">
                       <BadgeFirma activo={contrato.data?.requiereFirma !== false} />
                       <BadgeFirma activo={contrato.data?.requiereFirmaRelease !== false} que="el release" />
+                      {contrato.data?.validaCuit === false && <BadgeSinValidarCuit />}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${contrato.isActive === false ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}>
@@ -1317,6 +1344,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                   {contrato.data?.esTiempoIndeterminado && <BadgeTiempoIndeterminado />}
                   <BadgeFirma activo={contrato.data?.requiereFirma !== false} />
                   <BadgeFirma activo={contrato.data?.requiereFirmaRelease !== false} que="el release" />
+                  {contrato.data?.validaCuit === false && <BadgeSinValidarCuit />}
                 </div>
 
                 {cantPlantillas > 0 && (
@@ -2049,6 +2077,9 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
           </p>
           <p>
             <strong>Se envía a firmar el alta de ARCA:</strong> aparece sólo si el estado impositivo es de alta temprana (Pedido de ARCA). Activado, el documento del alta ya cargado se suma al envío a firmar; desactivado, el alta no se manda.
+          </p>
+          <p>
+            <strong>Valida el CUIT en ARCA antes de Contratos:</strong> aparece sólo si el estado impositivo es de constancia de CUIT (Servicios). Activado, el contrato pasa por Trámite impositivo y no llega a Contratos hasta que el Padrón de ARCA diga que el CUIT está activo. Desactivado, el contrato que no se firma nace directamente en Contratos: es para Servicios Adicional e Intercambio, donde la persona ya tiene una Jornada vigente y nadie factura.
           </p>
         </div>
       </InfoModal>

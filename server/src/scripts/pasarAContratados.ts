@@ -3,7 +3,7 @@ import UserProject from "../models/UserProject.js";
 import { User } from "../models/User.js";
 import { Contrato } from "../models/Contrato.js";
 import { Info } from "../models/Info.js";
-import { tipoEnviaAFirmar } from "../compartido/estadosFirma.js";
+import { quedaContratadoAlCrearse, tipoEnviaAFirmar } from "../compartido/estadosFirma.js";
 import { estadoContratado, copiarConstanciaAContratados } from "../services/contratadoDirecto.js";
 
 /**
@@ -13,6 +13,11 @@ import { estadoContratado, copiarConstanciaAContratados } from "../services/cont
  * ARCA se guarda directo en el estado final (`services/contratadoDirecto.ts`). Los cargados antes
  * quedaron en los pasos 1 o 2 de Gestión de Contratos. Este script los lista y, con APLICAR=1, los
  * mueve. Sólo contratos de WeProdu (solicitud o «Agregar miembro») y sólo hacia adelante en el flujo.
+ *
+ * MISMA REGLA QUE AL CREAR (`quedaContratadoAlCrearse`): los de Servicios (constancia de CUIT) se quedan
+ * en el Paso 2 hasta validar el CUIT (14/11/2026), salvo que el tipo tenga apagado «Valida el CUIT en
+ * ARCA antes de Contratos» (25/11/2026). Los que se quedan por eso se listan aparte, por tipo, para que
+ * se vea qué destrabaría apagar el check en ese tipo.
  *
  *   npm run contratos:pasar-a-contratados            (solo lectura: lista lo que movería)
  *   APLICAR=1 npm run contratos:pasar-a-contratados  (escribe)
@@ -31,7 +36,7 @@ async function main() {
   const ordenDestino = Number(destino.data.ordenDependencia) || 0;
   console.log(`Estado «Contratados»: ${destino.name} (id ${destino.data.id}, paso ${ordenDestino})`);
 
-  const tipos: any[] = await Contrato.find().select("name data.requiereFirma data.requiereFirmaRelease data.requiereFirmaAlta").lean();
+  const tipos: any[] = await Contrato.find().select("name data.requiereFirma data.requiereFirmaRelease data.requiereFirmaAlta data.validaCuit").lean();
   const sinFirma = tipos.filter((t) => !tipoEnviaAFirmar({ ...(t.data || {}), generaAlta: false }));
   console.log(`Tipos que no mandan nada a firmar: ${sinFirma.map((t) => t.name).join(", ") || "ninguno"}\n`);
   if (!sinFirma.length) return;
@@ -39,6 +44,9 @@ async function main() {
   const estados: any[] = await Info.find({ type: "estado-empleado" }).select("name data.id data.tipoImpositivo data.ordenDependencia").lean();
   const estadoPorId = new Map(estados.map((e) => [Number(e.data?.id), e]));
   const tipoIds = sinFirma.map((t) => t._id);
+  const tipoPorId = new Map(sinFirma.map((t) => [String(t._id), t]));
+  /** Por tipo: cuántos se quedan en Constancia de CUIT porque el tipo valida el CUIT. */
+  const seQuedan = new Map<string, number>();
 
   const ups: any[] = await UserProject.find({ contracts: { $elemMatch: { contrato_id: { $in: tipoIds } } } });
   const nombres = new Map((await User.find({ _id: { $in: ups.map((u) => u.userId) } }).select("firstName lastName").lean()).map((u: any) => [String(u._id), `${u.lastName || ""}, ${u.firstName || ""}`]));
@@ -51,8 +59,16 @@ async function main() {
       if (!(c.solicitudId || c.origen === "agregar_miembro")) return;
       if (Number(c.estado_id) === Number(destino.data.id)) return;
       const actual = estadoPorId.get(Number(c.estado_id));
-      if (actual?.data?.tipoImpositivo === "alta_temprana_afip") return; // genera alta: sigue el circuito
       if ((Number(actual?.data?.ordenDependencia) || 0) >= ordenDestino) return; // sólo hacia adelante
+      const tipo = tipoPorId.get(String(c.contrato_id));
+      if (!quedaContratadoAlCrearse(tipo?.data || {}, actual?.data?.tipoImpositivo)) {
+        // Sigue el circuito: genera alta, o es de Servicios y su tipo valida el CUIT.
+        if (actual?.data?.tipoImpositivo === "constancia_cuit") {
+          const k = tipo?.name || String(c.contrato_id);
+          seQuedan.set(k, (seQuedan.get(k) || 0) + 1);
+        }
+        return;
+      }
       total += 1;
       console.log(`  ${nombres.get(String(up.userId)) || up.userId} · ${up.nombre_proyecto || up.projectId} · contrato ${i} · ${c.nombre_contrato || ""} · ${c.nombre_estado_empleado || "sin estado"} → ${destino.name}`);
       if (APLICAR) {
@@ -70,6 +86,10 @@ async function main() {
         console.log(`    constancia: ${r.path ? `copiada a ${r.path}` : `no se copió (${r.motivo})`}`);
       }
     }
+  }
+  if (seQuedan.size > 0) {
+    console.log("\nSe quedan en Constancia de CUIT porque su tipo valida el CUIT (apagar «Valida el CUIT en ARCA antes de Contratos» en el tipo los destraba):");
+    for (const [nombre, n] of seQuedan) console.log(`  ${nombre}: ${n} contrato(s)`);
   }
   console.log(`\n${total} contrato(s) ${APLICAR ? "movidos" : "se moverían"} a ${destino.name}.`);
 }

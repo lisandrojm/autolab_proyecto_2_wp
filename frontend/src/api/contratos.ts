@@ -26,6 +26,8 @@ export interface ContratoInput {
   requiereFirma?: boolean;
   requiereFirmaRelease?: boolean;
   requiereFirmaAlta?: boolean;
+  /** «Valida el CUIT en ARCA antes de Contratos» (sólo con constancia de CUIT). */
+  validaCuit?: boolean;
   isActive?: boolean;
   afipModalidadContrato?: string;
   afipTipoServicio?: string;

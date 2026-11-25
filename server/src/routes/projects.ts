@@ -2171,7 +2171,8 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       DIRECTO A CONTRATADOS (28/10/2026): un contrato NUEVO de un tipo que no manda nada a firmar ni
       lleva trámite impositivo no pasa por los pasos 1 a 5 de Gestión de Contratos. Se guarda ya en el
       estado final. Editar uno existente no le cambia el estado. Los de Servicios NO (14/11/2026): se
-      quedan en Constancia de CUIT hasta que se valide el CUIT.
+      quedan en Constancia de CUIT hasta que se valide el CUIT, salvo que el tipo tenga apagado «Valida el
+      CUIT en ARCA antes de Contratos» (25/11/2026, Servicios Adicional e Intercambio).
     */
     {
       const esNuevo = (contractIndex === undefined || contractIndex === null || contractIndex === "") && !isUpdate;

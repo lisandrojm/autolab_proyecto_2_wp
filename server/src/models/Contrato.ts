@@ -65,6 +65,12 @@ export interface IContrato extends Document {
      */
     requiereFirmaAlta?: boolean;
     /**
+     * «Valida el CUIT en ARCA antes de Contratos»: sólo cuenta si el estado impositivo del tipo es de
+     * constancia de CUIT (Servicios). Apagado, el contrato que no firma nada nace en Contratos sin pasar
+     * por el Paso 2 (ver `compartido/estadosFirma.ts`). Sin el campo = sí.
+     */
+    validaCuit?: boolean;
+    /**
      * Códigos AFIP para la generación del TXT de Alta masiva. Son específicos del convenio/modalidad,
      * por eso se cargan por Tipo de Contrato. Se guardan como string para conservar ceros a la izquierda.
      */
@@ -129,6 +135,7 @@ const contratoSchema = new Schema<IContrato>(
       requiereFirma: { type: Boolean, default: true },
       requiereFirmaRelease: { type: Boolean, default: true },
       requiereFirmaAlta: { type: Boolean, default: true },
+      validaCuit: { type: Boolean, default: true },
       afipModalidadContrato: { type: String },
       afipTipoServicio: { type: String },
       afipActividad: { type: String },

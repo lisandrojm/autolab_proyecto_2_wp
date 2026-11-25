@@ -27,6 +27,8 @@ export async function estadoContratado(): Promise<IInfo | null> {
  *
  * DESDE EL 14/11/2026 LOS DE SERVICIOS (constancia de CUIT) NO: aunque no firmen nada pasan por Trámite
  * impositivo › Constancia de CUIT, y recién con el CUIT validado van a Contratos (`destinoSiNoSeFirma`).
+ * Salvo que el tipo tenga apagado «Valida el CUIT en ARCA antes de Contratos» (25/11/2026): Servicios
+ * Adicional e Intercambio, donde nadie factura. Ver `quedaContratadoAlCrearse`.
  *
  * Si genera alta lo dice el estado impositivo que ya trae el contrato (el de su plantilla): el
  * `generaAlta` guardado en el tipo quedó viejo, ahora lo decide ese estado (ver ContractTypesTab).
@@ -69,10 +71,10 @@ export async function tipoGeneraDocumentos(contrato: any): Promise<boolean> {
 
 export async function estadoDirectoAContratado(contratoId: unknown, estadoId: unknown): Promise<IInfo | null> {
   if (!contratoId || !Types.ObjectId.isValid(String(contratoId))) return null;
-  const tipo: any = await Contrato.findById(contratoId).select("data.requiereFirma data.requiereFirmaRelease data.requiereFirmaAlta").lean();
+  const tipo: any = await Contrato.findById(contratoId).select("data.requiereFirma data.requiereFirmaRelease data.requiereFirmaAlta data.validaCuit").lean();
   if (!tipo) return null;
   const estadoActual: any = Number.isFinite(Number(estadoId)) && estadoId !== "" && estadoId != null ? await Info.findOne({ type: ESTADO_TYPE, "data.id": Number(estadoId) }).select("data.tipoImpositivo").lean() : null;
-  // Servicios (constancia de CUIT) no nace contratado aunque no firme nada: primero se valida el CUIT (ver `quedaContratadoAlCrearse`).
+  // Servicios (constancia de CUIT) no nace contratado aunque no firme nada: primero se valida el CUIT, salvo que el tipo lo tenga apagado (ver `quedaContratadoAlCrearse`).
   if (!quedaContratadoAlCrearse(tipo.data || {}, estadoActual?.data?.tipoImpositivo)) return null;
   return estadoContratado();
 }
