@@ -24,6 +24,8 @@ import * as XLSX from "xlsx";
 import { usePuedeAbrir } from "../../../hooks/usePuedeAbrir";
 import { fechaDeCalendario } from "../../../utils/fechas";
 import { PlanillaJornalerosModal } from "../../solicitudes/PlanillaJornalerosModal";
+import { ChipsTodosMenos } from "../../ui/ChipsTodosMenos";
+import { modalidadesApi } from "../../../api/modalidades";
 
 
 interface NewsReportsModalProps {
@@ -735,6 +737,17 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
    */
   const [tiposSeleccionados, setTiposSeleccionados] = useState<string[]>([]);
   const alternarTipo = (tipo: string) => setTiposSeleccionados((previos) => (previos.includes(tipo) ? previos.filter((t) => t !== tipo) : [...previos, tipo]));
+  /**
+   * MODALIDAD DEL CONTRATO (25/11/2026): Presencial / Remoto / Híbrido, el ABM del tenant. Vacío = todas.
+   * Un contrato sin modalidad cargada es de la por defecto (`esDefault` del catálogo): así lo lee todo el
+   * sistema (`services/modalidades.ts`), y así se filtra acá. Una fila entra si ALGUNO de sus contratos
+   * del período es de alguna de las modalidades incluidas.
+   */
+  const [modalidadesSeleccionadas, setModalidadesSeleccionadas] = useState<string[]>([]);
+  const alternarModalidad = (m: string) => setModalidadesSeleccionadas((previos) => (previos.includes(m) ? previos.filter((x) => x !== m) : [...previos, m]));
+  const [modalidadesCatalogo, setModalidadesCatalogo] = useState<{ name: string; esDefault?: boolean }[]>([]);
+  const nombresDeModalidades = useMemo(() => modalidadesCatalogo.map((m) => m.name), [modalidadesCatalogo]);
+  const modalidadPorDefecto = useMemo(() => modalidadesCatalogo.find((m) => m.esDefault)?.name || modalidadesCatalogo[0]?.name || "Presencial", [modalidadesCatalogo]);
 
   /*
     LOS FILTROS QUE RESUELVE EL SERVER — los mismos que Gestionar Equipo.
@@ -864,6 +877,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     void roleFrameAPI.list().then((r: any) => setRolesCatalogo(r)).catch(() => setRolesCatalogo([]));
     void areasAPI.listAll().then((a: any) => setAreasCatalogo(a)).catch(() => setAreasCatalogo([]));
     void shiftsAPI.getAll().then((s: any) => setTurnosCatalogo(s)).catch(() => setTurnosCatalogo([]));
+    // El ABM de modalidades, para el filtro «Modalidad» (activas; la por defecto viene marcada).
+    void modalidadesApi.list().then((m: any[]) => setModalidadesCatalogo((m || []).filter((x) => x?.activo !== false).map((x) => ({ name: String(x.name || ""), esDefault: !!x.esDefault })).filter((x) => x.name))).catch(() => setModalidadesCatalogo([]));
   }, [isOpen]);
 
   /*
@@ -992,6 +1007,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       setGlossary(overtimeUtils.getGlossary());
       setShowActiveTableOnly(true);
       setTiposSeleccionados([]);
+      setModalidadesSeleccionadas([]);
       setShowStats(false);
     }
   }, [isOpen]);
@@ -1152,6 +1168,11 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           const hasType = targetsForFilter.some((c) => tiposSeleccionados.includes(c.nombre_contrato || nombreTipoPorId.get(String(c.tipo_contrato_id ?? "")) || ""));
           if (!hasType) return;
         }
+        // Modalidad del contrato: sin dato es la por defecto del tenant.
+        if (modalidadesSeleccionadas.length > 0) {
+          const targetsForFilter = showActiveTableOnly ? activeContracts : allContracts;
+          if (!targetsForFilter.some((c) => modalidadesSeleccionadas.includes(c.nombre_modalidad || modalidadPorDefecto))) return;
+        }
 
         const mapKey = `${userIdStr}-${normName}`;
 
@@ -1307,6 +1328,10 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             // los contratos importados, que traen el tipo en `tipo_contrato_id` y el nombre vacío.
             const hasType = targetsForFilter.some((c) => tiposSeleccionados.includes(c.nombre_contrato || nombreTipoPorId.get(String(c.tipo_contrato_id ?? "")) || ""));
             if (!hasType) return;
+          }
+          if (modalidadesSeleccionadas.length > 0) {
+            const targetsForFilter = showActiveTableOnly ? activeContracts : matchContracts;
+            if (!targetsForFilter.some((c) => modalidadesSeleccionadas.includes(c.nombre_modalidad || modalidadPorDefecto))) return;
           }
 
           const targets = showActiveTableOnly ? activeContracts : matchContracts;
@@ -1563,7 +1588,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     if (soloConExtras) results = results.filter((s) => s.overtimeHours > 0);
 
     return results.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
-  }, [partesDelPeriodo, fechasFeriado, dateFrom, dateTo, proyectosSeleccionados, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, tiposSeleccionados, rolesEmpresaSeleccionados, soloConAusencias, soloConExtras, clavesPermitidas, economiaPorFila, areaTurnoDeContratos, areasSeleccionadas, turnosSeleccionados]);
+  }, [partesDelPeriodo, fechasFeriado, dateFrom, dateTo, proyectosSeleccionados, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, tiposSeleccionados, modalidadesSeleccionadas, modalidadPorDefecto, rolesEmpresaSeleccionados, soloConAusencias, soloConExtras, clavesPermitidas, economiaPorFila, areaTurnoDeContratos, areasSeleccionadas, turnosSeleccionados]);
 
   /**
    * LAS OPCIONES SALEN DEL PERÍODO, no del sistema entero.
@@ -1792,6 +1817,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       [
         proyectosSeleccionados.length > 0,
         tiposSeleccionados.length > 0,
+        modalidadesSeleccionadas.length > 0,
         rolesEmpresaSeleccionados.length > 0,
         !showActiveTableOnly,
         soloConAusencias,
@@ -1801,7 +1827,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         areasSeleccionadas.length > 0,
         turnosSeleccionados.length > 0,
       ].filter(Boolean).length,
-    [proyectosSeleccionados, tiposSeleccionados, rolesEmpresaSeleccionados, showActiveTableOnly, soloConAusencias, soloConExtras, filtroEstadoUsuario, filtroVigencia, areasSeleccionadas, turnosSeleccionados],
+    [proyectosSeleccionados, tiposSeleccionados, modalidadesSeleccionadas, rolesEmpresaSeleccionados, showActiveTableOnly, soloConAusencias, soloConExtras, filtroEstadoUsuario, filtroVigencia, areasSeleccionadas, turnosSeleccionados],
   );
 
   /**
@@ -1816,8 +1842,15 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const chipsDeFiltros = useMemo(() => {
     const chips: { key: string; label: string; valor: string; quitar: () => void }[] = [];
     for (const clave of proyectosSeleccionados) chips.push({ key: `proyecto:${clave}`, label: "Proyecto", valor: proyectosDelReporte.find((p) => p.clave === clave)?.nombre || clave, quitar: () => alternarProyecto(clave) });
-    // Un chip por tipo tildado: con varios puestos, uno solo que dijera «3 tipos» obliga a abrir el modal para saber cuáles.
-    for (const t of tiposSeleccionados) chips.push({ key: `tipo:${t}`, label: "Tipo", valor: t, quitar: () => alternarTipo(t) });
+    // Tipo y modalidad arrancan con todo puesto y se SACAN opciones: el chip dice lo que falta («Sin tipo: Jornada»),
+    // que es lo que se tocó. Si se sacaron más de los que quedan, un chip por cada tipo que sigue, como antes.
+    const chipsDeExclusion = (label: string, todos: string[], incluidos: string[], volverAIncluir: (x: string) => void, quitar: (x: string) => void) => {
+      const excluidos = todos.filter((x) => !incluidos.includes(x));
+      if (excluidos.length > 0 && excluidos.length <= incluidos.length) for (const x of excluidos) chips.push({ key: `sin-${label}:${x}`, label: `Sin ${label.toLowerCase()}`, valor: x, quitar: () => volverAIncluir(x) });
+      else for (const x of incluidos) chips.push({ key: `${label}:${x}`, label, valor: x, quitar: () => quitar(x) });
+    };
+    chipsDeExclusion("Tipo", opcionesServidor.tipos, tiposSeleccionados, alternarTipo, alternarTipo);
+    chipsDeExclusion("Modalidad", nombresDeModalidades, modalidadesSeleccionadas, alternarModalidad, alternarModalidad);
     /* Los del server, cada uno con su forma de sacarlo sin abrir el modal. */
     if (filtroEstadoUsuario) chips.push({ key: "estadoUsuario", label: "Usuarios", valor: filtroEstadoUsuario === "active" ? "Activos" : "Inactivos", quitar: () => setFiltroEstadoUsuario("") });
     if (filtroVigencia) chips.push({ key: "vigencia", label: "Contratos", valor: filtroVigencia === "vigente" ? "Vigentes" : "No vigentes", quitar: () => setFiltroVigencia("") });
@@ -1831,11 +1864,12 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     // Este entra al revés que el resto: lo que se anota es haberlo APAGADO, porque el default es ON.
     if (!showActiveTableOnly) chips.push({ key: "activos", label: "Incluye", valor: "Contratos no vigentes", quitar: () => setShowActiveTableOnly(true) });
     return chips;
-  }, [proyectosSeleccionados, tiposSeleccionados, rolesEmpresaSeleccionados, soloConAusencias, soloConExtras, showActiveTableOnly, allProjects, filtroEstadoUsuario, filtroVigencia, areasSeleccionadas, turnosSeleccionados, opcionesServidor, proyectosDelReporte]);
+  }, [proyectosSeleccionados, tiposSeleccionados, modalidadesSeleccionadas, nombresDeModalidades, rolesEmpresaSeleccionados, soloConAusencias, soloConExtras, showActiveTableOnly, allProjects, filtroEstadoUsuario, filtroVigencia, areasSeleccionadas, turnosSeleccionados, opcionesServidor, proyectosDelReporte]);
 
   const limpiarFiltros = () => {
     setProyectosSeleccionados([]);
     setTiposSeleccionados([]);
+    setModalidadesSeleccionadas([]);
     setRolesEmpresaSeleccionados([]);
     // «Contratos activos» vuelve a ON: es el default y lo que evita filas de gente sin contrato.
     setShowActiveTableOnly(true);
@@ -2154,7 +2188,16 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     fila 1, autofiltro, fila congelada, fechas y horas reales). Es por proyecto: sin uno, «sin ningún
     parte en el mes» serían todas las personas del tenant.
   */
-  const idsProyectosDelConsolidado = useMemo(() => proyectosSeleccionados.map((clave) => proyectosDelReporte.find((p) => p.clave === clave)?.id).filter((id): id is string => !!id), [proyectosSeleccionados, proyectosDelReporte]);
+  /*
+    EL CONSOLIDADO SALE CON TODOS LOS PROYECTOS POR DEFECTO (25/11/2026, pedido del usuario): antes pedía elegir
+    uno en el filtro y el botón quedaba apagado. Sin proyectos elegidos van todos los del reporte (los que tienen
+    id); con alguno elegido, sólo esos. El archivo, con todos, se llama «todos-los-proyectos».
+  */
+  const consolidadoDeTodos = proyectosSeleccionados.length === 0;
+  const idsProyectosDelConsolidado = useMemo(
+    () => (consolidadoDeTodos ? proyectosDelReporte : proyectosDelReporte.filter((p) => proyectosSeleccionados.includes(p.clave))).map((p) => p.id).filter((id): id is string => !!id),
+    [consolidadoDeTodos, proyectosSeleccionados, proyectosDelReporte],
+  );
   const periodosDeLiquidacionOpciones = useMemo(() => periodosDeLiquidacion(new Date()), []);
   const handleExportConsolidado = async () => {
     if (idsProyectosDelConsolidado.length === 0 || exportandoConsolidado) return;
@@ -2163,7 +2206,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     try {
       const datos = await activityReportsAPI.consolidado(dateFrom, dateTo, idsProyectosDelConsolidado);
       const hojas = hojasDelConsolidado(datos, glossary, { exportadoPor: datos.exportadoPor || "", exportadoEl: format(new Date(), "dd/MM/yyyy HH:mm") });
-      const nombre = nombreDelConsolidado(datos);
+      const nombre = consolidadoDeTodos ? `consolidado_empresas_todos-los-proyectos_${dateFrom}_a_${dateTo}.xlsx` : nombreDelConsolidado(datos);
       const blob = await activityReportsAPI.consolidadoXlsx(hojas, nombre);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -2235,7 +2278,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
               partes, a revisar y glosario. Por proyecto: sin uno elegido no hay a quién acotar «sin ningún
               parte en el mes». El período es el del filtro de fechas (ver «Período de liquidación»).
             */}
-            <button onClick={handleExportConsolidado} disabled={idsProyectosDelConsolidado.length === 0 || exportandoConsolidado} title={idsProyectosDelConsolidado.length === 0 ? "Elegí al menos un proyecto en el filtro" : `Una hoja por empresa para pegar en la planilla de liquidación, más novedades por persona, compensatorios, feriados, detalle diario, partes, a revisar y glosario (${dateFrom.split("-").reverse().join("/")} al ${dateTo.split("-").reverse().join("/")})`} className="px-5 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+            <button onClick={handleExportConsolidado} disabled={idsProyectosDelConsolidado.length === 0 || exportandoConsolidado} title={idsProyectosDelConsolidado.length === 0 ? "No hay proyectos en el período" : `${consolidadoDeTodos ? `Todos los proyectos del período (${idsProyectosDelConsolidado.length}); elegí alguno en el filtro para acotarlo. ` : `${idsProyectosDelConsolidado.length} proyecto(s) del filtro. `}Una hoja por empresa para pegar en la planilla de liquidación, más novedades por persona, compensatorios, feriados, detalle diario, partes, a revisar y glosario (${dateFrom.split("-").reverse().join("/")} al ${dateTo.split("-").reverse().join("/")})`} className="px-5 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
               <FontAwesomeIcon icon={exportandoConsolidado ? faSpinner : faTableList} spin={exportandoConsolidado} />
               Consolidado Empresas
             </button>
@@ -2440,37 +2483,30 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
               />
 
               {/*
-                TIPO DE CONTRATO: VARIOS A LA VEZ, EN SU PROPIA VENTANA.
+                TIPO DE CONTRATO: TODOS PUESTOS, Y SE SACAN (25/11/2026, pedido del usuario).
 
-                Son doce tipos y las preguntas reales son de a varios: «los tres plazo fijo», «todos
-                los Eventual». Con un desplegable de a uno había que correr el reporte tres veces y
-                sumar a mano. Nada elegido = todos, que es como se abre.
-
-                Es el mismo gesto de «Rol/es Empresa» en la ficha de usuario —`SelectorBadges`—:
-                acá la lista de tildes se llevaba 200px de este modal, que ya scrollea, para mostrar
-                cinco de doce filas y sin buscador. Afuera la ventana usa la pantalla entera para
-                buscar, y en el filtro queda solo lo elegido, que es lo único que importa después.
+                Era un buscador de «qué incluir» (`SelectorBadges`), y la pregunta real es al revés:
+                «todo menos jornaleros». Con doce tipos eso obligaba a tildar once. Ahora los doce están a
+                la vista como chips, todos incluidos, y tocar uno lo saca del reporte. El valor sigue
+                siendo la lista de incluidos (vacía = todos): el filtrado de abajo no cambió.
               */}
-              <SelectorBadges
+              <ChipsTodosMenos
                 etiqueta="Tipo de contrato"
-                tituloModal="Tipo de Contrato"
-                descripcion="qué tipos de contrato entran en el reporte"
-                placeholder="Buscar tipo de contrato…"
-                permitirTodos
-                /* El modal de filtros está en 100: esta ventana va arriba. */
-                zIndex={110}
                 /* Del server: son los tipos del contrato que RIGE de cada uno, no los de todo su historial. */
-                items={opcionesServidor.tipos.map((t) => ({ id: t, nombre: t }))}
+                items={opcionesServidor.tipos}
                 value={tiposSeleccionados}
                 onChange={setTiposSeleccionados}
-                textoVacio={opcionesServidor.tipos.length === 0 ? "No hay tipos de contrato en el período." : "Elegir tipos de contrato…"}
-                ayuda={
-                  opcionesServidor.tipos.length === 0 && !filtrandoEnServidor
-                    ? <span className="text-amber-600 dark:text-amber-400">Ningún contrato del período tiene tipo cargado.</span>
-                    : tiposSeleccionados.length === 0
-                      ? "Sin elegir ninguno entran todos."
-                      : undefined
-                }
+                textoVacio="No hay tipos de contrato en el período."
+                ayuda={opcionesServidor.tipos.length === 0 && !filtrandoEnServidor ? <span className="text-amber-600 dark:text-amber-400">Ningún contrato del período tiene tipo cargado.</span> : undefined}
+              />
+
+              {/* MODALIDAD: Presencial / Remoto / Híbrido (el ABM del tenant), con el mismo gesto. Ver `modalidadesSeleccionadas`. */}
+              <ChipsTodosMenos
+                etiqueta="Modalidad"
+                items={nombresDeModalidades}
+                value={modalidadesSeleccionadas}
+                onChange={setModalidadesSeleccionadas}
+                textoVacio="No hay modalidades cargadas (Configuración › Modalidades)."
               />
 
               {/*

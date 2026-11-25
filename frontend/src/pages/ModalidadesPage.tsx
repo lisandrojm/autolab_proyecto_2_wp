@@ -1,9 +1,8 @@
 import React from "react";
 import { faHouseLaptop } from "@fortawesome/free-solid-svg-icons";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
-import { createSimpleCatalogApi } from "../api/simpleCatalog";
+import { modalidadesApi } from "../api/modalidades";
 
-export const modalidadesApi = createSimpleCatalogApi("/modalidades");
 
 /**
  * Modalidades de trabajo (Presencial, Remoto, Híbrido…): se eligen en cada contrato y salen en las

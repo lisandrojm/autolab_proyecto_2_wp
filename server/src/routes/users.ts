@@ -2799,7 +2799,9 @@ const consultarDirectorio = async (tenantObjectId: any, status?: string) => {
         "projectId areaId nombre_proyecto nombre_rol_frame " +
         "contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga " +
         "contracts.hora_inicio contracts.hora_fin contracts.areaId contracts.shiftId contracts.areaShiftAssignments " +
-        "contracts.nombre_contrato contracts.tipo_contrato_id contracts.estadoContrato",
+        "contracts.nombre_contrato contracts.tipo_contrato_id contracts.estadoContrato " +
+        // La modalidad (Presencial/Remoto/Híbrido) para el filtro «Modalidad» de Reportes (25/11/2026); vacía = la por defecto.
+        "contracts.nombre_modalidad",
     })
     .sort({ firstName: 1, lastName: 1 })
     .lean();
