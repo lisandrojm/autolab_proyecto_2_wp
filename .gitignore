@@ -43,3 +43,5 @@ server/storage/*/recibos-sueldo/
 
 # Respaldos de scripts que corrigen datos (valores viejos para deshacer): no van al repo.
 server/respaldos/
+cd /Applications/XAMPP/xamppfiles/htdocs/clientes/autolab_proyecto_2_wp
+git show a45c3252~1:server/.env.production | grep '^TANGO_API_TOKEN='
