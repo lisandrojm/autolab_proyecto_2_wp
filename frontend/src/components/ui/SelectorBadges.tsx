@@ -22,6 +22,12 @@ import { CLASE_BADGE_CENTRO_COSTO } from '../../utils/centroCosto';
  *
  * LO ELEGIDO VA ARRIBA Y AFUERA DEL BUSCADOR. Badges adentro de un input lo hacen crecer y se leen
  * como texto tipeado; afuera se leen como lo que son, la selección actual.
+ *
+ * MODO «TODOS POR DEFECTO» (`todosPorDefecto`, 25/11/2026, pedido del usuario para los filtros de Reportes):
+ * con el valor vacío se muestran TODAS las opciones como badges, cada una con su X, porque la pregunta real
+ * de un filtro es «todo menos jornaleros». La X saca esa opción (el valor pasa a ser «todas menos esa»); si
+ * se sacan todas, el valor vuelve a vacío y aparecen todas de nuevo. El [+] y la ventana sirven para volver a
+ * incluir una. El valor sigue siendo la lista de INCLUIDOS (vacía = todas): quien filtra no cambia nada.
  */
 
 export interface OpcionSelector {
@@ -59,6 +65,8 @@ interface Props {
   zIndex?: number;
   /** Acciones extra al lado de la etiqueta (ⓘ, contadores). */
   children?: React.ReactNode;
+  /** Con el valor vacío, todas las opciones están incluidas y a la vista, con su X (ver arriba). */
+  todosPorDefecto?: boolean;
 }
 
 const Badge: React.FC<{ texto: string; onQuitar: () => void }> = ({ texto, onQuitar }) => (
@@ -70,19 +78,28 @@ const Badge: React.FC<{ texto: string; onQuitar: () => void }> = ({ texto, onQui
   </span>
 );
 
-export const SelectorBadges: React.FC<Props> = ({ etiqueta, items, value, onChange, tituloModal, descripcion, placeholder = 'Buscar…', ayuda, textoVacio, permitirTodos, zIndex = 90, children }) => {
+export const SelectorBadges: React.FC<Props> = ({ etiqueta, items, value, onChange, tituloModal, descripcion, placeholder = 'Buscar…', ayuda, textoVacio, permitirTodos, zIndex = 90, children, todosPorDefecto }) => {
   const [abierto, setAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState('');
 
-  const elegidos = value.map((id) => items.find((i) => i.id === id)).filter(Boolean) as OpcionSelector[];
-  const filtrados = items.filter((i) => fuzzyMatch(i.insignia ? `${i.insignia} ${i.nombre}` : i.nombre, busqueda));
   const seleccionables = items.filter((i) => !i.bloqueadoPor);
+  /* Lo incluido de verdad: en modo «todos por defecto», el valor vacío es todas las opciones. */
+  const todas = !!todosPorDefecto && value.length === 0;
+  const incluidos = todas ? seleccionables.map((i) => i.id) : value;
+  const elegidos = incluidos.map((id) => items.find((i) => i.id === id)).filter(Boolean) as OpcionSelector[];
+  const excluidos = todosPorDefecto ? seleccionables.filter((i) => !incluidos.includes(i.id)) : [];
+  const filtrados = items.filter((i) => fuzzyMatch(i.insignia ? `${i.insignia} ${i.nombre}` : i.nombre, busqueda));
 
   const abrir = () => {
     setBusqueda('');
     setAbierto(true);
   };
-  const alternar = (id: string) => onChange(value.includes(id) ? value.filter((x) => x !== id) : [...value, id]);
+  const alternar = (id: string) => {
+    const siguiente = incluidos.includes(id) ? incluidos.filter((x) => x !== id) : [...incluidos, id];
+    /* Con todas incluidas el valor vuelve a vacío: también al sacar la última («si saco el último se muestran todos»). */
+    onChange(todosPorDefecto && (siguiente.length === 0 || seleccionables.every((i) => siguiente.includes(i.id))) ? [] : siguiente);
+  };
+  const ayudaPorDefecto = todosPorDefecto && items.length > 0 ? (excluidos.length === 0 ? 'Entran todos. Sacá con la X los que no van.' : `Sin ${excluidos.map((i) => i.nombre).join(', ')}. Con el [+] se vuelven a incluir.`) : undefined;
 
   return (
     <>
@@ -90,6 +107,11 @@ export const SelectorBadges: React.FC<Props> = ({ etiqueta, items, value, onChan
         <div className="flex items-center gap-1.5 ml-1">
           <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{etiqueta}</span>
           {elegidos.length > 0 && <span className="text-[11px] normal-case tracking-normal text-gray-500 dark:text-gray-400">({elegidos.length} de {seleccionables.length})</span>}
+          {todosPorDefecto && excluidos.length > 0 && (
+            <button type="button" onClick={() => onChange([])} className="text-[11px] normal-case tracking-normal font-semibold text-blue-600 hover:underline dark:text-blue-400">
+              Incluir todos
+            </button>
+          )}
           {children}
           {/* El [+] solo con algo elegido: sin nada, abajo está el botón ancho y esto sería un
               segundo camino a lo mismo. */}
@@ -105,7 +127,7 @@ export const SelectorBadges: React.FC<Props> = ({ etiqueta, items, value, onChan
           )}
         </div>
 
-        {ayuda && <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">{ayuda}</p>}
+        {(ayuda || ayudaPorDefecto) && <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">{ayuda || ayudaPorDefecto}</p>}
 
         {elegidos.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
@@ -132,19 +154,22 @@ export const SelectorBadges: React.FC<Props> = ({ etiqueta, items, value, onChan
           isOpen
           onClose={() => setAbierto(false)}
           title={tituloModal || etiqueta}
-          subtitle={`${value.length} seleccionado(s)${descripcion ? ` · ${descripcion}` : ''}`}
+          subtitle={`${incluidos.length} seleccionado(s)${descripcion ? ` · ${descripcion}` : ''}`}
           size="lg"
           zIndex={zIndex}
           footer={
             <>
-              {permitirTodos && (
-                <button type="button" onClick={() => onChange(seleccionables.map((i) => i.id))} className="btn-secondary" disabled={value.length === seleccionables.length}>
-                  Seleccionar todos
+              {(permitirTodos || todosPorDefecto) && (
+                <button type="button" onClick={() => onChange(todosPorDefecto ? [] : seleccionables.map((i) => i.id))} className="btn-secondary" disabled={incluidos.length === seleccionables.length}>
+                  {todosPorDefecto ? 'Incluir todos' : 'Seleccionar todos'}
                 </button>
               )}
-              <button type="button" onClick={() => onChange([])} className="btn-secondary" disabled={value.length === 0}>
-                Limpiar
-              </button>
+              {/* En modo «todos por defecto» vacío es «todas»: «Limpiar» no significaría nada. */}
+              {!todosPorDefecto && (
+                <button type="button" onClick={() => onChange([])} className="btn-secondary" disabled={value.length === 0}>
+                  Limpiar
+                </button>
+              )}
               <button type="button" onClick={() => setAbierto(false)} className="btn-primary">
                 Listo
               </button>
@@ -182,12 +207,12 @@ export const SelectorBadges: React.FC<Props> = ({ etiqueta, items, value, onChan
                   className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
                     o.bloqueadoPor
                       ? 'opacity-60 cursor-not-allowed bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700'
-                      : value.includes(o.id)
+                      : incluidos.includes(o.id)
                         ? 'cursor-pointer bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20'
                         : 'cursor-pointer bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  <input type="checkbox" checked={value.includes(o.id)} disabled={!!o.bloqueadoPor} onChange={() => alternar(o.id)} className="rounded text-blue-500 focus:ring-blue-500 h-4 w-4 shrink-0 disabled:cursor-not-allowed" />
+                  <input type="checkbox" checked={incluidos.includes(o.id)} disabled={!!o.bloqueadoPor} onChange={() => alternar(o.id)} className="rounded text-blue-500 focus:ring-blue-500 h-4 w-4 shrink-0 disabled:cursor-not-allowed" />
                   <span className="min-w-0">
                     <span className="flex items-center gap-1.5 min-w-0">
                       {o.insignia && <span className={`${CLASE_BADGE_CENTRO_COSTO} shrink-0 px-1.5 py-px text-[10px]`}>{o.insignia}</span>}

@@ -24,7 +24,6 @@ import * as XLSX from "xlsx";
 import { usePuedeAbrir } from "../../../hooks/usePuedeAbrir";
 import { fechaDeCalendario } from "../../../utils/fechas";
 import { PlanillaJornalerosModal } from "../../solicitudes/PlanillaJornalerosModal";
-import { ChipsTodosMenos } from "../../ui/ChipsTodosMenos";
 import { modalidadesApi } from "../../../api/modalidades";
 
 
@@ -1841,16 +1840,16 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
    */
   const chipsDeFiltros = useMemo(() => {
     const chips: { key: string; label: string; valor: string; quitar: () => void }[] = [];
-    for (const clave of proyectosSeleccionados) chips.push({ key: `proyecto:${clave}`, label: "Proyecto", valor: proyectosDelReporte.find((p) => p.clave === clave)?.nombre || clave, quitar: () => alternarProyecto(clave) });
     // Tipo y modalidad arrancan con todo puesto y se SACAN opciones: el chip dice lo que falta («Sin tipo: Jornada»),
     // que es lo que se tocó. Si se sacaron más de los que quedan, un chip por cada tipo que sigue, como antes.
-    const chipsDeExclusion = (label: string, todos: string[], incluidos: string[], volverAIncluir: (x: string) => void, quitar: (x: string) => void) => {
+    const chipsDeExclusion = (label: string, todos: string[], incluidos: string[], alternar: (x: string) => void, nombreDe: (x: string) => string = (x) => x) => {
       const excluidos = todos.filter((x) => !incluidos.includes(x));
-      if (excluidos.length > 0 && excluidos.length <= incluidos.length) for (const x of excluidos) chips.push({ key: `sin-${label}:${x}`, label: `Sin ${label.toLowerCase()}`, valor: x, quitar: () => volverAIncluir(x) });
-      else for (const x of incluidos) chips.push({ key: `${label}:${x}`, label, valor: x, quitar: () => quitar(x) });
+      if (excluidos.length > 0 && excluidos.length <= incluidos.length) for (const x of excluidos) chips.push({ key: `sin-${label}:${x}`, label: `Sin ${label.toLowerCase()}`, valor: nombreDe(x), quitar: () => alternar(x) });
+      else for (const x of incluidos) chips.push({ key: `${label}:${x}`, label, valor: nombreDe(x), quitar: () => alternar(x) });
     };
-    chipsDeExclusion("Tipo", opcionesServidor.tipos, tiposSeleccionados, alternarTipo, alternarTipo);
-    chipsDeExclusion("Modalidad", nombresDeModalidades, modalidadesSeleccionadas, alternarModalidad, alternarModalidad);
+    chipsDeExclusion("Proyecto", proyectosDelReporte.map((p) => p.clave), proyectosSeleccionados, alternarProyecto, (clave) => proyectosDelReporte.find((p) => p.clave === clave)?.nombre || clave);
+    chipsDeExclusion("Tipo", opcionesServidor.tipos, tiposSeleccionados, alternarTipo);
+    chipsDeExclusion("Modalidad", nombresDeModalidades, modalidadesSeleccionadas, alternarModalidad);
     /* Los del server, cada uno con su forma de sacarlo sin abrir el modal. */
     if (filtroEstadoUsuario) chips.push({ key: "estadoUsuario", label: "Usuarios", valor: filtroEstadoUsuario === "active" ? "Activos" : "Inactivos", quitar: () => setFiltroEstadoUsuario("") });
     if (filtroVigencia) chips.push({ key: "vigencia", label: "Contratos", valor: filtroVigencia === "vigente" ? "Vigentes" : "No vigentes", quitar: () => setFiltroVigencia("") });
@@ -2466,44 +2465,51 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 pt-2 border-t border-gray-200 dark:border-gray-700">Filtros por Categoría</p>
 
-              {/* Mismo gesto que Tipo de contrato y Rol/es Empresa: la lista puede tener decenas de
-                  proyectos y dentro del desplegable no se podía buscar. */}
+              {/*
+                PROYECTOS, TIPO DE CONTRATO Y MODALIDAD: TODOS PUESTOS, CON SU X (25/11/2026, pedido del usuario).
+
+                Los tres arrancan con todas las opciones a la vista como badges, todas incluidas: la X saca
+                una del reporte («todo menos jornaleros», «todos menos este proyecto»), y si se sacan todas
+                vuelven a aparecer todas. El [+] abre la ventana con buscador para volver a incluir. El valor
+                sigue siendo la lista de incluidos (vacía = todos): el filtrado de abajo no cambió.
+              */}
               <SelectorBadges
                 etiqueta="Proyecto/s"
                 tituloModal="Proyectos"
                 descripcion="qué proyectos entran en el reporte"
                 placeholder="Buscar proyecto…"
-                permitirTodos
+                todosPorDefecto
                 zIndex={110}
                 items={proyectosDelReporte.map((p) => ({ id: p.clave, nombre: p.nombre, insignia: p.id ? centroPorProyecto.get(p.id) : undefined }))}
                 value={proyectosSeleccionados}
                 onChange={setProyectosSeleccionados}
-                textoVacio={proyectosDelReporte.length === 0 ? "No hay proyectos para el período." : "Elegir proyectos…"}
-                ayuda={proyectosSeleccionados.length === 0 ? "Sin elegir ninguno entran todos." : undefined}
+                textoVacio="No hay proyectos para el período."
               />
 
-              {/*
-                TIPO DE CONTRATO: TODOS PUESTOS, Y SE SACAN (25/11/2026, pedido del usuario).
-
-                Era un buscador de «qué incluir» (`SelectorBadges`), y la pregunta real es al revés:
-                «todo menos jornaleros». Con doce tipos eso obligaba a tildar once. Ahora los doce están a
-                la vista como chips, todos incluidos, y tocar uno lo saca del reporte. El valor sigue
-                siendo la lista de incluidos (vacía = todos): el filtrado de abajo no cambió.
-              */}
-              <ChipsTodosMenos
+              {/* Tipo de contrato: del server, los tipos del contrato que RIGE de cada uno en el período. */}
+              <SelectorBadges
                 etiqueta="Tipo de contrato"
-                /* Del server: son los tipos del contrato que RIGE de cada uno, no los de todo su historial. */
-                items={opcionesServidor.tipos}
+                tituloModal="Tipo de Contrato"
+                descripcion="qué tipos de contrato entran en el reporte"
+                placeholder="Buscar tipo de contrato…"
+                todosPorDefecto
+                zIndex={110}
+                items={opcionesServidor.tipos.map((t) => ({ id: t, nombre: t }))}
                 value={tiposSeleccionados}
                 onChange={setTiposSeleccionados}
                 textoVacio="No hay tipos de contrato en el período."
                 ayuda={opcionesServidor.tipos.length === 0 && !filtrandoEnServidor ? <span className="text-amber-600 dark:text-amber-400">Ningún contrato del período tiene tipo cargado.</span> : undefined}
               />
 
-              {/* MODALIDAD: Presencial / Remoto / Híbrido (el ABM del tenant), con el mismo gesto. Ver `modalidadesSeleccionadas`. */}
-              <ChipsTodosMenos
+              {/* Modalidad: Presencial / Remoto / Híbrido (el ABM del tenant). Ver `modalidadesSeleccionadas`. */}
+              <SelectorBadges
                 etiqueta="Modalidad"
-                items={nombresDeModalidades}
+                tituloModal="Modalidad del contrato"
+                descripcion="qué modalidades de contrato entran en el reporte"
+                placeholder="Buscar modalidad…"
+                todosPorDefecto
+                zIndex={110}
+                items={nombresDeModalidades.map((m) => ({ id: m, nombre: m }))}
                 value={modalidadesSeleccionadas}
                 onChange={setModalidadesSeleccionadas}
                 textoVacio="No hay modalidades cargadas (Configuración › Modalidades)."
