@@ -247,6 +247,7 @@
     "test:etapa-vacaciones": "tsx --test src/compartido/vacaciones/etapaDeAprobacion.test.ts",
     "test:alta-vigente": "tsx --test src/compartido/altaVigente.test.ts src/utils/superposicionContratos.test.ts src/services/superposicion.bajasArca.test.ts",
     "test:campania-vacaciones": "tsx --test src/compartido/vacaciones/campania.test.ts src/compartido/vacaciones/tipoDeContrato.test.ts src/utils/contratoDeComputo.test.ts",
+    "test:tango": "tsx --test src/services/tangoApi.test.ts",
     "test:arca-operaciones": "tsx --test src/compartido/arca/relacionParaOperar.test.ts src/compartido/arca/modalidadArca.test.ts src/compartido/arca/motivoBaja.test.ts src/services/arca/reglasOperacionRelacion.test.ts src/services/arca/corridaOperacionRelacion.test.ts src/services/arca/relacionesOperables.test.ts src/services/arca/listaBajasArca.test.ts src/services/arca/presentacionBajasAutomatica.test.ts",
     "arca:situaciones-baja:dry": "dotenv -e .env.production -- tsx src/scripts/sembrarSituacionesBajaArca.ts",
     "arca:situaciones-baja": "dotenv -e .env.production -- tsx src/scripts/sembrarSituacionesBajaArca.ts --commit"

@@ -10,7 +10,7 @@ import { requireTenant } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { createSimpleCatalogRouter } from "./_simpleCatalogRouter.js";
 import { construirRemapeo, decidirRemapeo, validarPayload } from "../services/centrosCostoImport.js";
-import { estadoSincronizacion, probarTango, sincronizarCentrosCostoDesdeTango } from "../services/centrosCostoSync.js";
+import { estadoSincronizacion, probarTango, SIN_CONNECTOR, sincronizarCentrosCostoDesdeTango } from "../services/centrosCostoSync.js";
 import { TangoApi } from "../services/tangoApi.js";
 /*
   CENTROS DE COSTO: EL AUXILIAR DE TANGO, CON SU PROPIO ABM.
@@ -332,7 +332,7 @@ router.post("/import-json", requireTenant, authenticateToken, requirePermission(
     }
 });
 /*
-  POST /sincronizar-tango — traer el catálogo de las tres empresas, en vivo.
+  POST /sincronizar-tango — traer el catálogo de las tres empresas, en vivo, a través del tango-connector.
 
   Es el camino oficial desde que los centros de costo se leen de Tango: el archivo JSON quedó como
   respaldo para cuando Tango no está disponible. Contesta el detalle POR EMPRESA —cuántos trajo cada
@@ -344,7 +344,7 @@ router.post("/import-json", requireTenant, authenticateToken, requirePermission(
 router.post("/sincronizar-tango", requireTenant, authenticateToken, requirePermission(PERMISO), async (_req, res) => {
     try {
         if (!TangoApi.configurada()) {
-            res.status(503).json({ error: "Falta configurar la conexión con Tango (TANGO_API_URL). Mientras tanto se puede importar el JSON." });
+            res.status(503).json({ error: SIN_CONNECTOR });
             return;
         }
         const r = await sincronizarCentrosCostoDesdeTango();
@@ -364,14 +364,15 @@ router.post("/sincronizar-tango", requireTenant, authenticateToken, requirePermi
 /*
   GET /probar-tango — ¿se llega a Tango? Consulta y NO escribe nada.
 
-  El túnel a cada Tango termina en el VPS, así que desde afuera no se puede comprobar: esto lo pregunta
-  desde el server, que es el único que está del lado correcto. Contesta por empresa qué pasó —el estado
-  HTTP, o el tipo de auxiliar que trajo y cuántos centros vendrían—, que es lo que hace falta para
-  saber si la URL del túnel y el token están bien antes de reemplazar el catálogo.
+  La API key del tango-connector vive en el `.env` del server, así que desde afuera no se puede
+  comprobar: esto lo pregunta desde el server. Contesta primero qué dice el connector de la key (qué
+  empresas y procesos tiene permitidos) y después, por empresa, qué pasó —el rechazo explicado, o el
+  tipo de auxiliar que trajo y cuántos centros vendrían—, que es lo que hace falta para saber si la
+  key y las empresas registradas están bien antes de reemplazar el catálogo.
 */
 router.get("/probar-tango", requireTenant, authenticateToken, requirePermission(PERMISO), async (_req, res) => {
     try {
-        res.json({ tangoConfigurado: TangoApi.configurada(), empresas: await probarTango() });
+        res.json({ tangoConfigurado: TangoApi.configurada(), ...(await probarTango()) });
     }
     catch (error) {
         console.error("Probar Tango error:", error);

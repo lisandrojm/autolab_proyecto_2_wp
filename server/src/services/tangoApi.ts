@@ -1,95 +1,261 @@
-import axios, { AxiosInstance } from "axios";
+import axios from "axios";
 import type { SobreTango } from "./centrosCostoTango.js";
 
 /*
-  EL CLIENTE DE LA API DE TANGO.
+  EL CLIENTE DE TANGO, A TRAVÉS DEL TANGO-CONNECTOR (desde el 25/11/2026).
 
-  EL PROTOCOLO ES EL DE `tango/server/src/modules/integration/api-client.service.ts`, que es el que
-  ya funciona contra estos Tango. No se inventó nada acá:
+  WeProdu ya no le habla a Tango directo. Le habla al **tango-connector** (`/tango-connector` en la
+  raíz del repo: README.md y docs/decisiones/), que es la capa única de acceso a Tango Gestión de
+  Lumba y corre en el mismo VPS donde termina el túnel FRP de cada Tango. Antes el server le pegaba
+  al puerto del túnel (`http://72.60.9.42:8003/Api`) con el token de Tango en la mano; ese camino
+  dejó de funcionar y, además, dependía de un puerto que el connector tiene previsto cerrar al
+  exterior (`docs/relevamiento/2026-10-08-vps.md`, etapa 0).
 
-    GET {base}/GetById?process={proceso}&id={id}
-    ApiAuthorization: <token>      ← autentica; no hay login ni sesión
-    Company: <id de la empresa>    ← A QUÉ EMPRESA se le pregunta
+  EL PROTOCOLO ES EL DEL SDK DEL CONNECTOR (`tango-connector/sdk/src/cliente.ts`), que es idéntico
+  al de Tango salvo la URL y la autenticación (ADR 0002):
 
-  Y la respuesta viene siempre en el mismo sobre: `{ value, message, exceptionInfo, succeeded }`.
+    GET {TANGO_CONNECTOR_URL}/tango/{tenant}/{empresa}/GetById?process={proceso}&id={id}
+    X-Api-Key: <key de la plataforma WeProdu>
 
-  DÓNDE CORRE ESTO IMPORTA. Cada Tango vive en la máquina del cliente (`localhost:17000`) y se llega
-  por un túnel FRP que termina EN EL VPS: desde el VPS es `http://localhost:<puertoDelTunel>/Api`, y
-  desde afuera no se llega —esos puertos no están publicados a propósito—. Por eso `TANGO_API_URL` es
-  una variable de entorno y no una constante: en el VPS apunta al túnel, y en una máquina de
-  desarrollo no hay a dónde apuntar (la sincronización queda apagada y el catálogo se carga por el
-  import de JSON, que para eso quedó).
+  - `{tenant}` es el servidor Tango registrado en el connector (`servertango`, el de Frame Zero).
+  - `{empresa}` es el slug o el **Company ID de Tango**: se manda el `Company.tangoId` que ya se
+    guardaba, así que la ficha de cada empresa no cambia.
+  - La respuesta es la de Tango, byte por byte: el mismo sobre `{ value, message, exceptionInfo,
+    succeeded }` de siempre. Lo que la interpreta (`leerRegistroAuxiliares`) no se enteró del cambio.
+  - El header `X-Connector-Origin` dice quién contestó: `tango` (la respuesta es de Tango, errores
+    incluidos) o `connector` (lo rechazó el connector: key, permisos, validación, túnel caído). Es lo
+    que permite explicar una falla en palabras de quien tiene que ir a arreglarla (`explicarFalla`).
+
+  LO QUE HACE FALTA DEL LADO DEL CONNECTOR, y que se administra en el VPS de Lumba, no acá:
+  - una API key para WeProdu con las empresas de la plataforma y el permiso `1656:GetById`. Los
+    permisos de la key se escriben con el SLUG con que cada empresa está registrada, aunque la URL
+    lleve el Company ID (`node dist/cli key:crear weprodu --empresas servertango/fzero-srl,
+    servertango/2030-srl-gestion,servertango/grini-srl --procesos "1656:GetById"`);
+  - que cada empresa que se sincroniza esté REGISTRADA en el connector (`empresa:crear`). Una que no
+    lo esté contesta 404 «Empresa no registrada» (o 403 si la key tampoco la tiene) y la
+    sincronización lo dice tal cual. Al 25/11/2026 FZERO CORP (Company 9) no está registrada.
+
+  NO SE USA EL SDK como paquete: se distribuye como tarball, no tiene `.js` en los imports (el
+  server compila con NodeNext) y sumarlo obligaba a un `npm install` en el VPS. Para una sola
+  consulta, el protocolo de arriba con axios alcanza; `transporte` queda inyectable para los tests.
 
   ─────────────────────────────────────────────────────────────────────────────
-    TANGO_API_URL     la base con /Api, ej. http://localhost:8001/Api
-    TANGO_API_TOKEN   el token que va en `ApiAuthorization`
+    TANGO_CONNECTOR_URL       la base del connector, con /v1
+                              (https://www.somoslumba.site/production/tango-connector/v1)
+    TANGO_CONNECTOR_API_KEY   la key de WeProdu (se muestra una sola vez al crearla)
+    TANGO_CONNECTOR_TENANT    el servidor Tango en el connector; `servertango` si no se dice
+    TANGO_API_TIMEOUT         ms por consulta; 30000 si no se dice (el connector corta a los 120 s)
   ─────────────────────────────────────────────────────────────────────────────
-
-  El token puede además venir POR EMPRESA (`Company.tangoToken`), porque así lo modela el proyecto de
-  Tango: cada empresa tiene el suyo. El de la variable de entorno es el que se usa si la empresa no
-  trae uno propio.
 */
+
+export const TENANT_POR_DEFECTO = "servertango";
+const TIMEOUT_POR_DEFECTO = 30000;
+/** Un reintento ante una falla del túnel o de la red, como hace el SDK; no más, para no duplicar esperas. */
+const REINTENTOS = 1;
+const ESPERA_REINTENTO_MS = 1000;
+
+export interface ConfigConnector {
+  /** Sin barra final. */
+  url: string;
+  apiKey: string;
+  tenant: string;
+  timeoutMs: number;
+}
 
 const sinBarra = (s: string) => s.replace(/\/+$/, "");
 
-/** «Datos de la empresa»: de ahí sale el nombre de cada empresa de Tango. */
-export const PROCESO_DATOS_EMPRESA = 1050;
+/** La configuración del entorno, o `null` si falta la URL o la key: sin las dos no hay a quién preguntarle. */
+export function configDelEntorno(env: NodeJS.ProcessEnv = process.env): ConfigConnector | null {
+  const url = sinBarra(String(env.TANGO_CONNECTOR_URL || "").trim());
+  const apiKey = String(env.TANGO_CONNECTOR_API_KEY || "").trim();
+  if (!url || !apiKey) return null;
+  const timeout = Number(env.TANGO_API_TIMEOUT);
+  return {
+    url,
+    apiKey,
+    tenant: String(env.TANGO_CONNECTOR_TENANT || "").trim() || TENANT_POR_DEFECTO,
+    timeoutMs: Number.isFinite(timeout) && timeout > 0 ? timeout : TIMEOUT_POR_DEFECTO,
+  };
+}
+
+/** De dónde salió una falla: el connector la rechazó, Tango contestó con error, o no hubo respuesta. */
+export type OrigenFalla = "connector" | "tango" | "red";
+
+/**
+ * Una consulta que no trajo el sobre de Tango. Guarda lo que hace falta para explicarla: quién
+ * contestó, con qué estado HTTP y con qué detalle (`exceptionInfo.messages`, que es donde el
+ * connector y Tango ponen el motivo real; el `message` suele ser genérico).
+ */
+export class ErrorConnector extends Error {
+  constructor(
+    readonly origen: OrigenFalla,
+    readonly status: number,
+    readonly mensajes: string[],
+    /** `tenant/empresa` al que se le preguntó. Nunca la key. */
+    readonly destino: string,
+    readonly reintentable: boolean,
+  ) {
+    super(mensajes.length ? mensajes.join(" | ") : `Error de ${origen} (HTTP ${status})`);
+    this.name = "ErrorConnector";
+  }
+}
+
+/** Lo que vuelve de un request, ya leído: estado, el header de origen y el body parseado (JSON) o en texto. */
+export interface RespuestaHttp {
+  status: number;
+  origen: string | null;
+  cuerpo: unknown;
+}
+
+export type Transporte = (url: string, headers: Record<string, string>, timeoutMs: number) => Promise<RespuestaHttp>;
+
+const transporteAxios: Transporte = async (url, headers, timeoutMs) => {
+  // `validateStatus: () => true`: un 403 del connector trae el motivo en el body y hay que leerlo, no tirarlo.
+  const r = await axios.get(url, { headers, timeout: timeoutMs, validateStatus: () => true });
+  const origen = r.headers?.["x-connector-origin"];
+  return { status: r.status, origen: origen ? String(origen) : null, cuerpo: r.data };
+};
+
+/** Los mensajes de un body de error, del más específico al más general, sin repetir (como `mensajesDe` del SDK). */
+export function mensajesDe(cuerpo: unknown): string[] {
+  if (!cuerpo || typeof cuerpo !== "object") return [];
+  const r = cuerpo as { message?: unknown; title?: unknown; detail?: unknown; exceptionInfo?: { messages?: unknown; detailMessages?: unknown } | null };
+  const lista = (v: unknown): string[] => (Array.isArray(v) ? v.filter((m): m is string => typeof m === "string" && m !== "") : []);
+  const detalle = [...lista(r.exceptionInfo?.detailMessages), ...lista(r.exceptionInfo?.messages)];
+  const todos = detalle.length ? detalle : [r.message, r.title, r.detail].filter((m): m is string => typeof m === "string" && m !== "");
+  return [...new Set(todos)];
+}
+
+/** 502 y 504 son el túnel o Tango que no responden; un 5xx sin header de origen es nginx. Las dos cosas pasan. */
+const esReintentable = (r: RespuestaHttp): boolean => r.status === 502 || r.status === 504 || (r.status >= 500 && !r.origen);
+
+const esperar = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/** Qué contestó `GET /meta/yo`: la key con la que se habla y lo que tiene permitido. Para el diagnóstico. */
+export interface IdentidadEnConnector {
+  plataforma?: string;
+  prefijo?: string;
+  permisos?: { empresas?: string[]; procesos?: Record<string, string[]>; filtroSql?: boolean };
+  catalogo?: string;
+}
 
 export class TangoApi {
-  private api: AxiosInstance;
+  constructor(
+    private readonly transporte: Transporte = transporteAxios,
+    private readonly leerConfig: () => ConfigConnector | null = () => configDelEntorno(),
+  ) {}
 
-  constructor() {
-    this.api = axios.create({
-      baseURL: sinBarra(process.env.TANGO_API_URL || ""),
-      timeout: Number(process.env.TANGO_API_TIMEOUT || 30000),
-    });
-  }
-
-  /** ¿Está configurada? Sin la URL del túnel, cada llamada terminaría en un error de red. */
+  /** ¿Está configurada? Sin URL y key del connector, cada llamada terminaría en un error. */
   static configurada(): boolean {
-    return !!process.env.TANGO_API_URL;
+    return configDelEntorno() !== null;
+  }
+
+  /** `tenant/empresa` tal como viaja en la URL, para poder mostrarlo en un diagnóstico. */
+  static destino(empresaTangoId: string, env: NodeJS.ProcessEnv = process.env): string {
+    return `${TangoApi.tenant(env)}/${empresaTangoId}`;
+  }
+
+  /** La URL del connector, sin la key. Vacía si no está configurada. */
+  static url(): string {
+    return configDelEntorno()?.url || "";
+  }
+
+  /** El servidor Tango registrado en el connector al que se le habla. */
+  static tenant(env: NodeJS.ProcessEnv = process.env): string {
+    return String(env.TANGO_CONNECTOR_TENANT || "").trim() || TENANT_POR_DEFECTO;
+  }
+
+  private config(): ConfigConnector {
+    const c = this.leerConfig();
+    if (!c) throw new Error("Falta configurar el tango-connector (TANGO_CONNECTOR_URL y TANGO_CONNECTOR_API_KEY): sin eso no se puede consultar Tango.");
+    return c;
   }
 
   /**
-   * `GET /GetById?process=&id=` para una empresa.
+   * `GET /tango/{tenant}/{empresa}/GetById?process=&id=` para una empresa, por su Company ID de Tango.
    *
-   * Devuelve el sobre tal cual: interpretarlo es de quien sabe qué pidió (para centros de costo,
-   * `leerRegistroAuxiliares`). Acá sólo se resuelve el transporte.
+   * Devuelve el sobre de Tango tal cual: interpretarlo es de quien sabe qué pidió (para centros de
+   * costo, `leerRegistroAuxiliares`; un `succeeded: false` de Tango también llega por acá). Lo que
+   * NO es un sobre —rechazos del connector, túnel caído, red— sale como `ErrorConnector`.
    */
-  async getRegistro(proceso: number, id: number, empresaTangoId: string, token?: string, baseUrl?: string): Promise<SobreTango<any>> {
-    const base = sinBarra(baseUrl || process.env.TANGO_API_URL || "");
-    if (!base) throw new Error("Falta configurar TANGO_API_URL: sin eso no se puede consultar Tango.");
-    const apiToken = token || process.env.TANGO_API_TOKEN || "";
-    if (!apiToken) throw new Error("Falta el token de Tango (TANGO_API_TOKEN, o el propio de la empresa).");
-
-    const { data } = await this.api.get("/GetById", {
-      baseURL: base,
-      params: { process: proceso, id },
-      headers: { ApiAuthorization: apiToken, Company: empresaTangoId },
-    });
-    return data as SobreTango<any>;
+  async getRegistro(proceso: number, id: number, empresaTangoId: string): Promise<SobreTango<any>> {
+    const c = this.config();
+    const destino = `${c.tenant}/${empresaTangoId}`;
+    const url = `${c.url}/tango/${encodeURIComponent(c.tenant)}/${encodeURIComponent(empresaTangoId)}/GetById?process=${proceso}&id=${id}`;
+    const r = await this.pedir(url, c, destino);
+    if (!r.cuerpo || typeof r.cuerpo !== "object") {
+      throw new ErrorConnector(r.origen === "tango" ? "tango" : "connector", r.status, [`Respuesta vacía o que no es JSON (HTTP ${r.status})`], destino, false);
+    }
+    return r.cuerpo as SobreTango<any>;
   }
 
-  /**
-   * Cómo se llama una empresa de Tango (proceso 1050, «Datos de la empresa»).
-   *
-   * Se le pregunta a Tango en vez de escribirlo en la configuración: el nombre es de allá, y copiarlo
-   * a mano garantiza que algún día digan cosas distintas. `null` si no se pudo averiguar.
-   */
-  async getNombreEmpresa(empresaTangoId: string, token?: string, baseUrl?: string): Promise<string | null> {
-    try {
-      const sobre = await this.getRegistro(PROCESO_DATOS_EMPRESA, 1, empresaTangoId, token, baseUrl);
-      const v: any = sobre?.value || {};
-      const nombre = v.NOMBRE_LEGAL || v.NOMBRE_COMERCIAL || v.nombrE_LEGAL || v.nombrE_COMERCIAL;
-      return nombre ? String(nombre).trim() : null;
-    } catch {
-      return null;
+  /** Con qué key se está hablando y qué le permiten: `GET /meta/yo`. Para el diagnóstico de «Probar Tango». */
+  async quienSoy(): Promise<IdentidadEnConnector> {
+    const c = this.config();
+    const r = await this.pedir(`${c.url}/meta/yo`, c, c.tenant);
+    return (r.cuerpo && typeof r.cuerpo === "object" ? r.cuerpo : {}) as IdentidadEnConnector;
+  }
+
+  /** Un request con un reintento ante fallas del túnel o de la red. Un 4xx es un rechazo: se explica, no se repite. */
+  private async pedir(url: string, c: ConfigConnector, destino: string): Promise<RespuestaHttp> {
+    const headers = { "X-Api-Key": c.apiKey, Accept: "application/json" };
+    for (let intento = 0; ; intento++) {
+      let r: RespuestaHttp;
+      try {
+        r = await this.transporte(url, headers, c.timeoutMs);
+      } catch (e: any) {
+        if (intento < REINTENTOS) {
+          await esperar(ESPERA_REINTENTO_MS);
+          continue;
+        }
+        const porTimeout = e?.code === "ECONNABORTED" || e?.code === "ETIMEDOUT" || /timeout/i.test(String(e?.message || ""));
+        throw new ErrorConnector("red", 0, [porTimeout ? `El connector no respondió en ${c.timeoutMs / 1000} s` : `No se pudo conectar con el connector: ${e?.code || e?.message || "error de red"}`], destino, true);
+      }
+      if (esReintentable(r) && intento < REINTENTOS) {
+        await esperar(ESPERA_REINTENTO_MS);
+        continue;
+      }
+      if (r.status >= 400) {
+        const mensajes = mensajesDe(r.cuerpo);
+        throw new ErrorConnector(r.origen === "tango" ? "tango" : "connector", r.status, mensajes.length ? mensajes : [`HTTP ${r.status}`], destino, esReintentable(r));
+      }
+      return r;
     }
   }
+}
 
-  /** La base que se va a usar para una empresa, para poder mostrarla en el diagnóstico. */
-  static baseDe(empresa?: { tangoApiUrl?: string }): string {
-    return sinBarra(empresa?.tangoApiUrl || process.env.TANGO_API_URL || "");
+/**
+ * Por qué no se pudo consultar Tango, en palabras de quien tiene que ir a arreglarlo.
+ *
+ * «Request failed with status code 403» no dice qué hacer. Cada rechazo del connector tiene un
+ * responsable distinto —la key la administra Lumba en su VPS, el túnel lo levanta el cliente del
+ * lado de Tango, la URL está en el `.env` de WeProdu— y el mensaje tiene que mandar al lugar correcto.
+ */
+export function explicarFalla(e: unknown): string {
+  if (!(e instanceof ErrorConnector)) {
+    const msg = String((e as any)?.message || "error desconocido").replace(/\.+$/, "");
+    return `No se pudo consultar Tango: ${msg}.`;
+  }
+  const detalle = e.mensajes.join(" · ");
+  if (e.origen === "red") {
+    return `No se llega al tango-connector (${TangoApi.url() || "sin URL"}): ${detalle}. Hay que revisar TANGO_CONNECTOR_URL y la salida HTTPS del servidor.`;
+  }
+  if (e.origen === "tango") {
+    return `Tango contestó HTTP ${e.status} a través del connector (${e.destino})${detalle ? `: ${detalle}` : ""}. El token de la empresa en el connector puede estar vencido.`;
+  }
+  switch (e.status) {
+    case 401:
+      return `El tango-connector rechazó la API key (${detalle}). Hay que revisar TANGO_CONNECTOR_API_KEY.`;
+    case 403:
+      return `El tango-connector no autoriza a ${e.destino}: ${detalle}. La key de WeProdu tiene que incluir esa empresa y el permiso 1656:GetById.`;
+    case 404:
+      return `${detalle} (${e.destino}). Si es la empresa, hay que registrarla en el tango-connector (empresa:crear) y sumarla a la key de WeProdu.`;
+    case 502:
+      return `Tango no responde detrás del tango-connector (${e.destino}): ${detalle}. El túnel del lado de Tango (frpc) puede estar caído.`;
+    case 504:
+      return `Tango no respondió a tiempo detrás del tango-connector (${e.destino}): ${detalle}.`;
+    default:
+      return `El tango-connector contestó HTTP ${e.status} para ${e.destino}: ${detalle}.`;
   }
 }
 

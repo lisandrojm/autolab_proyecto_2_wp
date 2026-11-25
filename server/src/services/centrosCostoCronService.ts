@@ -1,4 +1,4 @@
-import { sincronizarCentrosCostoDesdeTango } from "./centrosCostoSync.js";
+import { SIN_CONNECTOR, sincronizarCentrosCostoDesdeTango } from "./centrosCostoSync.js";
 import { TangoApi } from "./tangoApi.js";
 
 /*
@@ -11,8 +11,9 @@ import { TangoApi } from "./tangoApi.js";
   abre WeProdu a la mañana ya lo tenga para elegir. Más seguido no aporta: el catálogo cambia de a un
   centro por semana, y son tres consultas a sistemas de terceros.
 
-  SI TANGO NO ESTÁ CONFIGURADO, NO CORRE NADA y se dice una vez. Un scheduler que falla cada cinco
-  minutos contra una URL vacía llena el log de ruido y esconde los errores que sí importan.
+  SI EL TANGO-CONNECTOR NO ESTÁ CONFIGURADO (URL y API key, ver `tangoApi.ts`), NO CORRE NADA y se
+  dice una vez. Un scheduler que falla cada cinco minutos contra una URL vacía llena el log de ruido
+  y esconde los errores que sí importan.
 */
 
 const HORA = 6;
@@ -28,7 +29,7 @@ const hoyLocal = (): string => {
 
 export const initCentrosCostoScheduler = () => {
   if (!TangoApi.configurada()) {
-    console.log("[CENTROS-COSTO-CRON] Sin TANGO_API_URL: la sincronización diaria queda apagada.");
+    console.log(`[CENTROS-COSTO-CRON] ${SIN_CONNECTOR} La sincronización diaria queda apagada.`);
     return;
   }
   console.log(`[CENTROS-COSTO-CRON] Sincronización diaria a las ${HORA}:${String(MINUTO).padStart(2, "0")}.`);

@@ -1,13 +1,15 @@
 import { Types } from "mongoose";
 import { CentroCosto, sincronizarCamposDerivados } from "../models/CentroCosto.js";
 import { Company } from "../models/Company.js";
-import { tangoApi, TangoApi } from "./tangoApi.js";
+import { explicarFalla, tangoApi, TangoApi } from "./tangoApi.js";
 import { leerRegistroAuxiliares } from "./centrosCostoTango.js";
 /*
   TRAER LOS CENTROS DE COSTO DE TANGO, DE LAS TRES EMPRESAS.
 
   Los centros de costo son un tipo de AUXILIAR de Tango, y viven en el proceso 1656, registro 1, de
-  cada empresa. Cada empresa tiene su propio Tango: se le pregunta a cada una con su `tangoId`.
+  cada empresa. Se le pregunta a cada una por su `tangoId` (el Company ID de Tango), a través del
+  tango-connector (ver `tangoApi.ts`): el connector sabe en qué servidor vive cada empresa y con qué
+  token se le habla; acá sólo se dice CUÁL.
 
   TRES DECISIONES QUE EXPLICAN CÓMO ESTÁ ESCRITO:
 
@@ -26,23 +28,38 @@ import { leerRegistroAuxiliares } from "./centrosCostoTango.js";
 /** Dónde vive el catálogo de centros de costo en Tango. Es igual en las tres empresas. */
 export const PROCESO_CENTROS_COSTO = 1656;
 export const REGISTRO_CENTROS_COSTO = 1;
+/** El mensaje único de «no hay connector configurado», para la ruta, el cron y la sincronización. */
+export const SIN_CONNECTOR = "Falta configurar el tango-connector (TANGO_CONNECTOR_URL y TANGO_CONNECTOR_API_KEY): sin eso no se puede consultar Tango. Mientras tanto se puede importar el JSON.";
 /**
- * Por qué no se pudo hablar con Tango, en palabras de quien tiene que ir a arreglarlo.
+ * EMPRESAS DE TANGO QUE NO SON EMPLEADORAS DE LA PLATAFORMA (`TANGO_EMPRESAS_EXTRA`).
  *
- * «timeout of 30000ms exceeded» no dice qué hacer. Lo que casi siempre pasó es que el túnel se cayó:
- * el 19/9/2026 el cliente de frp del lado de Tango se desconectó, el puerto quedó sin nadie atrás y
- * cada consulta esperaba los 30 s enteros. Así se dice, con la dirección que hay que revisar.
+ * FZERO CORP —la entidad de Estados Unidos— es el caso: su catálogo se usa, pero darla de alta como
+ * empresa acá la pondría a elegir como empleadora en cada contrato, y sin CUIT. Se listan sus ids de
+ * Tango separados por coma, cada uno con su nombre si se quiere: `9:FZERO CORP, 15`.
+ *
+ * Antes el nombre se le preguntaba a Tango (proceso 1050, «Datos de la empresa»). Ese proceso no
+ * tiene API en el catálogo del connector —lo rechaza con 404—, así que el nombre viene de acá o,
+ * si no se dijo, del que ya tiene en el catálogo (`nombreDeEmpresaExtra`).
  */
-function explicarFallaTango(e, empresa) {
-    const donde = TangoApi.baseDe(empresa);
-    if (e?.response?.status)
-        return `Tango contestó HTTP ${e.response.status} (${donde}).`;
-    if (e?.code === "ECONNABORTED" || e?.code === "ETIMEDOUT" || /timeout/i.test(String(e?.message || ""))) {
-        return `Tango no respondió a tiempo (${donde}): el túnel a Tango puede estar caído. Hay que revisar el cliente de frp en el servidor de Tango.`;
+export function parsearEmpresasExtra(valor) {
+    const vistos = new Set();
+    const salida = [];
+    for (const parte of String(valor || "").split(",")) {
+        const m = /^\s*(\d+)\s*(?:[:=]\s*(.*?))?\s*$/.exec(parte);
+        if (!m || vistos.has(m[1]))
+            continue;
+        vistos.add(m[1]);
+        salida.push(m[2] ? { id: m[1], nombre: m[2] } : { id: m[1] });
     }
-    if (e?.code === "ECONNREFUSED")
-        return `Nadie atiende en ${donde}: el túnel a Tango no está levantado.`;
-    return `No se pudo consultar Tango (${donde}): ${String(e?.message || "error de red").replace(/\.+$/, "")}.`;
+    return salida;
+}
+/** El nombre con que se guarda una empresa extra: el de la variable, si no el que ya tiene el catálogo, si no el id. */
+export async function nombreDeEmpresaExtra(x) {
+    if (x.nombre)
+        return x.nombre;
+    const previo = await CentroCosto.findOne({ empresaTangoId: Number(x.id), empresaNombre: { $nin: [null, ""] } }).select("empresaNombre").lean();
+    const nombre = String(previo?.empresaNombre || "").trim();
+    return nombre && !/^Empresa de Tango \d+$/.test(nombre) ? nombre : `Empresa de Tango ${x.id}`;
 }
 /**
  * Sincroniza una empresa.
@@ -57,10 +74,10 @@ export async function sincronizarEmpresa(empresa) {
     }
     let sobre;
     try {
-        sobre = await tangoApi.getRegistro(PROCESO_CENTROS_COSTO, REGISTRO_CENTROS_COSTO, empresa.tangoId, empresa.tangoToken, empresa.tangoApiUrl);
+        sobre = await tangoApi.getRegistro(PROCESO_CENTROS_COSTO, REGISTRO_CENTROS_COSTO, empresa.tangoId);
     }
     catch (e) {
-        return { ...base, errores: [explicarFallaTango(e, empresa)] };
+        return { ...base, errores: [explicarFalla(e)] };
     }
     const leido = leerRegistroAuxiliares(sobre);
     const tipo = leido.tipo.codigo || leido.tipo.descripcion ? `${leido.tipo.codigo}${leido.tipo.descripcion ? ` — ${leido.tipo.descripcion}` : ""}` : undefined;
@@ -132,7 +149,7 @@ export async function sincronizarEmpresa(empresa) {
  */
 export async function sincronizarCentrosCostoDesdeTango() {
     if (!TangoApi.configurada())
-        throw new Error("Falta configurar TANGO_API_URL: sin eso no se puede consultar Tango.");
+        throw new Error(SIN_CONNECTOR);
     try {
         await CentroCosto.syncIndexes();
     }
@@ -140,36 +157,24 @@ export async function sincronizarCentrosCostoDesdeTango() {
         console.warn("[CENTROS-COSTO-SYNC] No se pudieron actualizar los índices:", e?.message || e);
     }
     const empleadoras = await Company.find({ tangoId: { $exists: true, $nin: [null, ""] } })
-        .select("razonSocial tangoId tangoToken tangoApiUrl")
+        .select("razonSocial tangoId")
         .lean();
-    /*
-      EMPRESAS DE TANGO QUE NO SON EMPLEADORAS DE LA PLATAFORMA (`TANGO_EMPRESAS_EXTRA`).
-  
-      FZERO CORP —la entidad de Estados Unidos— es el caso: su catálogo se usa, pero darla de alta como
-      empresa acá la pondría a elegir como empleadora en cada contrato, y sin CUIT. Se listan sus ids de
-      Tango, separados por coma, y el NOMBRE se le pregunta a Tango (proceso 1050): copiarlo a mano
-      garantiza que algún día digan cosas distintas.
-    */
-    const idsExtra = String(process.env.TANGO_EMPRESAS_EXTRA || "")
-        .split(",")
-        .map((x) => x.trim())
-        .filter(Boolean)
-        .filter((id) => !empleadoras.some((e) => String(e.tangoId) === id)); // ya entra como empleadora
+    // Las que no son empleadoras (ver `parsearEmpresasExtra`); una que ya entra como empleadora no se repite.
+    const extras = parsearEmpresasExtra(process.env.TANGO_EMPRESAS_EXTRA).filter((x) => !empleadoras.some((e) => String(e.tangoId) === x.id));
     /*
       EN PARALELO, NO UNA DETRÁS DE OTRA.
   
-      Iban en fila, y con Tango caído cada consulta esperaba su timeout (30 s): tres empleadoras, el
-      nombre de la extra y la extra sumaban dos minutos y medio. El navegador corta a los 60 s, así que
-      la pantalla decía «probá de nuevo» sin llegar nunca a mostrar QUÉ empresa falló ni por qué.
+      Iban en fila, y con Tango caído cada consulta esperaba su timeout (30 s): tres empleadoras y la
+      extra sumaban dos minutos. El navegador corta a los 60 s, así que la pantalla decía «probá de
+      nuevo» sin llegar nunca a mostrar QUÉ empresa falló ni por qué.
   
       Cada empresa escribe sólo lo suyo (su `empresaTangoId`), así que no se pisan. La extra necesita el
-      nombre ANTES de sincronizar —se guarda en cada centro—: se averigua mientras corren las empleadoras.
+      nombre ANTES de sincronizar —se guarda en cada centro—: se resuelve mientras corren las empleadoras.
     */
-    const [deEmpleadoras, extras] = await Promise.all([
+    const [deEmpleadoras, deExtras] = await Promise.all([
         Promise.all(empleadoras.map((e) => sincronizarEmpresa(e))),
-        Promise.all(idsExtra.map(async (id) => ({ _id: null, razonSocial: (await tangoApi.getNombreEmpresa(id)) || `Empresa de Tango ${id}`, tangoId: id }))),
+        Promise.all(extras.map(async (x) => sincronizarEmpresa({ _id: null, razonSocial: await nombreDeEmpresaExtra(x), tangoId: x.id }))),
     ]);
-    const deExtras = await Promise.all(extras.map((e) => sincronizarEmpresa(e)));
     const resultados = [...deEmpleadoras, ...deExtras];
     for (const r of resultados) {
         console.log(`[CENTROS-COSTO-SYNC] ${r.empresa}: ${r.ok ? `${r.total} centros (${r.creados} nuevos, ${r.actualizados} actualizados, ${r.inhabilitados} dados de baja)` : `FALLÓ · ${r.errores[0] || "sin detalle"}`}`);
@@ -180,37 +185,48 @@ export async function sincronizarCentrosCostoDesdeTango() {
 /**
  * PROBAR LA CONEXIÓN, SIN TOCAR EL CATÁLOGO.
  *
- * Existe porque el Tango de cada empresa se alcanza por un túnel que termina en el VPS: desde una
- * máquina de desarrollo no se llega, así que la única forma de saber si la URL y el token están bien
- * es preguntárselo AL SERVER. Devuelve, por empresa, qué contestó Tango —el estado HTTP, o el tipo de
- * auxiliar que trajo— y cuántos centros vendrían, sin escribir una sola fila.
+ * Primero el connector solo —`GET /meta/yo`: si la key es válida y qué empresas y procesos tiene
+ * permitidos—, porque con una key mal cargada las cuatro empresas fallan igual y el motivo es uno.
+ * Después, por empresa, qué contestó Tango —el estado HTTP, o el tipo de auxiliar que trajo— y
+ * cuántos centros vendrían, sin escribir una sola fila.
  */
 export async function probarTango() {
-    const empleadoras = await Company.find({}).select("razonSocial tangoId tangoToken tangoApiUrl").lean();
-    const idsExtra = String(process.env.TANGO_EMPRESAS_EXTRA || "").split(",").map((x) => x.trim()).filter(Boolean);
+    const connector = { url: TangoApi.url(), tenant: TangoApi.tenant(), ok: false, detalle: "" };
+    if (!TangoApi.configurada()) {
+        return { connector: { ...connector, detalle: SIN_CONNECTOR }, empresas: [] };
+    }
+    try {
+        const yo = await tangoApi.quienSoy();
+        const empresas = yo.permisos?.empresas?.join(", ") || "ninguna";
+        const procesos = Object.entries(yo.permisos?.procesos || {}).map(([p, e]) => `${p}:${e.join(",")}`).join("; ") || "ninguno";
+        connector.ok = true;
+        connector.identidad = yo;
+        connector.detalle = `Key «${yo.plataforma || "?"}» (${yo.prefijo || "?"}). Empresas: ${empresas}. Procesos: ${procesos}.`;
+    }
+    catch (e) {
+        return { connector: { ...connector, detalle: explicarFalla(e) }, empresas: [] };
+    }
+    const empleadoras = await Company.find({}).select("razonSocial tangoId").lean();
+    const extras = parsearEmpresasExtra(process.env.TANGO_EMPRESAS_EXTRA).filter((x) => !empleadoras.some((e) => String(e.tangoId) === x.id));
     const empresas = [
         ...empleadoras,
-        // Las que no son empleadoras (ver `sincronizarCentrosCostoDesdeTango`): también hay que poder probarlas.
-        ...idsExtra.filter((id) => !empleadoras.some((e) => String(e.tangoId) === id)).map((id) => ({ razonSocial: `Empresa de Tango ${id}`, tangoId: id })),
+        // Las que no son empleadoras (ver `parsearEmpresasExtra`): también hay que poder probarlas.
+        ...(await Promise.all(extras.map(async (x) => ({ razonSocial: await nombreDeEmpresaExtra(x), tangoId: x.id })))),
     ];
     const salida = [];
     for (const e of empresas) {
-        const base = TangoApi.baseDe(e);
         if (!e.tangoId) {
-            salida.push({ empresa: e.razonSocial, tangoId: undefined, base, ok: false, detalle: "No tiene cargado el ID de Tango." });
+            salida.push({ empresa: e.razonSocial, tangoId: undefined, destino: "", ok: false, detalle: "No tiene cargado el ID de Tango." });
             continue;
         }
-        if (!base) {
-            salida.push({ empresa: e.razonSocial, tangoId: e.tangoId, base, ok: false, detalle: "Falta TANGO_API_URL (y la empresa no tiene una propia)." });
-            continue;
-        }
+        const destino = TangoApi.destino(e.tangoId);
         try {
-            const sobre = await tangoApi.getRegistro(PROCESO_CENTROS_COSTO, REGISTRO_CENTROS_COSTO, e.tangoId, e.tangoToken, e.tangoApiUrl);
+            const sobre = await tangoApi.getRegistro(PROCESO_CENTROS_COSTO, REGISTRO_CENTROS_COSTO, e.tangoId);
             const leido = leerRegistroAuxiliares(sobre);
             salida.push({
                 empresa: e.razonSocial,
                 tangoId: e.tangoId,
-                base,
+                destino,
                 ok: leido.ok,
                 tipo: leido.tipo.codigo || leido.tipo.descripcion ? `${leido.tipo.codigo} — ${leido.tipo.descripcion}` : undefined,
                 centros: leido.items.length,
@@ -218,16 +234,10 @@ export async function probarTango() {
             });
         }
         catch (err) {
-            salida.push({
-                empresa: e.razonSocial,
-                tangoId: e.tangoId,
-                base,
-                ok: false,
-                detalle: err?.response?.status ? `HTTP ${err.response.status} de Tango.` : `No se pudo conectar: ${err?.code || err?.message || "error de red"}.`,
-            });
+            salida.push({ empresa: e.razonSocial, tangoId: e.tangoId, destino, ok: false, detalle: explicarFalla(err) });
         }
     }
-    return salida;
+    return { connector, empresas: salida };
 }
 /** Cuándo se sincronizó por última vez y cuántos centros tiene cada empresa. Para mostrarlo. */
 export async function estadoSincronizacion() {

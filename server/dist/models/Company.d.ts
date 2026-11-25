@@ -198,26 +198,15 @@ export interface ICompany extends Document {
     createdAt: Date;
     updatedAt: Date;
     /**
-     * EL ID DE ESTA EMPRESA EN TANGO, que es con lo que se le pide su catálogo a la API.
+     * EL ID DE ESTA EMPRESA EN TANGO (el Company ID), que es con lo que se le pide su catálogo.
      *
-     * Cada empresa tiene su propio Tango: sin este id no se sabe a cuál preguntarle, y la empresa
-     * queda afuera de la sincronización de centros de costo (se informa, no se adivina).
+     * Va en la URL del tango-connector (`/tango/<tenant>/<tangoId>/...`, ver `services/tangoApi.ts`):
+     * sin este id no se sabe a cuál preguntarle, y la empresa queda afuera de la sincronización de
+     * centros de costo (se informa, no se adivina). Tiene que coincidir con una empresa REGISTRADA en
+     * el connector y permitida en la key de WeProdu. El token y la URL de cada Tango viven en el
+     * connector, no acá: los campos `tangoToken` y `tangoApiUrl` que había se retiraron el 25/11/2026.
      */
     tangoId?: string;
-    /**
-     * El token de ESTA empresa para la API de Tango, si tiene uno propio.
-     *
-     * Así lo modela el proyecto de Tango (cada empresa con su `authToken`). Vacío = se usa el de la
-     * variable de entorno, que es el caso cuando las tres comparten token.
-     */
-    tangoToken?: string;
-    /**
-     * La base de la API de ESTA empresa, si su Tango está detrás de otro túnel.
-     *
-     * Lo normal es una sola base para el tenant y el header `Company` eligiendo la empresa. Esto cubre
-     * el otro caso —tres oficinas, tres túneles— sin tener que rehacer nada: vacío usa `TANGO_API_URL`.
-     */
-    tangoApiUrl?: string;
     /**
      * Sedes con las que trabaja esta empresa: `data.id` de las Info type:sede, como `Project.metadata.sedeIds`.
      *
