@@ -224,13 +224,17 @@ export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ la
                       key={day.toISOString()}
                       onClick={() => !isDisabled && handleDayClick(day)}
                       disabled={isDisabled}
+                      /*
+                        HOY SE MARCA CON EL BORDE AZUL, igual que en `CustomDatePicker`. El color del borde se decide
+                        en un solo lugar: sumar `border-blue-500` al final no servía, porque `border-transparent` queda
+                        después en el CSS que genera Tailwind y lo pisaba, y el recuadro de hoy nunca se veía.
+                      */
                       className={`
                         h-10 w-full rounded flex items-center justify-center text-sm font-medium transition-colors border
                         ${!isCurrentMonth ? "text-slate-300 dark:text-slate-700" : ""}
-                        ${isSelected ? "bg-blue-600 border-blue-600 text-white shadow-md font-bold" : "border-transparent"}
+                        ${isSelected ? "bg-blue-600 border-blue-600 text-white shadow-md font-bold" : isDisabled ? "" : isToday(day) ? "border-blue-500" : "border-transparent"}
                         ${!isSelected && !isDisabled ? "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200" : ""}
                         ${isDisabled ? "opacity-30 cursor-not-allowed bg-slate-50 dark:bg-slate-800/50 text-slate-400 border-dashed border-slate-300" : ""}
-                        ${isToday(day) && !isSelected ? "border-blue-500 text-blue-500" : ""}
                       `}
                     >
                       {format(day, "d")}
