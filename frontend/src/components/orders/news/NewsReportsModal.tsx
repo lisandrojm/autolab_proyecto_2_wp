@@ -1818,7 +1818,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         tiposSeleccionados.length > 0,
         modalidadesSeleccionadas.length > 0,
         rolesEmpresaSeleccionados.length > 0,
-        !showActiveTableOnly,
+        // «Solo contratos activos» recorta el reporte también cuando está en su default (encendido): cuenta (25/11/2026).
+        showActiveTableOnly,
         soloConAusencias,
         soloConExtras,
         !!filtroEstadoUsuario,
@@ -1860,8 +1861,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     for (const r of rolesEmpresaSeleccionados) chips.push({ key: `rolEmpresa:${r}`, label: "Rol Empresa", valor: r, quitar: () => alternarRolEmpresa(r) });
     if (soloConAusencias) chips.push({ key: "ausencias", label: "Solo", valor: "Con ausencias", quitar: () => setSoloConAusencias(false) });
     if (soloConExtras) chips.push({ key: "extras", label: "Solo", valor: "Con horas extra", quitar: () => setSoloConExtras(false) });
-    // Este entra al revés que el resto: lo que se anota es haberlo APAGADO, porque el default es ON.
-    if (!showActiveTableOnly) chips.push({ key: "activos", label: "Incluye", valor: "Contratos no vigentes", quitar: () => setShowActiveTableOnly(true) });
+    // ENCENDIDO ES UN FILTRO aunque sea el default (25/11/2026, pedido del usuario: el botón tiene que decir que el
+    // reporte está recortado): deja afuera a quienes no tienen contrato vigente en el período. Apagado = entran todos.
+    if (showActiveTableOnly) chips.push({ key: "activos", label: "Solo", valor: "Contratos activos en el período", quitar: () => setShowActiveTableOnly(false) });
     return chips;
   }, [proyectosSeleccionados, tiposSeleccionados, modalidadesSeleccionadas, nombresDeModalidades, rolesEmpresaSeleccionados, soloConAusencias, soloConExtras, showActiveTableOnly, allProjects, filtroEstadoUsuario, filtroVigencia, areasSeleccionadas, turnosSeleccionados, opcionesServidor, proyectosDelReporte]);
 
@@ -2423,7 +2425,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             zIndex={100}
             footer={
               <div className="flex items-center justify-end gap-3 w-full">
-                <button type="button" onClick={limpiarFiltros} className="btn-secondary" disabled={filtrosActivos === 0}>
+                {/* «Limpiar todo» vuelve al default, que incluye «Solo contratos activos» encendido: se apaga cuando no hay nada más que eso. */}
+                <button type="button" onClick={limpiarFiltros} className="btn-secondary" disabled={chipsDeFiltros.every((c) => c.key === "activos")}>
                   Limpiar todo
                 </button>
                 <button type="button" onClick={() => setFiltrosOpen(false)} className="btn-primary">
@@ -2619,7 +2622,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                     <span className="block text-sm text-gray-700 dark:text-gray-300">Solo contratos activos</span>
                     {/* Apagarlo trae filas de gente sin contrato vigente, que es lo que se quiere al
                         auditar un período cerrado y lo que estorba el resto del tiempo. Por eso el
-                        default es encendido y cuenta como filtro cuando se apaga. */}
+                        default es encendido; cuenta como filtro mientras está encendido, que es cuando recorta. */}
                     <span className="block text-[11px] text-gray-500 dark:text-gray-400">Apagalo para ver también a quienes no tienen contrato vigente en el período.</span>
                   </span>
                   <span className={`w-10 h-6 flex items-center rounded-full p-1 shrink-0 duration-300 ease-in-out ${showActiveTableOnly ? "bg-blue-500 dark:bg-blue-600" : "bg-gray-300 dark:bg-gray-700"}`}>
