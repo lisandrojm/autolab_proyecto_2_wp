@@ -1810,13 +1810,18 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     setProyectosSeleccionados((previos) => (previos.length === 0 ? [clave] : previos));
   }, [isOpen, initialProjectFilter, proyectosDelReporte]);
 
-  /** Cuántos filtros del modal están puestos. Es lo que se muestra en el badge del botón. */
+  /**
+   * CUÁNTOS FILTROS HAY PUESTOS, POR GRUPO: es el globo del botón «Filtros» (25/11/2026, pedido del usuario:
+   * «mínimo 3»). Proyecto/s, Tipo de contrato y Modalidad cuentan SIEMPRE que tengan opciones, también con
+   * todas incluidas: el filtro muestra «48 de 48» y eso es una selección, no la ausencia de una. Los demás
+   * cuentan cuando están puestos («Solo contratos activos» también en su default, porque recorta).
+   */
   const filtrosActivos = useMemo(
     () =>
       [
-        proyectosSeleccionados.length > 0,
-        tiposSeleccionados.length > 0,
-        modalidadesSeleccionadas.length > 0,
+        proyectosDelReporte.length > 0,
+        opcionesServidor.tipos.length > 0,
+        nombresDeModalidades.length > 0,
         rolesEmpresaSeleccionados.length > 0,
         // «Solo contratos activos» recorta el reporte también cuando está en su default (encendido): cuenta (25/11/2026).
         showActiveTableOnly,
@@ -1827,7 +1832,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         areasSeleccionadas.length > 0,
         turnosSeleccionados.length > 0,
       ].filter(Boolean).length,
-    [proyectosSeleccionados, tiposSeleccionados, modalidadesSeleccionadas, rolesEmpresaSeleccionados, showActiveTableOnly, soloConAusencias, soloConExtras, filtroEstadoUsuario, filtroVigencia, areasSeleccionadas, turnosSeleccionados],
+    [proyectosDelReporte, opcionesServidor.tipos, nombresDeModalidades, rolesEmpresaSeleccionados, showActiveTableOnly, soloConAusencias, soloConExtras, filtroEstadoUsuario, filtroVigencia, areasSeleccionadas, turnosSeleccionados],
   );
 
   /**
@@ -2355,15 +2360,10 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                     <FontAwesomeIcon icon={faFilter} />
                     {/* Con rótulo: un embudo solo obliga a adivinar, y este botón esconde siete filtros. */}
                     <span>Filtros</span>
-                    {/*
-                      EL GLOBO SUMA TODO LO FILTRADO (25/11/2026, pedido del usuario): cada proyecto, tipo o modalidad
-                      sacado, cada rol, área o turno elegido y cada llave puesta, lo mismo que los chips de arriba del
-                      reporte. Con tres proyectos sacados dice 3, no 1 (un grupo). El mismo globo que el botón de filtros
-                      del resto de la app.
-                    */}
-                    {chipsDeFiltros.length > 0 && (
-                      <span title={`${chipsDeFiltros.length} filtrado(s) en ${filtrosActivos} filtro(s)`} className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center shadow">
-                        {chipsDeFiltros.length}
+                    {/* EL GLOBO: cuántos filtros hay puestos, por grupo (ver `filtrosActivos`). El mismo globo que el botón de filtros del resto de la app. */}
+                    {filtrosActivos > 0 && (
+                      <span title={`${filtrosActivos} filtro(s) puesto(s)`} className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center shadow">
+                        {filtrosActivos}
                       </span>
                     )}
                   </button>
