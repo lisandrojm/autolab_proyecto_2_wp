@@ -2353,7 +2353,12 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                     <FontAwesomeIcon icon={faFilter} />
                     {/* Con rótulo: un embudo solo obliga a adivinar, y este botón esconde siete filtros. */}
                     <span>Filtros</span>
-                    {filtrosActivos > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">{filtrosActivos}</span>}
+                    {/* CUÁNTOS HAY PUESTOS, ADENTRO DEL BOTÓN (25/11/2026): el globo chico en la esquina no se veía. */}
+                    {filtrosActivos > 0 && (
+                      <span title={`${filtrosActivos} filtro(s) aplicado(s)`} className="min-w-[20px] h-5 px-1.5 rounded-full bg-blue-600 text-white text-[11px] font-black flex items-center justify-center">
+                        {filtrosActivos}
+                      </span>
+                    )}
                   </button>
                 </div>
               </div>
