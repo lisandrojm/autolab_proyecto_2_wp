@@ -42,6 +42,11 @@ export declare const claveFilaArea: (c: {
     areaId: unknown;
     sedeId?: unknown;
 }) => string;
+/** Separa una clave de `claveFilaArea`: "areaId" → sin sede (null), "areaId::s12" → sede 12. */
+export declare function partirClaveFilaArea(clave: string): {
+    areaId: string;
+    sedeId: number | null;
+};
 export interface FilaAreaConfig {
     areaId: unknown;
     shiftIds?: unknown[];

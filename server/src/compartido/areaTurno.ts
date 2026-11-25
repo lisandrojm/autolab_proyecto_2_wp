@@ -52,6 +52,12 @@ export const claveFilaArea = (c: { areaId: unknown; sedeId?: unknown }): string 
   return sede ? `${idDe(c.areaId)}::s${sede}` : idDe(c.areaId);
 };
 
+/** Separa una clave de `claveFilaArea`: "areaId" → sin sede (null), "areaId::s12" → sede 12. */
+export function partirClaveFilaArea(clave: string): { areaId: string; sedeId: number | null } {
+  const [areaId = "", sede = ""] = String(clave || "").split("::");
+  return { areaId, sedeId: sede.startsWith("s") ? sedeDe(sede.slice(1)) : null };
+}
+
 export interface FilaAreaConfig {
   areaId: unknown;
   shiftIds?: unknown[];

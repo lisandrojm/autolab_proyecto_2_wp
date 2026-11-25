@@ -46,6 +46,11 @@ export const claveFilaArea = (c) => {
     const sede = sedeDe(c.sedeId);
     return sede ? `${idDe(c.areaId)}::s${sede}` : idDe(c.areaId);
 };
+/** Separa una clave de `claveFilaArea`: "areaId" → sin sede (null), "areaId::s12" → sede 12. */
+export function partirClaveFilaArea(clave) {
+    const [areaId = "", sede = ""] = String(clave || "").split("::");
+    return { areaId, sedeId: sede.startsWith("s") ? sedeDe(sede.slice(1)) : null };
+}
 /**
  * EN QUÉ FILA (SEDE) DE ESTA ÁREA ESTÁ UNA PERSONA. Explícito, sin adivinar (pedido del 18/10/2026):
  * antes se deducía de la sede del contrato, y la gente terminaba en la principal sin que nadie lo

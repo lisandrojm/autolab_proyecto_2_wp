@@ -44,6 +44,8 @@ export interface IRequest extends Document {
   projectId?: Types.ObjectId;
   areaId?: Types.ObjectId;
   shiftId?: Types.ObjectId;
+  /** La sede de la fila (área + sede) sobre la que se hizo el parte; null/ausente = la fila sin sede (principal). */
+  sedeId?: number | null;
   hasActivity: boolean;
   comments?: string;
   attendance: Types.DocumentArray<any>;
@@ -59,6 +61,12 @@ const requestSchema = new Schema<IRequest>(
     projectId: { type: Schema.Types.ObjectId, ref: "Project" },
     areaId: { type: Schema.Types.ObjectId, ref: "Area" }, // Optional linkage to Area
     shiftId: { type: Schema.Types.ObjectId, ref: "Shift" }, // Optional linkage to Shift
+    /*
+      LA SEDE DE LA FILA (25/11/2026). «Técnica · La corte» y «Técnica · Exteriores» son filas distintas del
+      proyecto, con sus turnos y su supervisor; el parte de Mis novedades se hace sobre una de ellas y, al
+      reabrirlo, tiene que volver a la misma. Sin sede = la fila de la sede principal (como `coordinatorAssignments`).
+    */
+    sedeId: { type: Number },
     hasActivity: { type: Boolean, default: true },
     comments: { type: String },
     attendance: [attendanceRecordSchema],

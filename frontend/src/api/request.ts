@@ -33,6 +33,8 @@ export interface ActivityReport {
   projectId?: any;
   areaId?: any;
   shiftId?: any;
+  /** La sede de la fila (área + sede) del parte; null/ausente = la fila sin sede (principal). */
+  sedeId?: number | null;
   submittedAt: string;
   userId?: any;
   tenantId: string;

@@ -7,6 +7,8 @@ export interface IRequest extends Document {
     projectId?: Types.ObjectId;
     areaId?: Types.ObjectId;
     shiftId?: Types.ObjectId;
+    /** La sede de la fila (área + sede) sobre la que se hizo el parte; null/ausente = la fila sin sede (principal). */
+    sedeId?: number | null;
     hasActivity: boolean;
     comments?: string;
     attendance: Types.DocumentArray<any>;

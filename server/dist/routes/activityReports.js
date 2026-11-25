@@ -91,6 +91,8 @@ const createReportSchema = z.object({
     projectId: z.string().optional(),
     areaId: z.string().optional(),
     shiftId: z.string().optional(),
+    // La sede de la fila (área + sede) del parte; null = la fila sin sede. Ver el modelo.
+    sedeId: z.number().int().positive().nullable().optional(),
 });
 router.get("/", async (req, res) => {
     try {

@@ -10,7 +10,8 @@ import { areasAPI, Area } from "../../../../api/areas";
 import { shiftsAPI, Shift } from "../../../../api/shifts";
 import { vacationsAPI } from "../../../../api/vacations";
 import { infoAPI } from "../../../../api/info";
-import { claveAreaTurno, claveFilaArea, partirClaveAreaTurno, sedeDe, sedePrincipalDe } from "@compartido/areaTurno";
+import { claveAreaTurno, claveFilaArea, partirClaveAreaTurno, partirClaveFilaArea, sedeDe, sedePrincipalDe } from "@compartido/areaTurno";
+import { sedesDelForm } from "../../../../utils/sedesProyecto";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUsers, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch, faFilter, faExclamationTriangle, faUmbrellaBeach, faPen, faLocationDot, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { useProfile } from "../hooks/useProfile";
@@ -822,6 +823,14 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [selectedAreaId, setSelectedAreaId] = useState<string>("");
   const [selectedShiftId, setSelectedShiftId] = useState<string>("");
+  /*
+    LA SEDE DE LA FILA ELEGIDA (25/11/2026). «Técnica · La corte» y «Técnica · Exteriores» son dos filas distintas
+    del proyecto, con sus propios turnos y su propio supervisor (así lo arma la pestaña Supervisores). El selector
+    de área elegía sólo el área y mezclaba las sedes: quien en La corte supervisa Técnica sólo de Trasnoche pero en
+    Exteriores en los cuatro turnos veía los cuatro turnos y la gente de las tres sedes. `null` = la fila sin sede
+    (la de la sede principal). Se guarda en el parte para que al reabrirlo vuelva a la misma fila.
+  */
+  const [selectedSedeId, setSelectedSedeId] = useState<number | null>(null);
   const [hasActivity, setHasActivity] = useState<boolean | null>(null);
   const [comments, setComments] = useState("");
 
@@ -1376,6 +1385,9 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
     return (selectedProject.coordinatorAssignments || []).filter(isMyAssignment).map((asm: any) => ({
       areaId: String(asm.areaId?._id || asm.areaId || ""),
       shiftId: String(asm.shiftId?._id || asm.shiftId || ""),
+      sedeId: sedeDe(asm.sedeId),
+      // La fila (área + sede) a la que pertenece: la misma clave que usan los chips y el selector de área.
+      fila: claveFilaArea({ areaId: asm.areaId?._id || asm.areaId, sedeId: asm.sedeId }),
     }));
   }, [selectedProject, profile, isMyAssignment]);
 
@@ -1384,10 +1396,60 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
     return Array.from(ids);
   }, [myCoordinatedCombinations]);
 
+  /** La fila elegida como clave (área, o área::s<sede>): la misma de `filasQueCoordino` y de los chips. */
+  const selectedFila = selectedAreaId ? claveFilaArea({ areaId: selectedAreaId, sedeId: selectedSedeId }) : "";
   const coordinatedShiftIds = useMemo(() => {
-    if (!selectedAreaId) return [];
-    return myCoordinatedCombinations.filter((c) => c.areaId === selectedAreaId).map((c) => c.shiftId);
-  }, [myCoordinatedCombinations, selectedAreaId]);
+    if (!selectedFila) return [];
+    return myCoordinatedCombinations.filter((c) => c.fila === selectedFila).map((c) => c.shiftId);
+  }, [myCoordinatedCombinations, selectedFila]);
+  /*
+    UN ADMIN VE EL PROYECTO ENTERO SÓLO SI NO SUPERVISA NADA EN ÉL. Si además supervisa un área, mandan sus filas,
+    igual que en el roster (ver «Todas las Áreas | Turnos» más abajo): antes el rol salteaba el filtro de los
+    selectores y le ofrecía todas las áreas y todos los turnos.
+  */
+  const veTodoElProyecto = useMemo(() => {
+    const roles = (profile?.roleNames || []).map((r) => r.toLowerCase());
+    return (roles.includes("admin") || roles.includes("superadmin")) && myCoordinatedCombinations.length === 0;
+  }, [profile, myCoordinatedCombinations]);
+  /** La fila de `areasConfig` elegida: por área Y sede; si esa sede no tiene fila propia, la primera del área. */
+  const areaConfigElegida = useMemo(() => {
+    if (!selectedAreaId) return undefined;
+    const delArea = (selectedProject?.areasConfig || []).filter((ac: any) => String(ac.areaId?._id || ac.areaId || "") === String(selectedAreaId));
+    return delArea.find((ac: any) => claveFilaArea({ areaId: selectedAreaId, sedeId: ac.sedeId }) === selectedFila) || delArea[0];
+  }, [selectedProject, selectedAreaId, selectedFila]);
+  /*
+    LAS FILAS (ÁREA + SEDE) QUE OFRECE EL SELECTOR: las que superviso, en el orden de `areasConfig`. Un admin sin
+    filas ve todas las del proyecto. Las asignaciones a un área que el proyecto no tiene configurada (viejas) van
+    al final; las que apuntan a una sede que el área ya no tiene se omiten, porque no hay fila que reportar.
+    La sede sólo se escribe si el proyecto tiene más de una: en el resto «Técnica» sigue siendo «Técnica».
+  */
+  const filasQueCoordino = useMemo(() => {
+    const nombreArea = (areaId: string, ac?: any) => ac?.areaId?.name || allAreas.find((a) => String(a._id) === areaId)?.name || (isLoadingData ? "Cargando..." : "Área Desconocida");
+    const conSede = sedesDelForm(selectedProject?.metadata).length > 1;
+    const etiqueta = (areaId: string, sedeId: number | null, ac?: any) => {
+      const sede = conSede ? etiquetaSedeDeFila(sedeId, selectedProject?.metadata) : "";
+      return sede ? `${nombreArea(areaId, ac)} · ${sede}` : nombreArea(areaId, ac);
+    };
+    const filas: Array<{ clave: string; areaId: string; sedeId: number | null; etiqueta: string }> = [];
+    const vistas = new Set<string>();
+    const areasConfiguradas = new Set<string>();
+    for (const ac of selectedProject?.areasConfig || []) {
+      const areaId = String(ac.areaId?._id || ac.areaId || "");
+      areasConfiguradas.add(areaId);
+      const sedeId = sedeDe(ac.sedeId);
+      const clave = claveFilaArea({ areaId, sedeId });
+      if (vistas.has(clave)) continue;
+      if (!veTodoElProyecto && !myCoordinatedCombinations.some((c) => c.fila === clave)) continue;
+      vistas.add(clave);
+      filas.push({ clave, areaId, sedeId, etiqueta: etiqueta(areaId, sedeId, ac) });
+    }
+    for (const c of myCoordinatedCombinations) {
+      if (vistas.has(c.fila) || areasConfiguradas.has(c.areaId)) continue;
+      vistas.add(c.fila);
+      filas.push({ clave: c.fila, areaId: c.areaId, sedeId: c.sedeId, etiqueta: etiqueta(c.areaId, c.sedeId) });
+    }
+    return filas;
+  }, [selectedProject, myCoordinatedCombinations, veTodoElProyecto, allAreas, isLoadingData, catalogoSedes]);
 
   // Check if the coordinator has any assigned shifts in the selected project
   const hasCoordinatorAssignments = useMemo(() => {
@@ -1465,7 +1527,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
         if (selectedAreaId) {
           return claves.some((k) => {
             const c = partirClaveAreaTurno(k);
-            return c.areaId === String(selectedAreaId) && (!selectedShiftId || c.shiftId === String(selectedShiftId)) && (!acotadoAMisFilas || misClaves.has(k));
+            return c.areaId === String(selectedAreaId) && (c.sedeId ?? null) === selectedSedeId && (!selectedShiftId || c.shiftId === String(selectedShiftId)) && (!acotadoAMisFilas || misClaves.has(k));
           });
         }
         return !acotadoAMisFilas || claves.some((k) => misClaves.has(k));
@@ -1627,7 +1689,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
     const enAlcance = (k: string): boolean => {
       if (selectedAreaId) {
         const c = partirClaveAreaTurno(k);
-        return c.areaId === String(selectedAreaId) && (!selectedShiftId || c.shiftId === String(selectedShiftId)) && (!acotadoAMisFilas || misClaves.has(k));
+        return c.areaId === String(selectedAreaId) && (c.sedeId ?? null) === selectedSedeId && (!selectedShiftId || c.shiftId === String(selectedShiftId)) && (!acotadoAMisFilas || misClaves.has(k));
       }
       return !acotadoAMisFilas || misClaves.has(k);
     };
@@ -1726,7 +1788,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
     });
 
     return sorted;
-  }, [employees, selectedProjectId, selectedAreaId, selectedShiftId, myCoordinatedCombinations, profile, selectedProject, allShifts, estadoEquipo, isMyAssignment]);
+  }, [employees, selectedProjectId, selectedAreaId, selectedSedeId, selectedShiftId, myCoordinatedCombinations, profile, selectedProject, allShifts, estadoEquipo, isMyAssignment]);
 
   /*
     AL EDITAR UN PARTE GUARDADO, las novedades llegan con el id de la persona. Si esa persona va más de una
@@ -2555,6 +2617,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
         projectId: selectedProjectId || undefined,
         areaId: selectedAreaId || undefined,
         shiftId: selectedShiftId || undefined,
+        sedeId: selectedAreaId ? selectedSedeId : null,
       };
 
       if (selectedReportId) {
@@ -2597,8 +2660,10 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
     if (report.areaId) {
       const aId = typeof report.areaId === "object" ? report.areaId._id : report.areaId;
       setSelectedAreaId(aId);
+      setSelectedSedeId(sedeDe(report.sedeId));
     } else {
       setSelectedAreaId("");
+      setSelectedSedeId(null);
     }
 
     if (report.shiftId) {
@@ -2959,6 +3024,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
                                 onChange={(e) => {
                                   setSelectedProjectId(e.target.value);
                                   setSelectedAreaId("");
+                                  setSelectedSedeId(null);
                                   setSelectedShiftId("");
                                   setDraftTypeId("");
                                 }}
@@ -2979,50 +3045,36 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
                           {selectedProjectId && selectedProject?.areasConfig && selectedProject.areasConfig.length > 0 && (
                             <div className="animate-in fade-in slide-in-from-top-2">
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Área | Turno</label>
+                              {/* Una opción por FILA (área + sede): «Técnica · La corte» y «Técnica · Exteriores» tienen turnos y supervisores distintos. */}
                               <select
-                                value={selectedAreaId}
+                                value={selectedFila}
                                 onChange={(e) => {
-                                  setSelectedAreaId(e.target.value);
+                                  const fila = partirClaveFilaArea(e.target.value);
+                                  setSelectedAreaId(fila.areaId);
+                                  setSelectedSedeId(fila.sedeId);
                                   setSelectedShiftId("");
                                 }}
                                 disabled={!hasCoordinatorAssignments}
                                 className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${!hasCoordinatorAssignments ? "opacity-50 cursor-not-allowed" : ""}`}
                               >
                                 <option value="">Todas las Áreas | Turnos</option>
-                                {selectedProject.areasConfig
-                                  .filter((ac) => {
-                                    const userRoles = (profile?.roleNames || []).map((r) => r.toLowerCase());
-                                    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
-                                    if (isAdmin) return true;
-
-                                    const areaId = String(ac.areaId?._id || ac.areaId || "");
-                                    return coordinatedAreaIds.includes(areaId);
-                                  })
-                                  .map((ac) => {
-                                    const areaId = String(ac.areaId?._id || ac.areaId || "");
-                                    const areaName = ac.areaId?.name || allAreas.find((a) => String(a._id) === areaId)?.name;
-                                    return (
-                                      <option key={areaId} value={areaId}>
-                                        {areaName || (isLoadingData ? "Cargando..." : "Área Desconocida")}
-                                      </option>
-                                    );
-                                  })}
+                                {filasQueCoordino.map((f) => (
+                                  <option key={f.clave} value={f.clave}>
+                                    {f.etiqueta}
+                                  </option>
+                                ))}
                               </select>
                             </div>
                           )}
 
                           {/* Shift Selector */}
-                          {selectedAreaId &&
-                            (() => {
-                              const areaConfig = selectedProject?.areasConfig?.find((ac) => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === selectedAreaId);
-                              return areaConfig && areaConfig.shiftIds && areaConfig.shiftIds.length > 0;
-                            })() && (
+                          {selectedAreaId && !!areaConfigElegida?.shiftIds?.length && (
                               <div className="animate-in fade-in slide-in-from-top-2">
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Turno</label>
                                 <select value={selectedShiftId} onChange={(e) => setSelectedShiftId(e.target.value)} disabled={!hasCoordinatorAssignments} className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${!hasCoordinatorAssignments ? "opacity-50 cursor-not-allowed" : ""}`}>
                                   <option value="">Todos los Turnos</option>
                                   {(() => {
-                                    const areaConfig = selectedProject?.areasConfig?.find((ac) => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === selectedAreaId);
+                                    const areaConfig = areaConfigElegida;
                                     if (!areaConfig || !areaConfig.shiftIds) return null;
 
                                     return areaConfig.shiftIds
@@ -3033,10 +3085,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
                                       })
                                       .filter((s): s is Shift => {
                                         if (!s) return false;
-                                        const userRoles = (profile?.roleNames || []).map((r) => r.toLowerCase());
-                                        const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
-                                        if (isAdmin) return true;
-
+                                        if (veTodoElProyecto) return true;
                                         return coordinatedShiftIds.includes(String(s._id));
                                       })
                                       .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
@@ -3244,12 +3293,12 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
                                 })()}
                               </span>
                               {/* La sede (o sedes) en que supervisa esa área, en naranja. */}
-                              {[...new Set((selectedProject.coordinatorAssignments || []).filter(isMyAssignment).filter((asm: any) => String(asm.areaId?._id || asm.areaId || "") === String(selectedAreaId)).map((asm: any) => etiquetaSedeDeFila(asm.sedeId, selectedProject.metadata)))].map((t) => badgeSede(t, t))}
+                              {badgeSede(sedesDelForm(selectedProject.metadata).length > 1 ? etiquetaSedeDeFila(selectedSedeId, selectedProject.metadata) : "", "sede")}
                               {selectedShiftId ? (
                                 <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30 flex items-center gap-1 font-bold uppercase tracking-wider">
                                   <FontAwesomeIcon icon={faClock} className="text-[8px]" />
                                   {(() => {
-                                    const areaConfig = selectedProject.areasConfig?.find((ac) => String(ac.areaId?._id || ac.areaId || "") === String(selectedAreaId));
+                                    const areaConfig = areaConfigElegida;
                                     const s = areaConfig?.shiftIds?.find((s: any) => String(s?._id || s || "") === String(selectedShiftId));
                                     const sName = typeof s === "object" ? s.name : undefined;
                                     return sName || allShifts.find((s) => String(s._id) === String(selectedShiftId))?.name || "Turno";
@@ -3258,7 +3307,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
                               ) : (
                                 /* Area selected but all shifts — show all shifts for this area */
                                 (() => {
-                                  const areaConfig = selectedProject.areasConfig?.find((ac) => String(ac.areaId?._id || ac.areaId || "") === String(selectedAreaId));
+                                  const areaConfig = areaConfigElegida;
                                   if (!areaConfig || !areaConfig.shiftIds) return null;
 
                                   const visibleShifts = areaConfig.shiftIds
@@ -3268,9 +3317,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
                                     })
                                     .filter((s: any): s is Shift => {
                                       if (!s) return false;
-                                      const userRoles = (profile?.roleNames || []).map((r) => r.toLowerCase());
-                                      const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
-                                      if (isAdmin) return true;
+                                      if (veTodoElProyecto) return true;
                                       return coordinatedShiftIds.includes(String(s._id));
                                     })
                                     .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
@@ -5261,7 +5308,9 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
                 <span className="font-semibold text-gray-900 dark:text-white">
                   {(() => {
                     const ac = selectedProject?.areasConfig?.find((x: any) => String(x.areaId?._id || x.areaId || "") === String(selectedAreaId));
-                    return ac?.areaId?.name || allAreas.find((a) => String(a._id) === String(selectedAreaId))?.name || "Área";
+                    const nombre = ac?.areaId?.name || allAreas.find((a) => String(a._id) === String(selectedAreaId))?.name || "Área";
+                    const sede = sedesDelForm(selectedProject?.metadata).length > 1 ? etiquetaSedeDeFila(selectedSedeId, selectedProject?.metadata) : "";
+                    return sede ? `${nombre} · ${sede}` : nombre;
                   })()}
                 </span>
               </div>
