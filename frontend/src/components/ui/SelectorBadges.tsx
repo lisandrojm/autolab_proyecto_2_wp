@@ -24,10 +24,12 @@ import { CLASE_BADGE_CENTRO_COSTO } from '../../utils/centroCosto';
  * como texto tipeado; afuera se leen como lo que son, la selección actual.
  *
  * MODO «TODOS POR DEFECTO» (`todosPorDefecto`, 25/11/2026, pedido del usuario para los filtros de Reportes):
- * con el valor vacío se muestran TODAS las opciones como badges, cada una con su X, porque la pregunta real
- * de un filtro es «todo menos jornaleros». La X saca esa opción (el valor pasa a ser «todas menos esa»); si
- * se sacan todas, el valor vuelve a vacío y aparecen todas de nuevo. El [+] y la ventana sirven para volver a
- * incluir una. El valor sigue siendo la lista de INCLUIDOS (vacía = todas): quien filtra no cambia nada.
+ * con el valor vacío TODAS las opciones están incluidas, porque la pregunta real de un filtro es «todo menos
+ * jornaleros». No se dibujan todas como badges —con cien proyectos «son un montón»—: cerrado dice «Todos
+ * incluidos (N)» y la ventana muestra la lista entera tildada, donde destildar saca una. Lo que se ve como badge
+ * es lo que se SACÓ («Sin Jornada», con su X para volver a incluirlo) o, si quedó menos adentro que afuera, lo
+ * que quedó. Sacar la última vuelve el valor a vacío = todas. El valor sigue siendo la lista de INCLUIDOS
+ * (vacía = todas): quien filtra no cambia nada.
  */
 
 export interface OpcionSelector {
@@ -69,10 +71,15 @@ interface Props {
   todosPorDefecto?: boolean;
 }
 
-const Badge: React.FC<{ texto: string; onQuitar: () => void }> = ({ texto, onQuitar }) => (
-  <span className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+/** `sacado`: lo que se SACÓ del filtro (modo «todos por defecto»), en gris; la X lo vuelve a incluir. */
+const Badge: React.FC<{ texto: string; onQuitar: () => void; sacado?: boolean }> = ({ texto, onQuitar, sacado }) => (
+  <span
+    className={`inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold border ${
+      sacado ? 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600' : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
+    }`}
+  >
     {texto}
-    <button type="button" onClick={onQuitar} title={`Quitar ${texto}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+    <button type="button" onClick={onQuitar} title={sacado ? `Volver a incluir ${texto.replace(/^Sin /, '')}` : `Quitar ${texto}`} className={`rounded-full p-0.5 ${sacado ? 'hover:bg-gray-300 dark:hover:bg-gray-600' : 'hover:bg-blue-200 dark:hover:bg-blue-800/60'}`}>
       <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
     </button>
   </span>
@@ -99,14 +106,17 @@ export const SelectorBadges: React.FC<Props> = ({ etiqueta, items, value, onChan
     /* Con todas incluidas el valor vuelve a vacío: también al sacar la última («si saco el último se muestran todos»). */
     onChange(todosPorDefecto && (siguiente.length === 0 || seleccionables.every((i) => siguiente.includes(i.id))) ? [] : siguiente);
   };
-  const ayudaPorDefecto = todosPorDefecto && items.length > 0 ? (excluidos.length === 0 ? 'Entran todos. Sacá con la X los que no van.' : `Sin ${excluidos.map((i) => i.nombre).join(', ')}. Con el [+] se vuelven a incluir.`) : undefined;
+  /* Qué badges se dibujan en modo «todos»: lo sacado (si es menos que lo que queda), si no lo que queda; con todo adentro, ninguno. */
+  const mostrarExcluidos = !!todosPorDefecto && excluidos.length > 0 && excluidos.length <= elegidos.length;
+  const badges = todosPorDefecto ? (todas ? [] : mostrarExcluidos ? excluidos : elegidos) : elegidos;
+  const ayudaPorDefecto = todosPorDefecto && items.length > 0 ? (todas ? 'Entran todos. Abrí la lista para sacar alguno.' : mostrarExcluidos ? 'Sacados del reporte; la X los vuelve a incluir.' : 'Sólo entran estos; la X los saca.') : undefined;
 
   return (
     <>
       <div className="space-y-2">
         <div className="flex items-center gap-1.5 ml-1">
           <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{etiqueta}</span>
-          {elegidos.length > 0 && <span className="text-[11px] normal-case tracking-normal text-gray-500 dark:text-gray-400">({elegidos.length} de {seleccionables.length})</span>}
+          {(elegidos.length > 0 || todosPorDefecto) && items.length > 0 && <span className="text-[11px] normal-case tracking-normal text-gray-500 dark:text-gray-400">({elegidos.length} de {seleccionables.length})</span>}
           {todosPorDefecto && excluidos.length > 0 && (
             <button type="button" onClick={() => onChange([])} className="text-[11px] normal-case tracking-normal font-semibold text-blue-600 hover:underline dark:text-blue-400">
               Incluir todos
@@ -115,7 +125,7 @@ export const SelectorBadges: React.FC<Props> = ({ etiqueta, items, value, onChan
           {children}
           {/* El [+] solo con algo elegido: sin nada, abajo está el botón ancho y esto sería un
               segundo camino a lo mismo. */}
-          {elegidos.length > 0 && (
+          {badges.length > 0 && (
             <button
               type="button"
               onClick={abrir}
@@ -129,12 +139,22 @@ export const SelectorBadges: React.FC<Props> = ({ etiqueta, items, value, onChan
 
         {(ayuda || ayudaPorDefecto) && <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">{ayuda || ayudaPorDefecto}</p>}
 
-        {elegidos.length > 0 ? (
+        {badges.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
-            {elegidos.map((o) => (
-              <Badge key={o.id} texto={o.nombre} onQuitar={() => alternar(o.id)} />
+            {badges.map((o) => (
+              <Badge key={o.id} texto={mostrarExcluidos ? `Sin ${o.nombre}` : o.nombre} onQuitar={() => alternar(o.id)} sacado={mostrarExcluidos} />
             ))}
           </div>
+        ) : todosPorDefecto && items.length > 0 ? (
+          /* Todo adentro: una línea, no cien badges. Abre la lista entera tildada para sacar alguno. */
+          <button
+            type="button"
+            onClick={abrir}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left"
+          >
+            <FontAwesomeIcon icon={faSearch} className="h-3.5 w-3.5" />
+            Todos incluidos ({seleccionables.length}). Tocá para sacar alguno…
+          </button>
         ) : (
           /* Sin nada elegido, un botón ancho: es la invitación a abrir la ventana, y ocupa una fila
              en vez de las cinco que ocupaba la lista completa. */
@@ -179,10 +199,10 @@ export const SelectorBadges: React.FC<Props> = ({ etiqueta, items, value, onChan
           {/* Alto fijo: con la altura atada al contenido, filtrar encogía la ventana y «Listo» se
               movía debajo del cursor. Lo que scrollea es la grilla, no el modal. */}
           <div className="h-[60vh] flex flex-col">
-            {elegidos.length > 0 && (
+            {(todosPorDefecto ? excluidos : elegidos).length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-3 shrink-0">
-                {elegidos.map((o) => (
-                  <Badge key={o.id} texto={o.nombre} onQuitar={() => alternar(o.id)} />
+                {(todosPorDefecto ? excluidos : elegidos).map((o) => (
+                  <Badge key={o.id} texto={todosPorDefecto ? `Sin ${o.nombre}` : o.nombre} onQuitar={() => alternar(o.id)} sacado={!!todosPorDefecto} />
                 ))}
               </div>
             )}
