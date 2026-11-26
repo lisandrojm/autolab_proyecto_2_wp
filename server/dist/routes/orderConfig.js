@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { OrderConfig } from "../models/OrderConfig.js";
 import { Pdf } from "../models/Pdf.js";
+import { datosEditablesDeSistema, rechazoAlBorrar, rechazoAlCrear, rechazoAlEditar } from "../services/tiposDePedidoSistema.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import mongoose from "mongoose";
@@ -20,6 +21,14 @@ const configSchema = z
     subtipos: z.array(subtypeSchema).optional(),
     // Campos de datos personales habilitados para modificación (categoryType === "datos_personales").
     camposEditables: z.array(z.string()).optional(),
+    // Reglas del tipo de sistema «Cambio de turno» (categoryType === "cambio_turno"); ver compartido/cambioDeTurno.ts.
+    reglasCambioTurno: z
+        .object({
+        diasAnticipacion: z.number().int().min(0).max(365).optional(),
+        permitirTemporal: z.boolean().optional(),
+        cupoMaximoPorTurno: z.number().int().min(1).nullable().optional(),
+    })
+        .optional(),
 })
     .passthrough();
 const createCategorySchema = z
@@ -27,7 +36,7 @@ const createCategorySchema = z
     name: z.string().min(1).max(100),
     informacion: z.string().max(1000).optional(),
     isActive: z.boolean().default(true),
-    categoryType: z.enum(["fecha", "dinero", "objeto", "otros", "datos_personales"]).default("otros"),
+    categoryType: z.enum(["fecha", "dinero", "objeto", "otros", "datos_personales", "cambio_turno"]).default("otros"),
     dateMode: z.enum(["single", "range"]).default("single").optional(),
     maxDays: z.number().min(1).nullable().optional(),
     config: configSchema.optional(),
@@ -99,7 +108,7 @@ const updateCategorySchema = z
     informacion: z.string().max(1000).optional(),
     isActive: z.boolean().optional(),
     sortOrder: z.number().int().min(0).optional(),
-    categoryType: z.enum(["fecha", "dinero", "objeto", "otros", "datos_personales"]).optional(),
+    categoryType: z.enum(["fecha", "dinero", "objeto", "otros", "datos_personales", "cambio_turno"]).optional(),
     dateMode: z.enum(["single", "range"]).optional(),
     maxDays: z.number().min(1).nullable().optional(),
     config: configSchema.optional(),
@@ -270,6 +279,12 @@ router.post("/", async (req, res) => {
     try {
         const userId = req.user.userId;
         const data = createCategorySchema.parse(req.body);
+        // Tipos de sistema: los crea el server (ver services/tiposDePedidoSistema.ts).
+        const rechazoCrear = rechazoAlCrear({ ...data, isSystem: req.body?.isSystem, systemKey: req.body?.systemKey });
+        if (rechazoCrear) {
+            res.status(rechazoCrear.status).json({ error: rechazoCrear.error });
+            return;
+        }
         const existingCategory = await OrderConfig.findOne({
             tenantId: req.tenantObjectId,
             name: data.name,
@@ -336,6 +351,12 @@ router.put("/:id", async (req, res) => {
             res.status(404).json({ error: "Category not found" });
             return;
         }
+        // Tipo de sistema: tipo de dato y clave quedan como están (ver services/tiposDePedidoSistema.ts).
+        const rechazoEditar = rechazoAlEditar(category, { ...data, isSystem: req.body?.isSystem, systemKey: req.body?.systemKey });
+        if (rechazoEditar) {
+            res.status(rechazoEditar.status).json({ error: rechazoEditar.error });
+            return;
+        }
         if (data.name && data.name !== category.name) {
             const existingCategory = await OrderConfig.findOne({
                 tenantId: req.tenantObjectId,
@@ -362,11 +383,13 @@ router.put("/:id", async (req, res) => {
                 return;
             }
         }
-        const updateData = { ...data };
+        const updateData = category.isSystem ? datosEditablesDeSistema(category, data) : { ...data };
         if (updateData.pdfId) {
             updateData.pdfId = new mongoose.Types.ObjectId(updateData.pdfId);
         }
         Object.assign(category, updateData);
+        if (updateData.config !== undefined)
+            category.markModified("config");
         await category.save();
         res.json(category);
     }
@@ -388,6 +411,11 @@ router.delete("/:id", async (req, res) => {
         });
         if (!category) {
             res.status(404).json({ error: "Category not found" });
+            return;
+        }
+        const rechazoBorrar = rechazoAlBorrar(category);
+        if (rechazoBorrar) {
+            res.status(rechazoBorrar.status).json({ error: rechazoBorrar.error });
             return;
         }
         await OrderConfig.findByIdAndDelete(category._id);
