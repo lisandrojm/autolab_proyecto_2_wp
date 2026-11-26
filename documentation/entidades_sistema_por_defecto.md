@@ -2,6 +2,8 @@
 
 Este documento detalla la arquitectura, modelos de datos y lógicas de interfaz implementadas para establecer entidades obligatorias generadas por el sistema (Áreas, Turnos y Tipos de Turno). Estas protecciones aseguran que el sistema cuente con datos estructurales mínimos, vitales para el funcionamiento de Proyectos y Equipos.
 
+> **Estado al 26/11/2026.** Las secciones 1 a 7 describen el diseño original. Desde entonces: el turno de sistema se llama **«Oficina»** (`shiftInitService.ts` renombra el viejo «Mañana»); los **Tipos de Turno** (`ShiftConfig`) ya no existen; y `areaInitService.ts` quedó vacío (ya no se siembra un área). El patrón vigente es el de los turnos, y es el que replican los **Tipos de Pedido** de la sección 8.
+
 ## 1. Objetivo Principal
 Asegurar que cada organización (Tenant) tenga por defecto configuraciones clave:
 - **Área**: "Coordinador"
@@ -51,3 +53,35 @@ Se añadieron controles visuales preventivos en la solapa de Equipo y Coordinado
 
 - **Alerta Preventiva**: Si un usuario entra a ver la información de un Proyecto existente pero este *no cuenta* con un miembro del equipo que ostente el rol de sistema `mobile-coordinador`, se dispara una barra de alerta estilo modal o banner.
 - El mensaje instruye al usuario sobre la obligatoriedad de asignar al equipo un miembro con dicho rol, acompañado de un botón **"Entendido"** que redirige activamente la vista hacia la tabla de asignación de personal ("Equipo"), agilizando la resolución del error de configuración.
+
+## 8. Tipos de Pedido de sistema (26/11/2026)
+
+El patrón de los turnos, replicado en los **Tipos de Pedido** (`OrderConfig`, colección `orders_configs`) para crear el tipo **«Cambio de turno»**. El flujo completo del pedido está en [`cambio-de-turno.md`](cambio-de-turno.md).
+
+### 8.1 Modelo (`server/src/models/OrderConfig.ts`)
+- `isSystem: { type: Boolean, default: false }`.
+- `systemKey?: string`, con índice **único y sparse** por `tenantId + systemKey`: el tipo se reconoce por la clave aunque lo renombren; los tipos comunes no tienen clave.
+- `categoryType` suma el valor reservado **`cambio_turno`**.
+- Las reglas del tipo viven en `config.reglasCambioTurno` (`diasAnticipacion`, `permitirTemporal`, `cupoMaximoPorTurno`); defaults y normalización en `server/src/compartido/cambioDeTurno.ts` (lo comparte el front vía `@compartido`).
+
+### 8.2 Inicialización (`server/src/services/orderConfigInitService.ts`)
+`ensureAllTenantsHaveDefaultOrderConfigs()` corre al arrancar (`server.ts`, junto a roles y turnos) y, por tenant:
+- si existe un tipo con `systemKey: "cambio_turno"`, lo deja como está (y lo vuelve a marcar `isSystem` / `cambio_turno` si alguien lo tocó por base);
+- si no, **asimila** uno con nombre «Cambio de turno» (lo marca `isSystem`, le pone la clave y el tipo de dato);
+- si tampoco, lo **crea**: activo, al final del orden, sin firma, con las reglas por defecto.
+- Además garantiza la plantilla PDF `cambioTurno` («Solicitud de cambio de turno») y la asigna al tipo si no tiene.
+- No escribe cuando el server corre con `SIN_TAREAS_PROGRAMADAS=true` (copia local contra la base real), como las plantillas custom y las modalidades.
+
+### 8.3 Protecciones de la API (`server/src/routes/orderConfig.ts`)
+Las reglas son funciones puras en `server/src/services/tiposDePedidoSistema.ts` (con tests en `tiposDePedidoSistema.test.ts`):
+- **DELETE** → `403` si `isSystem`.
+- **PUT** sobre un tipo de sistema → `403` si cambia `categoryType`, `systemKey` o destilda `isSystem`; se guarda sólo lo editable (nombre, información, firma, plantilla, texto del PDF, estado, orden) y, para «Cambio de turno», la `config` son únicamente sus reglas normalizadas.
+- **POST** → `403` si viene `isSystem`, `systemKey` o `categoryType: "cambio_turno"`: los tipos de sistema los crea el server, uno por tenant.
+
+### 8.4 Frontend (`OrderTypesTab.tsx`, `OrderCategoryForm.tsx`)
+- Badge **«SISTEMA»** ámbar (mismas clases que `ShiftsPage`) en la tabla, en el encabezado del modal y junto a «Nombre».
+- Sin botón **Eliminar**: candado, como en los turnos.
+- El select **Tipo de Dato** queda deshabilitado; «Cambio de turno» no se ofrece para tipos nuevos.
+- En lugar de Modo de Fecha / Opciones / Fecha de reset se muestran las **reglas** del tipo.
+- Las reglas también se ven en la tabla, en la columna Tipo de Dato.
+
