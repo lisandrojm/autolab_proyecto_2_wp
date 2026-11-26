@@ -24,7 +24,7 @@ import { usePlantilla, usePlantillas } from "./contexto";
 import { Pantalla, Seccion, Vacio } from "./Pantalla";
 import { HojaModal } from "./HojaModal";
 import { SelectorPersona } from "./SelectorPersona";
-import { clavePuntual, contratoDelPuesto, EstadoContratar, guardarEstado, leerEstado, pedidosDe, puntualLimpio } from "./estadoContratar";
+import { clavePuntual, contratoDelPuesto, EstadoContratar, firmaDePedidos, guardarEstado, leerEstado, pedidosDe, previewRecordado, puntualLimpio, recordarPreview } from "./estadoContratar";
 import { estadoDe, nombreRoles, proyectoDelEquipo, PuestoDelEquipo, puestosDe, rutas } from "./equipoUtil";
 import { AvisoSoloServicios, contratosParaElegir, porDiasSueltos } from "./Condiciones";
 import { reglaDelAlta, useAltaEnFechas } from "../../../../../hooks/useContratoEnFechas";
@@ -70,15 +70,26 @@ export default function ContratarPersonas() {
 
   const pedidos = useMemo(() => (p && estado ? pedidosDe(p, estado, catalogos) : []), [p, estado, catalogos]);
   // Se recalcula cuando cambia algo que cambia el cálculo: los comentarios no.
-  const firma = JSON.stringify(pedidos.map((x) => ({ ...x, puntuales: Object.fromEntries(Object.entries(x.puntuales).map(([k, v]) => [k, { ...v, comentarios: undefined }])) })));
+  const firma = firmaDePedidos(pedidos);
   useEffect(() => {
     if (!p || pedidos.length === 0) return;
+    // Lo mismo que se calculó hace un rato (al volver de la Revisión, por ejemplo) no se vuelve a pedir.
+    const recordado = previewRecordado(p._id, firma);
+    if (recordado) {
+      setPreviews(recordado);
+      setFallo("");
+      return;
+    }
     let vigente = true;
     setCalculando(true);
     setFallo("");
     plantillasEquipoAPI
       .previewVarios(p._id, pedidos)
-      .then((r) => vigente && setPreviews(Object.fromEntries(r.equipos.map((x) => [x.equipoId, x]))))
+      .then((r) => {
+        const porEquipo = Object.fromEntries(r.equipos.map((x) => [x.equipoId, x]));
+        recordarPreview(p._id, firma, porEquipo);
+        if (vigente) setPreviews(porEquipo);
+      })
       .catch((e) => vigente && setFallo(e?.response?.data?.error || "No se pudo calcular. Probá de nuevo."))
       .finally(() => vigente && setCalculando(false));
     return () => {
@@ -89,9 +100,15 @@ export default function ContratarPersonas() {
 
   if (!estado) return <Navigate to={rutas.contratar(id)} replace />;
   const atras = rutas.contratar(id);
-  if (!p)
+  /*
+    EL PRIMER CÁLCULO SE ESPERA CON EL SPINNER DE SIEMPRE, no con la lista a medias. Con 36 personas el
+    server tarda, y mientras tanto la lista mostraba «— / día» en cada fila y el botón apagado sin decir
+    por qué: tocarlo no hacía nada y parecía colgado. Los recálculos (después de ajustar a alguien) sí
+    dejan la lista a la vista, atenuada, y el botón gira hasta que termina.
+  */
+  if (!p || (!previews && !fallo && pedidos.length > 0))
     return (
-      <Pantalla titulo="Personas" atras={atras} listo={false} pasos={{ actual: 2, etiquetas: PASOS_CONTRATAR }}>
+      <Pantalla titulo="Personas" contexto={p?.nombre} atras={atras} listo={false} pasos={{ actual: 2, etiquetas: PASOS_CONTRATAR }}>
         <LoadingSpinner message="Cargando datos..." />
       </Pantalla>
     );
@@ -135,9 +152,9 @@ export default function ContratarPersonas() {
       boton={{
         texto: `Revisar ${solicitudes} ${solicitudes === 1 ? "solicitud" : "solicitudes"}`,
         onClick: () => navigate(rutas.revision(id)),
-        deshabilitado: solicitudes === 0 || calculando,
+        deshabilitado: solicitudes === 0,
         motivo: solicitudes === 0 ? "No hay nadie para contratar" : undefined,
-
+        cargando: calculando,
       }}
       /* Los errores no frenan acá: se ven en la fila y se corrigen con el lápiz; la Revisión es la que no deja enviar. */
       notaBoton={errores > 0 ? `${errores === 1 ? "1 fila tiene" : `${errores} filas tienen`} algo para corregir` : undefined}

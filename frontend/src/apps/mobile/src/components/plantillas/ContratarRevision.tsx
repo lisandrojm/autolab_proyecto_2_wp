@@ -6,7 +6,7 @@ import { faCircleExclamation, faCircleInfo, faPen, faTriangleExclamation, faUser
 import { plantillasEquipoAPI, Preview, Puntual } from "../../../../../api/plantillasEquipo";
 import { usePlantilla, usePlantillas } from "./contexto";
 import { Pantalla } from "./Pantalla";
-import { borrarEstado, clavePuntual, EstadoContratar, guardarEstado, leerEstado, nuevaClave, pedidosDe, puntualLimpio } from "./estadoContratar";
+import { borrarEstado, clavePuntual, EstadoContratar, firmaDePedidos, guardarEstado, leerEstado, nuevaClave, olvidarPreview, pedidosDe, previewRecordado, puntualLimpio, recordarPreview } from "./estadoContratar";
 import { HojaPuntual } from "./ContratarPersonas";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { nombreRoles, nombreTurno, proyectoDelEquipo, puestosDe, rutas } from "./equipoUtil";
@@ -114,15 +114,26 @@ export default function ContratarRevision() {
 
   const pedidos = useMemo(() => (p && estado ? pedidosDe(p, estado, catalogos) : []), [p, estado, catalogos]);
   // Se recalcula cuando cambia algo que cambia el cálculo: los puntuales sí, los comentarios no.
-  const firma = JSON.stringify(pedidos.map((x) => ({ ...x, puntuales: Object.fromEntries(Object.entries(x.puntuales).map(([k, v]) => [k, { ...v, comentarios: undefined }])) })));
+  const firma = firmaDePedidos(pedidos);
   useEffect(() => {
     if (!p || pedidos.length === 0) return;
+    // Lo que el paso 2 acaba de calcular con estos mismos pedidos: «Revisar» no espera un segundo cálculo igual.
+    const recordado = previewRecordado(p._id, firma);
+    if (recordado) {
+      setPreviews(recordado);
+      setFallo("");
+      return;
+    }
     let vigente = true;
     setPreviews(null);
     setFallo("");
     plantillasEquipoAPI
       .previewVarios(p._id, pedidos)
-      .then((r) => vigente && setPreviews(Object.fromEntries(r.equipos.map((x) => [x.equipoId, x]))))
+      .then((r) => {
+        const porEquipo = Object.fromEntries(r.equipos.map((x) => [x.equipoId, x]));
+        recordarPreview(p._id, firma, porEquipo);
+        if (vigente) setPreviews(porEquipo);
+      })
       .catch((e) => vigente && setFallo(e?.response?.data?.error || "No se pudo calcular. Probá de nuevo."));
     return () => {
       vigente = false;
@@ -193,12 +204,14 @@ export default function ContratarRevision() {
     setEnviando(true);
     try {
       const r = await plantillasEquipoAPI.contratarVarios(p._id, pedidos, estado.clave);
+      olvidarPreview();
       borrarEstado(p._id);
       void cargar(p._id);
       navigate(rutas.enviado(p._id), { replace: true, state: { lotes: r.lotes, repetido: r.repetido, grupo: p.nombre } });
     } catch (e: any) {
       // Nada se creó (es todo o nada): se muestra el porqué con el detalle por equipo.
       const datos = e?.response?.data;
+      olvidarPreview();
       if (Array.isArray(datos?.plan?.equipos)) setPreviews(Object.fromEntries(datos.plan.equipos.map((x: any) => [x.equipoId, x])));
       setFallo(datos?.error || "No se envió ninguna solicitud. Probá de nuevo.");
       // Otra clave para el próximo intento: éste no creó nada.

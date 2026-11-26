@@ -1,4 +1,4 @@
-import { Equipo, PedidoDeContratacion, Plantilla, Puntual } from "../../../../../api/plantillasEquipo";
+import { Equipo, PedidoDeContratacion, Plantilla, Preview, Puntual } from "../../../../../api/plantillasEquipo";
 import { CatalogosContratacion } from "./useCatalogosContratacion";
 import { proyectoDelEquipo, puestosDe } from "./equipoUtil";
 import { porDiasSueltos } from "./Condiciones";
@@ -157,4 +157,39 @@ export function pedidosDe(plantilla: Plantilla, estado: EstadoContratar, catalog
         puntuales,
       };
     });
+}
+
+/*
+  EL CÁLCULO SE HACE UNA VEZ, NO EN CADA PASO.
+
+  El paso 2 y el paso 3 le pedían al server el mismo preview con los mismos pedidos: 36 personas eran
+  dos cálculos largos seguidos, y el segundo arrancaba justo al tocar «Revisar», que es cuando parecía
+  colgado. Ahora el último resultado queda guardado con la FIRMA de los pedidos que lo produjeron: si
+  la firma es la misma —no se tocó nada entre un paso y el otro, o se volvió atrás—, se usa ese y no
+  se vuelve a calcular. Cambió algo (una persona, un importe, las fechas): la firma cambia y se recalcula.
+
+  Vence a los pocos minutos: el preview mira contratos y solicitudes de la base, y lo que se decide
+  con él tiene que ser de ahora. Enviar revalida todo en el server de todos modos.
+*/
+const VIGENCIA_PREVIEW_MS = 5 * 60 * 1000;
+let ultimoPreview: { plantillaId: string; firma: string; previews: Record<string, Preview>; cuando: number } | null = null;
+
+/** Lo que hace distinto a un cálculo: todo lo de los pedidos menos los comentarios, que no cambian ningún número. */
+export const firmaDePedidos = (pedidos: PedidoDeContratacion[]) =>
+  JSON.stringify(pedidos.map((x) => ({ ...x, puntuales: Object.fromEntries(Object.entries(x.puntuales).map(([k, v]) => [k, { ...v, comentarios: undefined }])) })));
+
+export function recordarPreview(plantillaId: string, firma: string, previews: Record<string, Preview>) {
+  ultimoPreview = { plantillaId, firma, previews, cuando: Date.now() };
+}
+
+/** El preview de estos mismos pedidos, si se calculó hace poco. */
+export function previewRecordado(plantillaId: string, firma: string): Record<string, Preview> | null {
+  if (!ultimoPreview || ultimoPreview.plantillaId !== plantillaId || ultimoPreview.firma !== firma) return null;
+  if (Date.now() - ultimoPreview.cuando > VIGENCIA_PREVIEW_MS) return null;
+  return ultimoPreview.previews;
+}
+
+/** Después de enviar (o de que falle), lo calculado ya no vale. */
+export function olvidarPreview() {
+  ultimoPreview = null;
 }
