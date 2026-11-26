@@ -44,17 +44,21 @@ interface HomeProps {
 
 /**
  * EL RENGLÓN BAJO «VACACIONES» CON LA CAMPAÑA EN CURSO (24/11/2026): qué hay que hacer y hasta cuándo, en
- * palabras. Antes era un globo «24 d» en la esquina y se leía como 24 días de vacaciones. `urgente` lo pinta en
- * ámbar: queda una semana o menos, vence hoy o mañana, venció, o hay un aviso sin acusar.
+ * palabras. `urgente` lo pinta en ámbar: queda una semana o menos, vence hoy o mañana, venció, o hay un aviso
+ * sin acusar.
+ *
+ * MIENTRAS PUEDE ELEGIR, DOS RENGLONES CORTOS (pedido del 26/11/2026): «Pedido hasta 18/12/2026» y «Quedan 22
+ * días» (los días que faltan para esa fecha). Los DÍAS DE VACACIONES van en el globo de la esquina
+ * (`contador`), así el número grande es lo que la persona tiene para tomarse y el renglón, el plazo.
  */
 function subtituloDeCampania(c: MiInvitacion): { texto: string; urgente: boolean } {
   const inv = c.invitacion;
   const hasta = fechaCorta(inv.fechaLimite || c.campania.fechaLimite);
   if (c.puedeProponer) {
     const faltan = c.diasParaLaFechaLimite;
-    if (faltan <= 0) return { texto: `Hoy vence el plazo para elegir tus fechas (${hasta})`, urgente: true };
-    if (faltan === 1) return { texto: `Mañana vence el plazo para elegir tus fechas (${hasta})`, urgente: true };
-    return { texto: `Elegí tus fechas: quedan ${faltan} días, hasta el ${hasta}`, urgente: faltan <= 7 };
+    if (faltan <= 0) return { texto: `Pedido hasta ${hasta}\nVence hoy`, urgente: true };
+    if (faltan === 1) return { texto: `Pedido hasta ${hasta}\nVence mañana`, urgente: true };
+    return { texto: `Pedido hasta ${hasta}\nQuedan ${faltan} ${faltan === 1 ? "día" : "días"}`, urgente: faltan <= 7 };
   }
   if (inv.estado === "propuso_fechas") return { texto: "Propuesta enviada: esperando la aprobación", urgente: false };
   if (inv.estado === "vencido_sin_definir") return { texto: "Venció el plazo para elegir: la empresa te propone las fechas", urgente: true };
@@ -259,7 +263,8 @@ export default function Home({ onNavigate }: HomeProps) {
   */
   const conCampania = puede(MOBILE_VACATIONS) && !!campania?.pendienteDeAccion;
   if (conCampania) {
-    quickActions.push({ icon: faUmbrellaBeach, title: "Vacaciones", view: "campania" as ViewType, disabled: false, subtitulo: subtituloDeCampania(campania!) });
+    // El globo de la esquina son sus DÍAS DE VACACIONES (los que tiene para elegir), no los que faltan para el plazo.
+    quickActions.push({ icon: faUmbrellaBeach, title: "Vacaciones", view: "campania" as ViewType, disabled: false, subtitulo: subtituloDeCampania(campania!), contador: campania!.diasDisponibles });
   }
 
   if (puede(MOBILE_VACATIONS) && !conCampania) {
@@ -410,10 +415,10 @@ export default function Home({ onNavigate }: HomeProps) {
               <FontAwesomeIcon icon={action.icon} className={`h-4 w-4 shrink-0 ${action.disabled ? "text-slate-400 dark:text-slate-500" : "text-primary"}`} />
               {/* Con contador, el título deja libre la esquina: si no, un nombre largo le pasa por debajo. */}
               <div className="min-w-0 flex-1">
-                <h2 className={`min-w-0 break-words text-[15px] font-bold leading-tight sm:text-base text-slate-900 dark:text-slate-100 ${(action as any).badge ? "pr-8" : (action as any).nuevos > 0 ? "pr-5" : ""}`}>{action.title}</h2>
+                <h2 className={`min-w-0 break-words text-[15px] font-bold leading-tight sm:text-base text-slate-900 dark:text-slate-100 ${(action as any).badge ? "pr-8" : (action as any).nuevos > 0 || (action as any).contador > 0 ? "pr-5" : ""}`}>{action.title}</h2>
                 {/* Un renglón que dice qué hay que hacer y hasta cuándo (la campaña de goce): en ámbar cuando apura. */}
                 {(action as any).subtitulo && (
-                  <p className={`mt-0.5 text-[11px] leading-snug ${(action as any).subtitulo.urgente ? "font-semibold text-amber-700 dark:text-amber-300" : "text-slate-500 dark:text-slate-400"}`}>{(action as any).subtitulo.texto}</p>
+                  <p className={`mt-0.5 whitespace-pre-line text-[11px] leading-snug ${(action as any).subtitulo.urgente ? "font-semibold text-amber-700 dark:text-amber-300" : "text-slate-500 dark:text-slate-400"}`}>{(action as any).subtitulo.texto}</p>
                 )}
               </div>
 
@@ -436,6 +441,15 @@ export default function Home({ onNavigate }: HomeProps) {
               {!(action as any).badge && (action as any).nuevos > 0 && (
                 <span className="absolute right-2 top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-500/20 px-1 text-[10px] font-black leading-none text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-300">
                   {(action as any).nuevos > 9 ? "9+" : (action as any).nuevos}
+                </span>
+              )}
+              {/* Un número ENTERO en el mismo globo (los días de vacaciones de la campaña): acá «21» tiene que leerse 21. */}
+              {!(action as any).badge && !((action as any).nuevos > 0) && (action as any).contador > 0 && (
+                <span
+                  title={`${(action as any).contador} días de vacaciones`}
+                  className="absolute right-2 top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-500/20 px-1 text-[10px] font-black leading-none text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-300"
+                >
+                  {(action as any).contador > 99 ? "99+" : (action as any).contador}
                 </span>
               )}
             </button>
