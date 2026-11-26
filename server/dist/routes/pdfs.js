@@ -6,7 +6,7 @@ import { requireTenant } from "../middleware/tenant.js";
 import { htmlHasText } from "../utils/documentPdf.js";
 const router = Router();
 const PdfSchema = z.object({
-    code: z.enum(["dinero", "fechaRango", "fechaUnica", "fechasMultiples", "vacaciones", "objeto", "otros", "datosPersonales"]),
+    code: z.enum(["dinero", "fechaRango", "fechaUnica", "fechasMultiples", "vacaciones", "objeto", "otros", "datosPersonales", "cambioTurno"]),
     name: z.string().min(1).max(100),
     title: z.string().optional(),
     // El editor devuelve "<p></p>" cuando está vacío (pasa min(10) con "<p><br></p>"), así que además

@@ -558,6 +558,9 @@ router.put("/orders/:id/pre-approve", async (req, res) => {
                         else if (category.categoryType === "objeto") {
                             templateCode = "objeto";
                         }
+                        else if (category.categoryType === "cambio_turno") {
+                            templateCode = "cambioTurno";
+                        }
                         else {
                             templateCode = "otros";
                         }
@@ -760,6 +763,9 @@ router.post("/orders/:id/regenerate-pdf", async (req, res) => {
                 }
                 else if (category.categoryType === "objeto") {
                     templateCode = "objeto";
+                }
+                else if (category.categoryType === "cambio_turno") {
+                    templateCode = "cambioTurno";
                 }
                 else {
                     templateCode = "otros";

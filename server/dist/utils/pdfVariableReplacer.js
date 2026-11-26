@@ -242,8 +242,21 @@ export async function prepareVariables(order, category, user, tenantName) {
         const proposed = order.metadata?.proposedUserData || (order.dynamicValue && typeof order.dynamicValue === "object" && !Array.isArray(order.dynamicValue) ? order.dynamicValue : null);
         datosModificados = await buildDatosModificadosHtml(proposed, order.tenantId);
     }
+    // Cambio de turno: los nombres guardados al pedir (`metadata.cambioTurno`) y la vigencia en una frase.
+    const cambioTurno = {};
+    if (category.categoryType === "cambio_turno") {
+        const foto = order.metadata?.cambioTurno || {};
+        const p = order.dynamicValue && typeof order.dynamicValue === "object" && !Array.isArray(order.dynamicValue) ? order.dynamicValue : {};
+        cambioTurno.turnoActual = sanitizeHtml(foto.turnoActualNombre || "-");
+        cambioTurno.turnoSolicitado = sanitizeHtml(foto.turnoSolicitadoNombre || "-");
+        cambioTurno.proyecto = sanitizeHtml(foto.proyectoNombre || "-");
+        cambioTurno.area = sanitizeHtml(foto.sedeNombre ? `${foto.areaNombre || ""} · ${foto.sedeNombre}` : foto.areaNombre || "-");
+        cambioTurno.motivo = sanitizeHtml(p.motivo || "-");
+        cambioTurno.vigencia = p.fechaDesde ? (p.fechaHasta ? `desde el ${formatDate(p.fechaDesde)} hasta el ${formatDate(p.fechaHasta)}` : `desde el ${formatDate(p.fechaDesde)}, de forma permanente`) : "-";
+    }
     return {
         ...dynamicVars,
+        ...cambioTurno,
         datosModificados,
         numeroOrden: numeroPedido,
         categoria,

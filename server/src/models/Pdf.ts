@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 
 export interface IPdf extends Document {
   tenantId: Types.ObjectId;
-  code: "dinero" | "fechaRango" | "fechaUnica" | "fechasMultiples" | "vacaciones" | "objeto" | "otros" | "datosPersonales";
+  code: "dinero" | "fechaRango" | "fechaUnica" | "fechasMultiples" | "vacaciones" | "objeto" | "otros" | "datosPersonales" | "cambioTurno";
   name: string;
   title?: string;
   content: string;
@@ -20,7 +20,7 @@ const pdfSchema = new Schema<IPdf>(
     code: {
       type: String,
       required: true,
-      enum: ["dinero", "fechaRango", "fechaUnica", "fechasMultiples", "vacaciones", "objeto", "otros", "datosPersonales"],
+      enum: ["dinero", "fechaRango", "fechaUnica", "fechasMultiples", "vacaciones", "objeto", "otros", "datosPersonales", "cambioTurno"],
       trim: true,
       index: true,
     },

@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { PLANTILLA_CAMBIO_TURNO_POR_DEFECTO } from "../services/orderConfigInitService.js";
 import { connectDB, disconnectDB } from "../config/db.js";
 import { env } from "../config/env.js";
 import bcrypt from "bcryptjs";
@@ -23,6 +24,8 @@ import { Types } from "mongoose";
 /* ----------------------------- helpers ----------------------------- */
 
 const PdfsList = [
+  // La del tipo de sistema «Cambio de turno» vive con su init (también la siembra sin SEED_ON_START).
+  PLANTILLA_CAMBIO_TURNO_POR_DEFECTO,
   {
     code: "dinero" as const,
     name: "Solicitud de Dinero",
@@ -916,6 +919,7 @@ export async function seedOnStart() {
       { name: "Equipamiento y Materiales", templateCode: "objeto" },
       { name: "Solicitudes Especiales", templateCode: "otros" },
       { name: "Documentos Pendientes", templateCode: "objeto" },
+      { name: "Cambio de turno", templateCode: "cambioTurno" },
     ];
 
     for (const item of repairMap) {

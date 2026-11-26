@@ -1,6 +1,37 @@
 import { Types } from "mongoose";
 import { OrderConfig } from "../models/OrderConfig.js";
-import { CATEGORIA_CAMBIO_TURNO, NOMBRE_CAMBIO_TURNO, REGLAS_CAMBIO_TURNO_POR_DEFECTO, SYSTEM_KEY_CAMBIO_TURNO } from "../compartido/cambioDeTurno.js";
+import { Pdf } from "../models/Pdf.js";
+import { CATEGORIA_CAMBIO_TURNO, NOMBRE_CAMBIO_TURNO, PLANTILLA_CAMBIO_TURNO, REGLAS_CAMBIO_TURNO_POR_DEFECTO, SYSTEM_KEY_CAMBIO_TURNO } from "../compartido/cambioDeTurno.js";
+/**
+ * LA PLANTILLA PDF «Solicitud de cambio de turno», como las demás plantillas por defecto de pedidos
+ * (`scripts/seedOnStart.ts`, que la incluye en su lista). Se siembra acá también porque el seed sólo corre
+ * con SEED_ON_START y el tipo de sistema tiene que nacer con su plantilla asignada. Las variables
+ * `turnoActual`, `turnoSolicitado`, `proyecto`, `area`, `vigencia` y `motivo` las arma
+ * `utils/pdfVariableReplacer.ts` a partir de `metadata.cambioTurno` y `dynamicValue`.
+ */
+export const PLANTILLA_CAMBIO_TURNO_POR_DEFECTO = {
+    code: PLANTILLA_CAMBIO_TURNO,
+    name: "Solicitud de cambio de turno",
+    content: `Por la presente notifico que hemos aprobado su solicitud de {{categoria}} N° {{numeroOrden}} en el proyecto {{proyecto}}, área {{area}}: pasa del turno {{turnoActual}} al turno {{turnoSolicitado}} {{vigencia}}.
+
+Motivo informado: {{motivo}}.
+
+El cambio se hace efectivo en el equipo del proyecto en la fecha indicada y queda sujeto a las políticas internas de la empresa y a la coordinación con su supervisor directo.`,
+    variablesHint: "Variables: categoria, numeroOrden, proyecto, area, turnoActual, turnoSolicitado, fechaDesde, fechaHasta, vigencia, motivo, nombreUsuario, textoAdicional",
+    isActive: true,
+};
+/** La plantilla del tenant (se crea si falta) y, si el tipo no tiene plantilla asignada, se la asigna. */
+async function asegurarPlantillaCambioTurno(tid, tipo) {
+    let plantilla = await Pdf.findOne({ tenantId: tid, code: PLANTILLA_CAMBIO_TURNO });
+    if (!plantilla) {
+        console.log(`[OrderConfigInit] Creando la plantilla «${PLANTILLA_CAMBIO_TURNO_POR_DEFECTO.name}» para el tenant ${tid}`);
+        plantilla = await Pdf.create({ ...PLANTILLA_CAMBIO_TURNO_POR_DEFECTO, tenantId: tid });
+    }
+    if (!tipo.pdfId) {
+        tipo.pdfId = plantilla._id;
+        await tipo.save();
+    }
+}
 /*
   TIPOS DE PEDIDO DE SISTEMA (26/11/2026). Mismo patrón que `shiftInitService.ts`: al arrancar el server se
   recorren los tenants y se garantiza que cada uno tenga el tipo «Cambio de turno». Si ya existe uno con ese
@@ -55,6 +86,8 @@ export async function ensureDefaultOrderConfigs(tenantId) {
         tipo.categoryType = CATEGORIA_CAMBIO_TURNO;
         await tipo.save();
     }
+    // Nace con su plantilla PDF («Plantilla asignada automáticamente», como los demás tipos).
+    await asegurarPlantillaCambioTurno(tid, tipo);
 }
 /** Recorre todos los tenants. Se llama al arrancar (`server.ts`), junto a roles y turnos. */
 export async function ensureAllTenantsHaveDefaultOrderConfigs() {

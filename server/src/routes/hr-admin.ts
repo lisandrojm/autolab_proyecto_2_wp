@@ -651,6 +651,8 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
               templateCode = "dinero";
             } else if (category.categoryType === "objeto") {
               templateCode = "objeto";
+            } else if (category.categoryType === "cambio_turno") {
+              templateCode = "cambioTurno";
             } else {
               templateCode = "otros";
             }
@@ -878,6 +880,8 @@ router.post("/orders/:id/regenerate-pdf", async (req: AuthenticatedRequest & Ten
           templateCode = "dinero";
         } else if (category.categoryType === "objeto") {
           templateCode = "objeto";
+        } else if (category.categoryType === "cambio_turno") {
+          templateCode = "cambioTurno";
         } else {
           templateCode = "otros";
         }

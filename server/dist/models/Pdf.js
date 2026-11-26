@@ -4,7 +4,7 @@ const pdfSchema = new Schema({
     code: {
         type: String,
         required: true,
-        enum: ["dinero", "fechaRango", "fechaUnica", "fechasMultiples", "vacaciones", "objeto", "otros", "datosPersonales"],
+        enum: ["dinero", "fechaRango", "fechaUnica", "fechasMultiples", "vacaciones", "objeto", "otros", "datosPersonales", "cambioTurno"],
         trim: true,
         index: true,
     },
