@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSitemap, faLayerGroup, faChevronDown, faChevronRight, faUserTie, faUserShield, faSearch, faXmark, faFileContract, faCircleInfo, faLocationDot, faClock } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import SectionHeader from "../components/SectionHeader";
+import MenuDeTarjetas, { type OpcionDeMenu } from "../components/MenuDeTarjetas";
 import ContratoMiembroModal from "../components/ContratoMiembroModal";
 import ProyectoInfoModal from "../components/ProyectoInfoModal";
 import { BadgeCentroCosto, SelectorDeProyecto, etiquetaDeProyecto } from "../components/SelectorDeProyecto";
@@ -33,10 +34,10 @@ interface MyTeamsProps {
  *                   ve todas las áreas y turnos, y además quiénes del equipo no tienen área.
  *   · Coordinador — ve las combinaciones área/turno que tiene asignadas (`coordinatorAssignments`).
  *
- * DOS SECCIONES PARA QUIEN COORDINA EL PROYECTO (26/11/2026): primero los equipos que supervisa
- * directamente (sus filas de `coordinatorAssignments`) y después, aparte, «Supervisores a tu cargo»: el
- * resto de las áreas y turnos del proyecto, con quién supervisa cada turno. Antes veía el proyecto entero
- * en una sola lista y sus propios turnos quedaban mezclados con los de los demás.
+ * DOS TARJETAS PARA QUIEN COORDINA EL PROYECTO (26/11/2026): «Equipos que superviso», los que supervisa
+ * directamente (sus filas de `coordinatorAssignments`), y «Supervisores a mi cargo»: el resto de las áreas
+ * y turnos del proyecto, con quién supervisa cada turno. Antes veía el proyecto entero en una sola lista y
+ * sus propios turnos quedaban mezclados con los de los demás.
  *
  * TODO ARRANCA COLAPSADO, igual que en el panel: un proyecto grande son decenas de turnos y en un
  * celular se abre sólo lo que se quiere ver. Cerrada, cada área igual dice cuántos suman en cada turno
@@ -408,17 +409,33 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
   );
 
   /*
-    LAS DOS SECCIONES (26/11/2026). Lo que superviso directamente y, para quien coordina el proyecto, lo que
-    llevan sus supervisores. Un supervisor que no coordina el proyecto ve sólo la primera, sin título: nada cambia.
+    LAS DOS TARJETAS (26/11/2026). Lo que superviso directamente y, para quien coordina el proyecto, lo que
+    llevan sus supervisores. Un supervisor que no coordina el proyecto ve sólo la primera, sin menú: nada cambia.
   */
   const secciones = equipo
     ? equipo.supervisa
       ? [
-          { clave: "propias", titulo: "Equipos que supervisás", icono: faLayerGroup, vacio: "No supervisás ningún turno directamente: abajo están los equipos de tus supervisores.", areas: equipo.areas, conSupervisor: false },
-          { clave: "supervisores", titulo: "Supervisores a tu cargo", icono: faUserTie, vacio: "Todos los turnos del proyecto los supervisás vos.", areas: equipo.areasDeSupervisores, conSupervisor: true },
+          { clave: "propias" as const, titulo: "Equipos que superviso", icono: faLayerGroup, vacio: "Sin turnos a cargo directo en este proyecto: los equipos están en «Supervisores a mi cargo».", areas: equipo.areas, conSupervisor: false },
+          { clave: "supervisores" as const, titulo: "Supervisores a mi cargo", icono: faUserTie, vacio: "Todos los turnos del proyecto están a cargo directo: no hay otros supervisores.", areas: equipo.areasDeSupervisores, conSupervisor: true },
         ]
-      : [{ clave: "propias", titulo: "", icono: faLayerGroup, vacio: "", areas: equipo.areas, conSupervisor: false }]
+      : [{ clave: "propias" as const, titulo: "", icono: faLayerGroup, vacio: "", areas: equipo.areas, conSupervisor: false }]
     : [];
+  /*
+    UN MENÚ DE TARJETAS, COMO NOVEDADES (pedido del 26/11/2026: botones, no pestañas). Para quien coordina
+    el proyecto la pantalla abre con las dos tarjetas; tocar una ENTRA (el título pasa a ser el de esa parte)
+    y la flecha de atrás vuelve a las tarjetas. Cambiar de proyecto también vuelve al menú. Una tarjeta sin
+    equipos queda deshabilitada, con el contador en cero a la vista.
+  */
+  type Seccion = "propias" | "supervisores";
+  const conMenu = !!equipo?.supervisa;
+  const [elegida, setElegida] = useState<Seccion | "menu">("menu");
+  useEffect(() => {
+    setElegida("menu");
+  }, [proyectoId]);
+  const enMenu = conMenu && elegida === "menu";
+  const opciones: OpcionDeMenu<Seccion>[] = secciones.map((sec) => ({ id: sec.clave, label: sec.titulo, icon: sec.icono, contador: sec.areas.length, disabled: sec.areas.length === 0 }));
+  const opcionActiva = opciones.find((o) => o.id === elegida);
+  const seccionesVisibles = conMenu ? secciones.filter((sec) => sec.clave === elegida) : secciones;
   /** La misma fila puede estar en las dos secciones (mis turnos y los de los demás): lo abierto se recuerda por sección. */
   const claveDeArea = (seccion: string, a: AreaACargo) => `area::${seccion}::${a.filaKey}`;
 
@@ -426,11 +443,11 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
     <div className="flex-1 pb-24">
       {/* HEADER */}
       <SectionHeader
-        icon={faSitemap}
-        titulo="Equipos"
-        onBack={() => onNavigate("home")}
+        icon={enMenu || !opcionActiva ? faSitemap : opcionActiva.icon}
+        titulo={enMenu || !opcionActiva ? "Equipos" : opcionActiva.label}
+        onBack={() => (enMenu || !conMenu ? onNavigate("home") : setElegida("menu"))}
         info={
-          "Las áreas y turnos que tenés a cargo, con la gente de cada uno: lo mismo que la Jerarquía del proyecto en el escritorio.\n\nSi coordinás el proyecto, primero están los equipos que supervisás directamente y después, aparte, los de tus supervisores: cada área con sus turnos y quién supervisa cada uno.\n\nArranca todo cerrado. Cada área muestra sus turnos con cuántas personas suman sobre el total asignado (suman las activas con contrato vigente). Tocá un área para ver sus turnos, y un turno para ver quiénes lo integran.\n\nSi estás en más de un proyecto, elegí cuál ver."
+          "Las áreas y turnos que tenés a cargo, con la gente de cada uno: lo mismo que la Jerarquía del proyecto en el escritorio.\n\nSi coordinás el proyecto hay dos botones: los equipos que supervisás directamente y los de tus supervisores, cada área con sus turnos y quién supervisa cada uno.\n\nArranca todo cerrado. Cada área muestra sus turnos con cuántas personas suman sobre el total asignado (suman las activas con contrato vigente). Tocá un área para ver sus turnos, y un turno para ver quiénes lo integran.\n\nSi estás en más de un proyecto, elegí cuál ver."
         }
       />
 
@@ -477,200 +494,198 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
                   {!equipo.supervisa && <p className="mt-1 text-[11px] text-emerald-800/80 dark:text-emerald-300/70">Abajo están las áreas y turnos que supervisás.</p>}
                 </div>
 
-                {/* Abrir o cerrar todo de una vez. */}
-                <div className="flex items-center justify-end gap-2 text-xs font-semibold">
-                  <button
-                    type="button"
-                    onClick={() => setAbiertos(new Set([...secciones.flatMap((sec) => sec.areas.map((a) => claveDeArea(sec.clave, a))), ...secciones.flatMap((sec) => sec.areas.flatMap((a) => a.turnos.map((t) => t.clave))), ...(sinAsignar ? ["sin-asignar"] : [])]))}
-                    className="text-blue-600 dark:text-blue-400"
-                  >
-                    Expandir todo
-                  </button>
-                  <span className="text-slate-300 dark:text-slate-600">|</span>
-                  <button type="button" onClick={() => setAbiertos(new Set())} className="text-blue-600 dark:text-blue-400">
-                    Colapsar todo
-                  </button>
-                </div>
+                {/* Las dos tarjetas, como el menú de Novedades: tocar una entra; la flecha de atrás vuelve acá. */}
+                {enMenu && <MenuDeTarjetas opciones={opciones} onElegir={setElegida} />}
 
-                {/* Las secciones (ver `secciones`): dentro, un bloque por área con sus turnos en orden de horario. */}
-                {secciones.map((sec) => (
-                  <div key={sec.clave} className="space-y-4">
-                    {sec.titulo && (
-                      <p className="flex items-center gap-2 pt-1 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                        <FontAwesomeIcon icon={sec.icono} className="h-3 w-3" />
-                        {sec.titulo}
-                        <span className="font-semibold normal-case tracking-normal text-slate-400">
-                          · {sec.areas.length} {sec.areas.length === 1 ? "equipo" : "equipos"}
-                        </span>
-                      </p>
-                    )}
-                    {sec.titulo && sec.areas.length === 0 && <p className="rounded-xl border border-dashed border-slate-300 p-3 text-xs italic text-slate-500 dark:border-slate-600 dark:text-slate-400">{sec.vacio}</p>}
-                    {sec.areas.map((a) => {
-                      const areaAbierta = abiertos.has(claveDeArea(sec.clave, a));
-                      return (
-                        <section key={a.filaKey} className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900/60">
-                          <button
-                            type="button"
-                            onClick={() => alternar(claveDeArea(sec.clave, a))}
-                            aria-expanded={areaAbierta}
-                            className={`flex w-full flex-wrap items-center gap-2 text-left ${areaAbierta ? "mb-3 border-b border-slate-200 pb-2 dark:border-slate-700" : ""}`}
-                          >
-                            <FontAwesomeIcon icon={areaAbierta ? faChevronDown : faChevronRight} className="h-3 w-3 text-slate-400" />
-                            <FontAwesomeIcon icon={faLayerGroup} className="h-3.5 w-3.5 text-blue-500" />
-                            <span className="flex flex-col items-start">
-                              <span className="text-sm font-black uppercase tracking-wide text-slate-900 dark:text-slate-100">{a.nombre}</span>
-                              {/* La sede, siempre (también la principal sola): cada sede de un área es su propio equipo. */}
-                              {a.sedeEtiqueta && (
-                                <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300">
-                                  <FontAwesomeIcon icon={faLocationDot} className="h-2.5 w-2.5" />
-                                  {a.sedeEtiqueta}
+                {!enMenu && (
+                  <>
+                  {/* Abrir o cerrar todo de una vez. */}
+                  <div className="flex items-center justify-end gap-2 text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setAbiertos(new Set([...seccionesVisibles.flatMap((sec) => sec.areas.map((a) => claveDeArea(sec.clave, a))), ...seccionesVisibles.flatMap((sec) => sec.areas.flatMap((a) => a.turnos.map((t) => t.clave))), ...(sinAsignar ? ["sin-asignar"] : [])]))}
+                      className="text-blue-600 dark:text-blue-400"
+                    >
+                      Expandir todo
+                    </button>
+                    <span className="text-slate-300 dark:text-slate-600">|</span>
+                    <button type="button" onClick={() => setAbiertos(new Set())} className="text-blue-600 dark:text-blue-400">
+                      Colapsar todo
+                    </button>
+                  </div>
+
+                  {/* La parte elegida (ver `secciones`): dentro, un bloque por área con sus turnos en orden de horario. */}
+                  {seccionesVisibles.map((sec) => (
+                    <div key={sec.clave} className="space-y-4">
+                      {sec.titulo && sec.areas.length === 0 && <p className="rounded-xl border border-dashed border-slate-300 p-3 text-xs italic text-slate-500 dark:border-slate-600 dark:text-slate-400">{sec.vacio}</p>}
+                      {sec.areas.map((a) => {
+                        const areaAbierta = abiertos.has(claveDeArea(sec.clave, a));
+                        return (
+                          <section key={a.filaKey} className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900/60">
+                            <button
+                              type="button"
+                              onClick={() => alternar(claveDeArea(sec.clave, a))}
+                              aria-expanded={areaAbierta}
+                              className={`flex w-full flex-wrap items-center gap-2 text-left ${areaAbierta ? "mb-3 border-b border-slate-200 pb-2 dark:border-slate-700" : ""}`}
+                            >
+                              <FontAwesomeIcon icon={areaAbierta ? faChevronDown : faChevronRight} className="h-3 w-3 text-slate-400" />
+                              <FontAwesomeIcon icon={faLayerGroup} className="h-3.5 w-3.5 text-blue-500" />
+                              <span className="flex flex-col items-start">
+                                <span className="text-sm font-black uppercase tracking-wide text-slate-900 dark:text-slate-100">{a.nombre}</span>
+                                {/* La sede, siempre (también la principal sola): cada sede de un área es su propio equipo. */}
+                                {a.sedeEtiqueta && (
+                                  <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300">
+                                    <FontAwesomeIcon icon={faLocationDot} className="h-2.5 w-2.5" />
+                                    {a.sedeEtiqueta}
+                                  </span>
+                                )}
+                              </span>
+                              {a.diasComunes && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{a.diasComunes}</span>}
+                              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                                {a.turnos.length} {a.turnos.length === 1 ? "turno" : "turnos"}
+                              </span>
+                              {/* Cerrada, el área igual dice cuántos suman en cada turno. En el celular van en su propio renglón. */}
+                              {!areaAbierta && (
+                                <span className="flex w-full flex-wrap gap-1.5 pl-5">
+                                  {a.turnos.map((t) => {
+                                    const lista = porTurno.get(t.clave) || [];
+                                    const cuentan = lista.filter((m) => m.cuenta).length;
+                                    return (
+                                      <span key={t.clave} className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                                        {t.nombre}
+                                        {/* En «Supervisores a tu cargo», quién lleva cada turno, a la vista sin abrir nada. */}
+                                        {sec.conSupervisor && <span className="text-amber-700 dark:text-amber-300"> · {t.coordinadorNombre || "Sin supervisor"}</span>}
+                                        {personas !== null && (
+                                          <>
+                                            {" · "}
+                                            <span className="text-green-600 dark:text-green-400">{cuentan}</span>
+                                            {lista.length !== cuentan && <span className="text-slate-400">/{lista.length}</span>}
+                                          </>
+                                        )}
+                                      </span>
+                                    );
+                                  })}
                                 </span>
                               )}
-                            </span>
-                            {a.diasComunes && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{a.diasComunes}</span>}
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                              {a.turnos.length} {a.turnos.length === 1 ? "turno" : "turnos"}
-                            </span>
-                            {/* Cerrada, el área igual dice cuántos suman en cada turno. En el celular van en su propio renglón. */}
-                            {!areaAbierta && (
-                              <span className="flex w-full flex-wrap gap-1.5 pl-5">
+                            </button>
+
+                            {areaAbierta && (
+                              <div className="space-y-2">
                                 {a.turnos.map((t) => {
                                   const lista = porTurno.get(t.clave) || [];
-                                  const cuentan = lista.filter((m) => m.cuenta).length;
+                                  const suman = lista.filter((m) => m.cuenta).sort((x, y) => nombreDe(x).localeCompare(nombreDe(y)));
+                                  const noSuman = lista.filter((m) => !m.cuenta).sort((x, y) => nombreDe(x).localeCompare(nombreDe(y)));
+                                  const abierto = abiertos.has(t.clave);
                                   return (
-                                    <span key={t.clave} className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                                      {t.nombre}
-                                      {/* En «Supervisores a tu cargo», quién lleva cada turno, a la vista sin abrir nada. */}
-                                      {sec.conSupervisor && <span className="text-amber-700 dark:text-amber-300"> · {t.coordinadorNombre || "Sin supervisor"}</span>}
-                                      {personas !== null && (
-                                        <>
-                                          {" · "}
-                                          <span className="text-green-600 dark:text-green-400">{cuentan}</span>
-                                          {lista.length !== cuentan && <span className="text-slate-400">/{lista.length}</span>}
-                                        </>
-                                      )}
-                                    </span>
-                                  );
-                                })}
-                              </span>
-                            )}
-                          </button>
-
-                          {areaAbierta && (
-                            <div className="space-y-2">
-                              {a.turnos.map((t) => {
-                                const lista = porTurno.get(t.clave) || [];
-                                const suman = lista.filter((m) => m.cuenta).sort((x, y) => nombreDe(x).localeCompare(nombreDe(y)));
-                                const noSuman = lista.filter((m) => !m.cuenta).sort((x, y) => nombreDe(x).localeCompare(nombreDe(y)));
-                                const abierto = abiertos.has(t.clave);
-                                return (
-                                  <div key={t.clave} className="rounded-lg border border-slate-200 dark:border-slate-700">
-                                    <button type="button" onClick={() => alternar(t.clave)} aria-expanded={abierto} className="flex w-full items-start gap-2 px-3 py-2 text-left">
-                                      <FontAwesomeIcon icon={abierto ? faChevronDown : faChevronRight} className="mt-1 h-3 w-3 shrink-0 text-slate-400" />
-                                      <div className="min-w-0 flex-1">
-                                        <div className="flex flex-wrap items-baseline gap-x-2">
-                                          <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{t.nombre}</span>
-                                          {/* Los días sólo acá cuando los turnos del área no coinciden: si no, ya están arriba. */}
-                                          {!a.diasComunes && t.dias && <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">{t.dias}</span>}
+                                    <div key={t.clave} className="rounded-lg border border-slate-200 dark:border-slate-700">
+                                      <button type="button" onClick={() => alternar(t.clave)} aria-expanded={abierto} className="flex w-full items-start gap-2 px-3 py-2 text-left">
+                                        <FontAwesomeIcon icon={abierto ? faChevronDown : faChevronRight} className="mt-1 h-3 w-3 shrink-0 text-slate-400" />
+                                        <div className="min-w-0 flex-1">
+                                          <div className="flex flex-wrap items-baseline gap-x-2">
+                                            <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{t.nombre}</span>
+                                            {/* Los días sólo acá cuando los turnos del área no coinciden: si no, ya están arriba. */}
+                                            {!a.diasComunes && t.dias && <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">{t.dias}</span>}
+                                          </div>
+                                          {t.horario && <p className="text-[11px] text-slate-500 dark:text-slate-400">{t.horario}</p>}
+                                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
+                                            <span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                                              <FontAwesomeIcon icon={faUserTie} className="h-2.5 w-2.5" />
+                                              {t.coordinadorNombre || "Sin supervisor"}
+                                            </span>
+                                            {personas === null ? (
+                                              <span className="text-slate-400">Cargando…</span>
+                                            ) : (
+                                              <>
+                                                <span className="rounded border border-green-200 bg-green-50 px-1.5 py-0.5 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">{suman.length} suman</span>
+                                                {noSuman.length > 0 && <span className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-red-700 dark:border-red-900/70 dark:bg-red-950/20 dark:text-red-300">{noSuman.length} no suman</span>}
+                                              </>
+                                            )}
+                                          </div>
                                         </div>
-                                        {t.horario && <p className="text-[11px] text-slate-500 dark:text-slate-400">{t.horario}</p>}
-                                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
-                                          <span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-                                            <FontAwesomeIcon icon={faUserTie} className="h-2.5 w-2.5" />
-                                            {t.coordinadorNombre || "Sin supervisor"}
-                                          </span>
-                                          {personas === null ? (
-                                            <span className="text-slate-400">Cargando…</span>
+                                      </button>
+
+                                      {abierto && personas !== null && (
+                                        <div className="space-y-1.5 border-t border-slate-200 p-3 dark:border-slate-700">
+                                          {lista.length === 0 ? (
+                                            <p className="text-center text-xs italic text-slate-400">No hay personas asignadas a este turno.</p>
                                           ) : (
                                             <>
-                                              <span className="rounded border border-green-200 bg-green-50 px-1.5 py-0.5 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">{suman.length} suman</span>
-                                              {noSuman.length > 0 && <span className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-red-700 dark:border-red-900/70 dark:bg-red-950/20 dark:text-red-300">{noSuman.length} no suman</span>}
+                                              <p className="rounded-lg border border-green-200 bg-green-50 px-2 py-1.5 text-[11px] text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
+                                                <strong>{suman.length}</strong> {suman.length === 1 ? "persona activa" : "personas activas"} con contrato vigente
+                                                {noSuman.length > 0 && (
+                                                  <>
+                                                    {" "}
+                                                    · <strong>{lista.length}</strong> {lista.length === 1 ? "asignada" : "asignadas"} en total
+                                                  </>
+                                                )}
+                                              </p>
+                                              {suman.map((m) => tarjeta(m, m._id === t.coordinadorId))}
+                                              {noSuman.length > 0 && (
+                                                <>
+                                                  <p className="pt-2 text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">No suman al total ({noSuman.length})</p>
+                                                  {noSuman.map((m) => tarjeta(m, m._id === t.coordinadorId))}
+                                                </>
+                                              )}
                                             </>
                                           )}
                                         </div>
-                                      </div>
-                                    </button>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </section>
+                        );
+                      })}
+                    </div>
+                  ))}
 
-                                    {abierto && personas !== null && (
-                                      <div className="space-y-1.5 border-t border-slate-200 p-3 dark:border-slate-700">
-                                        {lista.length === 0 ? (
-                                          <p className="text-center text-xs italic text-slate-400">No hay personas asignadas a este turno.</p>
-                                        ) : (
-                                          <>
-                                            <p className="rounded-lg border border-green-200 bg-green-50 px-2 py-1.5 text-[11px] text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
-                                              <strong>{suman.length}</strong> {suman.length === 1 ? "persona activa" : "personas activas"} con contrato vigente
-                                              {noSuman.length > 0 && (
-                                                <>
-                                                  {" "}
-                                                  · <strong>{lista.length}</strong> {lista.length === 1 ? "asignada" : "asignadas"} en total
-                                                </>
-                                              )}
-                                            </p>
-                                            {suman.map((m) => tarjeta(m, m._id === t.coordinadorId))}
-                                            {noSuman.length > 0 && (
-                                              <>
-                                                <p className="pt-2 text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">No suman al total ({noSuman.length})</p>
-                                                {noSuman.map((m) => tarjeta(m, m._id === t.coordinadorId))}
-                                              </>
-                                            )}
-                                          </>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                  {/* Los que no están en ningún turno: sólo el supervisor los ve, es quien los acomoda. */}
+                  {sinAsignar && elegida === "supervisores" && (
+                    <div className="rounded-xl border border-dashed border-slate-300 p-3 dark:border-slate-600">
+                      <button type="button" onClick={() => alternar("sin-asignar")} aria-expanded={abiertos.has("sin-asignar")} className="flex w-full items-center gap-2 text-left">
+                        <FontAwesomeIcon icon={abiertos.has("sin-asignar") ? faChevronDown : faChevronRight} className="h-3 w-3 text-slate-400" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Sin área asignada ({sinAsignar.length})</span>
+                      </button>
+                      {abiertos.has("sin-asignar") &&
+                        (sinAsignar.length === 0 ? (
+                          <p className="mt-2 text-xs italic text-slate-400">Todo el equipo está ubicado.</p>
+                        ) : (
+                          <div className="mt-2 space-y-2">
+                            {/* Texto y no `search`: algunos navegadores le agregan su propia cruz y quedaban dos. */}
+                            <div className="relative">
+                              <FontAwesomeIcon icon={faSearch} className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                              <input
+                                type="text"
+                                enterKeyHint="search"
+                                autoComplete="off"
+                                value={buscaSinArea}
+                                onChange={(e) => setBuscaSinArea(e.target.value)}
+                                placeholder="Buscar por nombre o email"
+                                className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                              />
+                              {buscaSinArea && (
+                                <button type="button" onClick={() => setBuscaSinArea("")} aria-label="Limpiar búsqueda" className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                                  <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
+                                </button>
+                              )}
                             </div>
-                          )}
-                        </section>
-                      );
-                    })}
-                  </div>
-                ))}
-
-                {/* Los que no están en ningún turno: sólo el supervisor los ve, es quien los acomoda. */}
-                {sinAsignar && (
-                  <div className="rounded-xl border border-dashed border-slate-300 p-3 dark:border-slate-600">
-                    <button type="button" onClick={() => alternar("sin-asignar")} aria-expanded={abiertos.has("sin-asignar")} className="flex w-full items-center gap-2 text-left">
-                      <FontAwesomeIcon icon={abiertos.has("sin-asignar") ? faChevronDown : faChevronRight} className="h-3 w-3 text-slate-400" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Sin área asignada ({sinAsignar.length})</span>
-                    </button>
-                    {abiertos.has("sin-asignar") &&
-                      (sinAsignar.length === 0 ? (
-                        <p className="mt-2 text-xs italic text-slate-400">Todo el equipo está ubicado.</p>
-                      ) : (
-                        <div className="mt-2 space-y-2">
-                          {/* Texto y no `search`: algunos navegadores le agregan su propia cruz y quedaban dos. */}
-                          <div className="relative">
-                            <FontAwesomeIcon icon={faSearch} className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-                            <input
-                              type="text"
-                              enterKeyHint="search"
-                              autoComplete="off"
-                              value={buscaSinArea}
-                              onChange={(e) => setBuscaSinArea(e.target.value)}
-                              placeholder="Buscar por nombre o email"
-                              className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
-                            />
-                            {buscaSinArea && (
-                              <button type="button" onClick={() => setBuscaSinArea("")} aria-label="Limpiar búsqueda" className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                                <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-                              </button>
+                            {buscaSinArea.trim() && (
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                {sinAsignarFiltrados.length} de {sinAsignar.length}
+                              </p>
+                            )}
+                            {sinAsignarFiltrados.length === 0 ? (
+                              <p className="py-3 text-center text-xs italic text-slate-400">Nadie coincide con «{buscaSinArea.trim()}».</p>
+                            ) : (
+                              <div className="space-y-1.5">{sinAsignarFiltrados.map((m) => tarjeta(m, false))}</div>
                             )}
                           </div>
-                          {buscaSinArea.trim() && (
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                              {sinAsignarFiltrados.length} de {sinAsignar.length}
-                            </p>
-                          )}
-                          {sinAsignarFiltrados.length === 0 ? (
-                            <p className="py-3 text-center text-xs italic text-slate-400">Nadie coincide con «{buscaSinArea.trim()}».</p>
-                          ) : (
-                            <div className="space-y-1.5">{sinAsignarFiltrados.map((m) => tarjeta(m, false))}</div>
-                          )}
-                        </div>
-                      ))}
-                  </div>
+                        ))}
+                    </div>
+                  )}
+                  </>
                 )}
               </>
             )}
