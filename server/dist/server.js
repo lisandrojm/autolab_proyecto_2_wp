@@ -2,6 +2,7 @@
 // Trigger reload 2
 import { enContexto } from "./utils/contextoAuditoria.js";
 import { initTransicionEstadoScheduler } from "./services/transicionEstadoContratos.js";
+import { initCambioTurnoScheduler } from "./services/cambioTurnoCronService.js";
 import "./config/env.js";
 import { env } from "./config/env.js";
 import express from "express";
@@ -520,6 +521,13 @@ connectDB()
         }
         catch (error) {
             console.error("❌ Failed to initialize transicion-estado scheduler:", error);
+        }
+        // Cambios de turno aprobados: se aplican cuando llega la fecha y se revierten los temporales vencidos (una vez por día).
+        try {
+            enContexto({ origen: "sistema", detalle: "tarea initCambioTurnoScheduler" }, () => initCambioTurnoScheduler());
+        }
+        catch (error) {
+            console.error("❌ Failed to initialize cambio-turno scheduler:", error);
         }
     }
     // «Contrato custom» y «Release custom» son del sistema: se crean solos para cada tenant (en

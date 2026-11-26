@@ -88,6 +88,10 @@ describe("validar un pedido de cambio de turno", () => {
     // Sin cupo configurado la ocupación no se mira.
     assert.equal(validarCambioDeTurno(base({ ocupacionDestino: 50 })).ok, true);
   });
+  it("al aprobar no se mira la anticipación (la aprobación puede llegar tarde), el resto sí", () => {
+    assert.equal(validarCambioDeTurno(base({ alAprobar: true }, { fechaDesde: "2026-11-20" })).ok, true);
+    assert.deepEqual(codigos(base({ alAprobar: true, turnosActuales: [NOCHE] }, { fechaDesde: "2026-11-20" })), ["turno_actual_distinto"]);
+  });
   it("devuelve TODOS los errores juntos", () => {
     const r = validarCambioDeTurno(base({ turnosActuales: [] }, { fechaDesde: "2026-11-27", motivo: "" }));
     assert.deepEqual(r.errores.map((e) => e.codigo).sort(), ["anticipacion_insuficiente", "motivo_requerido", "sin_turno_actual"]);

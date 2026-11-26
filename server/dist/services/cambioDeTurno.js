@@ -74,7 +74,7 @@ export function validarCambioDeTurno(ctx) {
     const desdeOk = ES_FECHA.test(p.fechaDesde || "");
     if (!desdeOk)
         error("fecha_desde_invalida", "Indicá desde qué fecha.");
-    else {
+    else if (!ctx.alAprobar) {
         const minima = sumarDias(ctx.hoy, ctx.reglas.diasAnticipacion);
         if (p.fechaDesde < minima) {
             const n = ctx.reglas.diasAnticipacion;
@@ -209,7 +209,7 @@ export const tipoCambioDeTurno = (tenantId) => OrderConfig.findOne({ tenantId, c
 /** Cargar el contexto y validar: lo que corren POST /orders, validate-cambio-turno y la aprobación. */
 export async function validarPedidoCambioDeTurno(tenantId, userId, pedido, opciones = {}) {
     const reglas = opciones.reglas || reglasCambioTurnoDe((await tipoCambioDeTurno(tenantId))?.config);
-    const ctx = await contextoDeCambioDeTurno(tenantId, userId, pedido, reglas, opciones);
+    const ctx = { ...(await contextoDeCambioDeTurno(tenantId, userId, pedido, reglas, opciones)), alAprobar: !!opciones.alAprobar };
     return { ...validarCambioDeTurno(ctx), ctx };
 }
 const nombreDeTurno = (t) => (t ? etiquetaDeTurno(String(t.name || "")) : "");

@@ -21,6 +21,7 @@ import { requireTenant } from "../middleware/tenant.js";
 import { Types } from "mongoose";
 import { getPlainOrderNumber } from "../utils/orderHelpers.js";
 import { generateOrderPDF } from "../utils/pdfGenerator.js";
+import { aplicarSiCorresponde, revalidarAlAprobar } from "../services/pedidoCambioDeTurno.js";
 const router = Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -731,15 +732,24 @@ router.put("/orders/:id/approve", async (req, res) => {
             res.status(400).json({ error: "Only pre-approved orders can be approved" });
             return;
         }
+        const category = order.categoryId;
+        const requiresSignature = category?.requiresSignature || false;
+        // Cambio de turno: el contexto pudo cambiar desde que se pidió. Si ya no pasa, NO se aprueba (422).
+        const revalidacion = await revalidarAlAprobar(order, category, { tenantId: req.tenantObjectId, porUserId: approverId });
+        if (!revalidacion.ok) {
+            res.status(422).json({ error: "El cambio de turno ya no se puede aplicar: el pedido no quedó aprobado.", errores: revalidacion.errores });
+            return;
+        }
         order.status = "approved";
         order.approvedBy = new Types.ObjectId(approverId);
         order.approvedAt = new Date();
-        const category = order.categoryId;
-        const requiresSignature = category?.requiresSignature || false;
         if (requiresSignature) {
             order.signatureStatus = "sent";
             order.signatureSentAt = new Date();
         }
+        // Cambio de turno sin firma y con la fecha ya llegada: se escribe el equipo ANTES de guardar el pedido
+        // (si falla, el pedido no queda aprobado). Con fecha futura lo aplica el cron ese día; con firma, al confirmarla.
+        await aplicarSiCorresponde(order, category, { tenantId: req.tenantObjectId, porUserId: approverId });
         await order.save();
         // Datos personales: al aprobar, aplicar la propuesta al User (allowlist de la config).
         if (category?.categoryType === "datos_personales") {
@@ -1083,6 +1093,8 @@ router.put("/orders/:id/mark-signed", async (req, res) => {
         order.signatureStatus = "signed";
         order.signedAt = new Date();
         order.signedBy = new Types.ObjectId(signedById);
+        // Cambio de turno con firma: con la firma confirmada, se aplica si la fecha ya llegó (si no, el cron ese día).
+        await aplicarSiCorresponde(order, category, { tenantId: req.tenantObjectId, porUserId: signedById });
         await order.save();
         const categoryName = order.categoryId ? (await OrderConfig.findById(order.categoryId))?.name || order.category : order.category;
         const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";

@@ -27,6 +27,11 @@ export interface ContextoCambioTurno {
     ausencias: Ausencia[];
     /** Cuántas personas hay hoy en el turno de destino (sólo se calcula si el tipo tiene cupo); null = no se calculó. */
     ocupacionDestino: number | null;
+    /**
+     * Al APROBAR o APLICAR se vuelve a validar, pero la anticipación es una regla del momento de pedir: una
+     * aprobación que llega tarde no la cumple y no por eso el cambio deja de valer. Con esto no se mira.
+     */
+    alAprobar?: boolean;
 }
 export interface ResultadoValidacion {
     ok: boolean;
@@ -52,19 +57,19 @@ export declare const pedidoCambioTurnoSchema: z.ZodObject<{
     motivo?: string;
     areaId?: string;
     sedeId?: number;
-    fechaDesde?: string;
-    fechaHasta?: string;
     shiftActualId?: string;
     shiftSolicitadoId?: string;
+    fechaDesde?: string;
+    fechaHasta?: string;
 }, {
     projectId?: string;
     motivo?: string;
     areaId?: string;
     sedeId?: number;
-    fechaDesde?: string;
-    fechaHasta?: string;
     shiftActualId?: string;
     shiftSolicitadoId?: string;
+    fechaDesde?: string;
+    fechaHasta?: string;
 }>;
 interface Situacion {
     proyecto: any | null;
@@ -96,6 +101,7 @@ export declare function validarPedidoCambioDeTurno(tenantId: Types.ObjectId, use
     reglas?: ReglasCambioTurno;
     excluirOrderId?: string;
     hoy?: string;
+    alAprobar?: boolean;
 }): Promise<ResultadoValidacion & {
     ctx: ContextoCambioTurno;
 }>;

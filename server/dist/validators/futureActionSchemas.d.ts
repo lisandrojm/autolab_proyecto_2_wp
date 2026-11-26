@@ -123,17 +123,17 @@ export declare const queryFutureActionsSchema: z.ZodObject<{
     tipoAccionFutura?: "plazoDias" | "fechaEspecifica" | "sinVencimiento" | "presentacionDocumento";
     responsableAccion?: "usuario" | "cliente" | "area_interna";
     estadoAccion?: "pendiente" | "cumplida" | "vencida" | "en_revision";
-    page?: number;
     fechaDesde?: Date;
     fechaHasta?: Date;
+    page?: number;
     orderId?: string;
 }, {
     limit?: number;
     tipoAccionFutura?: "plazoDias" | "fechaEspecifica" | "sinVencimiento" | "presentacionDocumento";
     responsableAccion?: "usuario" | "cliente" | "area_interna";
     estadoAccion?: "pendiente" | "cumplida" | "vencida" | "en_revision";
-    page?: number;
     fechaDesde?: Date;
     fechaHasta?: Date;
+    page?: number;
     orderId?: string;
 }>;

@@ -14,6 +14,7 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { Types } from "mongoose";
 import { getPlainOrderNumber } from "../utils/orderHelpers.js";
 import { generateOrderPDF, generateVacationPDF } from "../utils/pdfGenerator.js";
+import { aplicarSiCorresponde, revalidarAlAprobar } from "../services/pedidoCambioDeTurno.js";
 import { resolveContractEmpresa } from "../utils/contractEmpresa.js";
 
 const router = Router();
@@ -717,17 +718,27 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
       return;
     }
 
+    const category = order.categoryId as any;
+    const requiresSignature = category?.requiresSignature || false;
+
+    // Cambio de turno: se revalida; si ya no pasa, no se aprueba (422). Ver services/pedidoCambioDeTurno.ts.
+    const revalidacion = await revalidarAlAprobar(order, category, { tenantId: req.tenantObjectId!, porUserId: approverId });
+    if (!revalidacion.ok) {
+      res.status(422).json({ error: "El cambio de turno ya no se puede aplicar: el pedido no quedó aprobado.", errores: revalidacion.errores });
+      return;
+    }
+
     order.status = "approved";
     order.approvedBy = new Types.ObjectId(approverId);
     order.approvedAt = new Date();
-
-    const category = order.categoryId as any;
-    const requiresSignature = category?.requiresSignature || false;
 
     if (requiresSignature) {
       order.signatureStatus = "sent";
       order.signatureSentAt = new Date();
     }
+
+    // El equipo se escribe antes de guardar el pedido (sin firma y con la fecha llegada); si falla, no queda aprobado.
+    await aplicarSiCorresponde(order, category, { tenantId: req.tenantObjectId!, porUserId: approverId });
 
     await order.save();
 

@@ -73,6 +73,11 @@ export interface ContextoCambioTurno {
   ausencias: Ausencia[];
   /** Cuántas personas hay hoy en el turno de destino (sólo se calcula si el tipo tiene cupo); null = no se calculó. */
   ocupacionDestino: number | null;
+  /**
+   * Al APROBAR o APLICAR se vuelve a validar, pero la anticipación es una regla del momento de pedir: una
+   * aprobación que llega tarde no la cumple y no por eso el cambio deja de valer. Con esto no se mira.
+   */
+  alAprobar?: boolean;
 }
 
 export interface ResultadoValidacion {
@@ -104,7 +109,7 @@ export function validarCambioDeTurno(ctx: ContextoCambioTurno): ResultadoValidac
   // Fechas.
   const desdeOk = ES_FECHA.test(p.fechaDesde || "");
   if (!desdeOk) error("fecha_desde_invalida", "Indicá desde qué fecha.");
-  else {
+  else if (!ctx.alAprobar) {
     const minima = sumarDias(ctx.hoy, ctx.reglas.diasAnticipacion);
     if (p.fechaDesde < minima) {
       const n = ctx.reglas.diasAnticipacion;
@@ -270,10 +275,10 @@ export async function validarPedidoCambioDeTurno(
   tenantId: Types.ObjectId,
   userId: string,
   pedido: PedidoCambioTurno,
-  opciones: { reglas?: ReglasCambioTurno; excluirOrderId?: string; hoy?: string } = {},
+  opciones: { reglas?: ReglasCambioTurno; excluirOrderId?: string; hoy?: string; alAprobar?: boolean } = {},
 ): Promise<ResultadoValidacion & { ctx: ContextoCambioTurno }> {
   const reglas = opciones.reglas || reglasCambioTurnoDe((await tipoCambioDeTurno(tenantId))?.config);
-  const ctx = await contextoDeCambioDeTurno(tenantId, userId, pedido, reglas, opciones);
+  const ctx = { ...(await contextoDeCambioDeTurno(tenantId, userId, pedido, reglas, opciones)), alAprobar: !!opciones.alAprobar };
   return { ...validarCambioDeTurno(ctx), ctx };
 }
 
