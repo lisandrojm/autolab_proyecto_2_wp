@@ -19,6 +19,8 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { getPlainOrderNumber, getOrderRemainingCost, recalculateUserOrderBalance } from "../utils/orderHelpers.js";
 import UserProject from "../models/UserProject.js";
 import { sanitizePersonalData } from "../utils/personalDataFields.js";
+import { contextoParaPedir, fotoDeCambioDeTurno, pedidoCambioTurnoSchema, tipoCambioDeTurno, validarPedidoCambioDeTurno } from "../services/cambioDeTurno.js";
+import { CATEGORIA_CAMBIO_TURNO, reglasCambioTurnoDe } from "../compartido/cambioDeTurno.js";
 
 const router = Router();
 
@@ -627,6 +629,49 @@ router.get("/usage", async (req: AuthenticatedRequest & TenantRequest, res) => {
   }
 });
 
+/*
+  CAMBIO DE TURNO (tipo de pedido de sistema, 26/11/2026). Dos endpoints de apoyo para el móvil, antes de
+  `/:id` para que no los capture. Las reglas y la lectura de dónde está la persona: `services/cambioDeTurno.ts`.
+
+  GET /orders/cambio-turno/contexto — los proyectos donde la persona tiene turno hoy, cada fila de área con su
+  turno actual y los turnos a los que puede pedir pasar, las reglas del tipo y la primera fecha válida. El
+  teléfono no calcula nada: el server decide dónde está cada uno (equipo + contrato que rige).
+*/
+router.get("/cambio-turno/contexto", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const tipo = await tipoCambioDeTurno(req.tenantObjectId!);
+    if (!tipo) {
+      res.status(404).json({ error: "Esta organización todavía no tiene el tipo de pedido «Cambio de turno»." });
+      return;
+    }
+    const contexto = await contextoParaPedir(req.tenantObjectId!, req.user!.userId, reglasCambioTurnoDe(tipo.config));
+    res.json({ ...contexto, tipo: { _id: tipo._id, nombre: tipo.name, isActive: tipo.isActive } });
+  } catch (error: any) {
+    console.error("Contexto cambio de turno error:", error);
+    res.status(500).json({ error: "No se pudo cargar tu situación en los proyectos." });
+  }
+});
+
+/*
+  POST /orders/validate-cambio-turno — la misma lista de errores que daría el POST /orders, sin crear nada,
+  para mostrarlos antes de enviar. Nunca es 422: el resultado es la respuesta.
+*/
+router.post("/validate-cambio-turno", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const parseado = pedidoCambioTurnoSchema.safeParse(req.body || {});
+    if (!parseado.success) {
+      res.status(400).json({ error: "Datos del cambio de turno inválidos", details: parseado.error.errors });
+      return;
+    }
+    const tipo = await tipoCambioDeTurno(req.tenantObjectId!);
+    const r = await validarPedidoCambioDeTurno(req.tenantObjectId!, req.user!.userId, parseado.data as any, { reglas: reglasCambioTurnoDe(tipo?.config) });
+    res.json({ ok: r.ok, errores: r.errores });
+  } catch (error: any) {
+    console.error("Validate cambio de turno error:", error);
+    res.status(500).json({ error: "No se pudo validar el pedido." });
+  }
+});
+
 router.get("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.user!.userId;
@@ -840,6 +885,8 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       documentoUrl,
       daysRequested: req.body.daysRequested ? parseFloat(req.body.daysRequested) : 0,
     });
+    // Los nombres del cambio de turno, si el pedido es de ese tipo (ver más abajo).
+    let fotoCambioTurno: any = null;
 
     if (data.categoryId) {
       const category = await OrderConfig.findOne({
@@ -851,6 +898,26 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       if (!category) {
         res.status(400).json({ error: "Invalid or inactive category" });
         return;
+      }
+
+      /*
+        CAMBIO DE TURNO: las reglas corren acá, obligatorias (el móvil sólo las anticipa). Si alguna falla,
+        422 con la lista COMPLETA. Lo que se guarda es el pedido normalizado y, en `metadata.cambioTurno`, los
+        nombres (proyecto, área, turnos) para el detalle y el PDF.
+      */
+      if (category.categoryType === CATEGORIA_CAMBIO_TURNO) {
+        const parseado = pedidoCambioTurnoSchema.safeParse(data.dynamicValue || {});
+        if (!parseado.success) {
+          res.status(400).json({ error: "Datos del cambio de turno inválidos", details: parseado.error.errors });
+          return;
+        }
+        const r = await validarPedidoCambioDeTurno(req.tenantObjectId!, userId, parseado.data as any, { reglas: reglasCambioTurnoDe(category.config) });
+        if (!r.ok) {
+          res.status(422).json({ error: "El pedido no pasa las validaciones del cambio de turno.", errores: r.errores });
+          return;
+        }
+        data.dynamicValue = parseado.data;
+        fotoCambioTurno = await fotoDeCambioDeTurno(req.tenantObjectId!, parseado.data as any);
       }
 
       if (category.categoryType === "fecha" && (!data.daysRequested || data.daysRequested === 0)) {
@@ -1084,6 +1151,9 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       const category = await OrderConfig.findById(data.categoryId);
       if (category?.requiresSignature) {
         orderData.signatureStatus = "pending";
+      }
+      if (fotoCambioTurno) {
+        orderData.metadata = { ...(orderData.metadata || {}), cambioTurno: fotoCambioTurno };
       }
       // Datos personales: sanitizar la propuesta contra la allowlist configurada y
       // guardarla en metadata.proposedUserData (se aplica al User al aprobar).

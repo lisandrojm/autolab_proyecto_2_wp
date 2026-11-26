@@ -131,6 +131,7 @@
     "test:ventana-goce": "tsx --test src/compartido/ventanaGoce.test.ts",
     "test:formas-pago": "tsx --test src/compartido/formasPago.test.ts",
     "test:estados-firma": "tsx --test src/compartido/estadosFirma.test.ts",
+    "test:cambio-turno": "tsx --test src/compartido/areaTurno.test.ts src/services/tiposDePedidoSistema.test.ts src/services/cambioDeTurno.test.ts",
     "test:retribucion-pactada": "tsx --test src/compartido/arca/retribucionPactada.test.ts",
     "test:valoracion": "tsx --test src/utils/valoracionAutomatica.test.ts src/utils/valoracionPorBruto.test.ts",
     "test:constancia": "tsx --test src/utils/constanciaPdf.test.ts",

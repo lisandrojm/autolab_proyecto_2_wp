@@ -38,11 +38,8 @@ export const textoDeDias = (dias: number[] | undefined): string => {
  * El rango se saca sólo si de verdad lo parece —dos números con "a" o un guion en el medio— y nunca
  * si al recortarlo no queda nada: un turno llamado "6 a 12" a secas se sigue llamando así.
  */
-export const etiquetaDeTurno = (nombre: string): string => {
-  const sinDias = nombre.split(" - ")[0].trim() || nombre;
-  const sinRango = sinDias.replace(/\s+\d{1,2}([:.]\d{2})?\s*(a|-|–)\s*\d{1,2}([:.]\d{2})?\s*(hs?)?\.?$/i, "").trim();
-  return sinRango || sinDias;
-};
+// La función vive en `compartido` (el server también la usa, 26/11/2026); acá se re-exporta con el mismo nombre.
+export { etiquetaDeTurno } from "@compartido/etiquetaTurno";
 
 /**
  * CÓMO SE ORDENAN LOS TURNOS: con el orden que se fijó en el admin (Turnos → Ordenar, `Shift.order`) y,
