@@ -54,26 +54,47 @@ export function pedidoDesdeSolicitud(m) {
 export async function compromisosDePersona(tenantId, userId, excluirSolicitudId) {
     if (!Types.ObjectId.isValid(userId))
         return [];
-    const uid = new Types.ObjectId(userId);
+    return (await compromisosDePersonas(tenantId, [userId], excluirSolicitudId)).get(userId) || [];
+}
+/**
+ * LO MISMO PARA VARIAS PERSONAS, EN UNA SOLA LECTURA (26/11/2026). El alta masiva de plantillas revisa a
+ * 36 personas de una vez y por cada una hacía estas cinco consultas, dos veces (avisos y altas de ARCA):
+ * 360 idas a la base, y el preview tardaba lo que tardaban en volver. Acá son las mismas cinco para
+ * todas juntas. Por `userId`; quien no tiene nada, lista vacía. Un id inválido no figura.
+ */
+export async function compromisosDePersonas(tenantId, userIds, excluirSolicitudId) {
+    const ids = [...new Set(userIds.filter((id) => Types.ObjectId.isValid(id)))];
+    const porPersona = new Map(ids.map((id) => [id, []]));
+    if (ids.length === 0)
+        return porPersona;
+    const uids = ids.map((id) => new Types.ObjectId(id));
     /*
       SÓLO LOS PROYECTOS DEL TENANT (18/11/2026). `UserProject` no tiene `tenantId`: se acota por los
       proyectos del tenant. Antes se buscaba por `userId` solo.
     */
     const proyectosDelTenant = await Project.find({ tenantId }).distinct("_id");
-    const [asignaciones, pendientes] = await Promise.all([
-        UserProject.find({ userId: uid, projectId: { $in: proyectosDelTenant } })
-            .select("projectId nombre_proyecto contracts.empresaContratoId contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.dias_semana contracts.dias_rotativos contracts.fechas_trabajadas contracts.hora_inicio contracts.hora_fin contracts.shiftId contracts.areaShiftAssignments contracts.nombre_turno contracts.nombre_contrato contracts.tipo_contrato_id contracts.contrato_id contracts.estadoContrato")
-            .lean(),
+    /*
+      LOS CONTRATOS, UNA CONSULTA POR PERSONA Y TODAS A LA VEZ, no una sola con `$in`. Son los mismos
+      bytes (28 personas de LN+ = 2.000 contratos, 700 KB), pero Atlas entrega por conexión a un ritmo
+      acotado: una sola consulta los trae por una conexión y tarda lo que esa conexión da; en paralelo
+      viajan por varias. Medido: 7 s la única contra 1,3 s las 28 juntas (la base los resuelve en 9 ms).
+      Lo chico (proyectos, solicitudes, nombres, turnos) sí va en una consulta cada uno.
+    */
+    const [porUsuario, pendientes] = await Promise.all([
+        Promise.all(uids.map((uid) => UserProject.find({ userId: uid, projectId: { $in: proyectosDelTenant } })
+            .select("userId projectId nombre_proyecto contracts.empresaContratoId contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.dias_semana contracts.dias_rotativos contracts.fechas_trabajadas contracts.hora_inicio contracts.hora_fin contracts.shiftId contracts.areaShiftAssignments contracts.nombre_turno contracts.nombre_contrato contracts.tipo_contrato_id contracts.contrato_id contracts.estadoContrato")
+            .lean())),
         User.find({
             tenantId,
             "metadata.isSolicitud": true,
             "metadata.solicitudStatus": "pendiente",
-            "metadata.solicitudUserId": { $in: [userId, uid] },
+            "metadata.solicitudUserId": { $in: [...ids, ...uids] },
             ...(excluirSolicitudId && Types.ObjectId.isValid(excluirSolicitudId) ? { _id: { $ne: new Types.ObjectId(excluirSolicitudId) } } : {}),
         })
-            .select("metadata.startDate metadata.dueDate metadata.fechasTrabajadas metadata.diasSemana metadata.diasRotativos metadata.schedule metadata.areaShiftAssignments metadata.projectIds")
+            .select("metadata.solicitudUserId metadata.startDate metadata.dueDate metadata.fechasTrabajadas metadata.diasSemana metadata.diasRotativos metadata.schedule metadata.areaShiftAssignments metadata.projectIds")
             .lean(),
     ]);
+    const asignaciones = porUsuario.flat();
     const proyectoIds = [...asignaciones.map((a) => a.projectId), ...pendientes.flatMap((p) => p.metadata?.projectIds || [])].filter((id) => id && Types.ObjectId.isValid(String(id)));
     const proyectos = proyectoIds.length ? await Project.find({ _id: { $in: proyectoIds } }).select("name clientId").populate("clientId", "name").lean() : [];
     const nombreDe = new Map(proyectos.map((p) => [String(p._id), p.clientId?.name ? `${p.clientId.name} | ${p.name}` : p.name]));
@@ -92,8 +113,10 @@ export async function compromisosDePersona(tenantId, userId, excluirSolicitudId)
             return c.dias_semana.map(Number);
         return [...new Set(idsDeTurno(c.areaShiftAssignments, c.shiftId).flatMap((id) => diasDelTurno.get(id) || []))].sort();
     };
-    const compromisos = [];
     for (const a of asignaciones) {
+        const compromisos = porPersona.get(String(a.userId));
+        if (!compromisos)
+            continue;
         for (const [contractIndex, c] of (a.contracts || []).entries()) {
             const desde = fechaISO(c.fecha_alta_contrato);
             if (!desde)
@@ -121,12 +144,15 @@ export async function compromisosDePersona(tenantId, userId, excluirSolicitudId)
         }
     }
     for (const p of pendientes) {
+        const compromisos = porPersona.get(String(p.metadata?.solicitudUserId));
+        if (!compromisos)
+            continue;
         const pedido = pedidoDesdeSolicitud(p.metadata);
         if (!pedido.desde && !pedido.fechas?.length)
             continue;
         compromisos.push({ origen: "solicitud", proyectoNombre: nombreDe.get(String(p.metadata?.projectIds?.[0])) || "", ...pedido });
     }
-    return compromisos;
+    return porPersona;
 }
 /**
  * Lee el trámite de un contrato: tipo → plantilla → el estado impositivo que la reclama, el mismo camino
@@ -173,24 +199,37 @@ export function compromisosConBajasDeArca(compromisos, relaciones, cuil, cuitDe)
 }
 const digitos = (v) => String(v ?? "").replace(/\D/g, "");
 /**
- * Los contratos de la persona con las bajas de ARCA aplicadas (ver `compromisosConBajasDeArca`), y lo que
- * hizo falta para eso: el CUIL, el CUIT y el nombre de cada empresa y las relaciones de ARCA (de ahí sale
- * también la liquidación de cada alta, ver `altasArcaEnFechas`).
+ * Lee lo de ARCA UNA vez para todas las personas: sólo las que tienen algún contrato con empresa (a las
+ * demás no hay qué cruzar), las empresas de esos contratos y las relaciones de los CUILes válidos.
  */
-async function contratosConBajasDeArca(tenantId, userId, compromisos) {
-    const empresaIds = [...new Set(compromisos.map((c) => c.empresaId || "").filter((id) => Types.ObjectId.isValid(id)))];
-    const vacio = { contratos: compromisos, cuil: "", relaciones: [], cuitDe: (_id) => "", nombreEmpresa: (_id) => "" };
-    if (empresaIds.length === 0)
-        return vacio;
-    const [usuario, empresas] = await Promise.all([User.findById(userId).select("metadata.cuit").lean(), Company.find({ _id: { $in: empresaIds } }).select("cuit name").lean()]);
+async function lecturaArca(tenantId, porPersona) {
+    const conEmpresa = [...porPersona].filter(([, lista]) => lista.some((c) => Types.ObjectId.isValid(c.empresaId || ""))).map(([id]) => id);
+    const empresaIds = [...new Set([...porPersona.values()].flat().map((c) => c.empresaId || "").filter((id) => Types.ObjectId.isValid(id)))];
+    const nada = { cuilDe: () => "", cuitDe: () => "", nombreEmpresa: () => "", relaciones: [] };
+    if (conEmpresa.length === 0 || empresaIds.length === 0)
+        return nada;
+    const [usuarios, empresas] = await Promise.all([
+        User.find({ _id: { $in: conEmpresa.map((id) => new Types.ObjectId(id)) } }).select("metadata.cuit").lean(),
+        Company.find({ _id: { $in: empresaIds } }).select("cuit name").lean(),
+    ]);
+    const cuils = new Map(usuarios.map((u) => [String(u._id), digitos(u.metadata?.cuit)]));
     const cuits = new Map(empresas.map((e) => [String(e._id), digitos(e.cuit)]));
     const nombres = new Map(empresas.map((e) => [String(e._id), String(e.name || "")]));
-    const cuitDe = (id) => cuits.get(id) || "";
-    const nombreEmpresa = (id) => nombres.get(id) || "";
-    const cuil = digitos(usuario?.metadata?.cuit);
+    // Una consulta por CUIL y todas a la vez, por lo mismo que los contratos (ver `compromisosDePersonas`): 28 CUILes de LN+ son 2.000 relaciones, 600 KB.
+    const relaciones = (await Promise.all([...new Set([...cuils.values()].filter((c) => c.length === 11))].map((c) => relacionesArcaDe(tenantId, [c])))).flat();
+    return { cuilDe: (id) => cuils.get(id) || "", cuitDe: (id) => cuits.get(id) || "", nombreEmpresa: (id) => nombres.get(id) || "", relaciones };
+}
+/**
+ * Los contratos de UNA persona con las bajas de ARCA aplicadas (ver `compromisosConBajasDeArca`), y lo que
+ * hizo falta para eso: su CUIL, el CUIT y el nombre de cada empresa y sus relaciones de ARCA (de ahí sale
+ * también la liquidación de cada alta, ver `altasArcaEnFechas`). Puro: todo sale de la lectura del grupo.
+ */
+function contratosConBajasDeArca(userId, compromisos, lectura) {
+    const { cuitDe, nombreEmpresa } = lectura;
+    const cuil = lectura.cuilDe(userId);
     if (cuil.length !== 11)
-        return { ...vacio, cuitDe, nombreEmpresa };
-    const relaciones = await relacionesArcaDe(tenantId, [cuil]);
+        return { contratos: compromisos, cuil: "", relaciones: [], cuitDe, nombreEmpresa };
+    const relaciones = lectura.relaciones.filter((r) => r.cuil === cuil);
     return { contratos: compromisosConBajasDeArca(compromisos, relaciones, cuil, cuitDe), cuil, relaciones, cuitDe, nombreEmpresa };
 }
 /**
@@ -216,14 +255,26 @@ async function lectorDeCodigosArca() {
         return { liquidacion, liquidacionTexto: texto(liquidaciones, liquidacion), modalidadTexto: texto(modalidades, modalidad) };
     };
 }
-export async function altasArcaEnFechas(tenantId, userId, pedido, excluir) {
+export async function lecturasDeAlta(tenantId, userIds) {
+    const compromisos = await compromisosDePersonas(tenantId, userIds.filter((id) => !!id));
+    const arca = await lecturaArca(tenantId, compromisos);
+    let lectores = null;
+    return {
+        compromisos,
+        arca,
+        lectores: () => (lectores ||= Promise.all([lectorDeTramites(), lectorDeCodigosArca()]).then(([tramiteDe, codigosDelTipo]) => ({ tramiteDe, codigosDelTipo }))),
+    };
+}
+export async function altasArcaEnFechas(tenantId, userId, pedido, excluir, lecturas) {
     if (!userId)
         return [];
-    const { contratos, cuil, relaciones, cuitDe, nombreEmpresa } = await contratosConBajasDeArca(tenantId, userId, (await compromisosDePersona(tenantId, userId)).filter((c) => c.origen === "contrato" && !(excluir && c.ref?.userProjectId === excluir.userProjectId && c.ref?.contractIndex === excluir.contractIndex)));
+    const l = lecturas || (await lecturasDeAlta(tenantId, [userId]));
+    const propios = (l.compromisos.get(userId) || []).filter((c) => c.origen === "contrato" && !(excluir && c.ref?.userProjectId === excluir.userProjectId && c.ref?.contractIndex === excluir.contractIndex));
+    const { contratos, cuil, relaciones, cuitDe, nombreEmpresa } = contratosConBajasDeArca(userId, propios, l.arca);
     const enFechas = contratos.filter((c) => contratoEnLasFechas(pedido, [c]));
     if (enFechas.length === 0)
         return [];
-    const [tramiteDe, codigosDelTipo] = await Promise.all([lectorDeTramites(), lectorDeCodigosArca()]);
+    const { tramiteDe, codigosDelTipo } = await l.lectores();
     const altas = [];
     for (const c of enFechas) {
         if (tramiteDe(c.tipo) !== "alta_temprana_afip")
@@ -251,8 +302,8 @@ export async function altasArcaEnFechas(tenantId, userId, pedido, excluir) {
     return altas;
 }
 /** La regla de `compartido/altaVigente.ts` sobre las altas de la persona en esas fechas. */
-export async function decisionAltaDePersona(tenantId, userId, pedido, empresaId, excluir) {
-    const altas = await altasArcaEnFechas(tenantId, userId, pedido, excluir);
+export async function decisionAltaDePersona(tenantId, userId, pedido, empresaId, excluir, lecturas) {
+    const altas = await altasArcaEnFechas(tenantId, userId, pedido, excluir, lecturas);
     const d = decidirAltaVigente(altas, empresaId);
     return { ...d, altas, mensaje: d.soloServicios ? mensajeSoloServicios(d.soloServicios) : d.mismaEmpleadora ? mensajeMismaEmpleadora(d.mismaEmpleadora) : "" };
 }
@@ -275,9 +326,9 @@ export async function tramiteDelTipo(contratoId) {
         return null;
     return (await lectorDeTramites())({ contrato_id: String(contratoId) });
 }
-/** Los avisos de superposición de un alta para una persona. `[]` si no es una persona registrada. */
-export async function superposicionesDeAlta(tenantId, userId, pedido, excluirSolicitudId) {
+/** Los avisos de superposición de un alta para una persona. `[]` si no es una persona registrada. `compromisos`: los ya leídos para el lote (ver `lecturasDeAlta`). */
+export async function superposicionesDeAlta(tenantId, userId, pedido, excluirSolicitudId, compromisos) {
     if (!userId)
         return [];
-    return superposiciones(pedido, await compromisosDePersona(tenantId, userId, excluirSolicitudId), hoyArgentina());
+    return superposiciones(pedido, compromisos || (await compromisosDePersona(tenantId, userId, excluirSolicitudId)), hoyArgentina());
 }

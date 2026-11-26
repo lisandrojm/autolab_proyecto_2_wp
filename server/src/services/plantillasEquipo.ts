@@ -12,7 +12,7 @@ import { RequestConfig } from "../models/RequestConfig.js";
 import { importePorJornada } from "../compartido/jornadas.js";
 import { armarPayloadDeSolicitud } from "../compartido/solicitudDeContratacion.js";
 import { Contexto, erroresDelLote, FechasDeContratacion, IntegranteParaPlan, MAX_INTEGRANTES_POR_LOTE, PlanDeLote, planDeLote, PlantillaParaPlan, Puntual } from "../utils/planDeLote.js";
-import { compromisosDePersona, decisionAltaDePersona, superposicionesDeAlta, pedidoDesdeSolicitud } from "./superposicion.js";
+import { compromisosDePersonas, decisionAltaDePersona, lecturasDeAlta, superposicionesDeAlta, pedidoDesdeSolicitud } from "./superposicion.js";
 import { choquesDelEquipo, CompromisoExistente, superposiciones } from "../utils/superposicionContratos.js";
 import { hoyArgentina } from "../utils/contratoVigencia.js";
 import { efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from "./solicitudes.js";
@@ -219,11 +219,10 @@ const condicionesParaMostrar = (c: any) => (c ? Object.fromEntries(Object.entrie
 /** Lo que cada persona ya tiene en CUALQUIER proyecto (contratos y solicitudes pendientes), por `userId`. */
 type Compromisos = Map<string, CompromisoExistente[]>;
 
-/** Los compromisos de todas las personas asignadas en estas plantillas, una búsqueda por persona. */
+/** Los compromisos de todas las personas asignadas en estas plantillas, en una sola lectura. Si falla, nadie tiene nada (son avisos). */
 async function compromisosDeLasPlantillas(tenantId: Types.ObjectId, plantillas: any[]): Promise<Compromisos> {
   const ids = [...new Set(plantillas.flatMap((p) => (p.equipos || []).flatMap((e: any) => (e.asignaciones || []).map((a: any) => (a.userId ? String(a.userId) : "")))).filter(idOk))];
-  const listas = await Promise.all(ids.map((id) => compromisosDePersona(tenantId, id).catch(() => [] as CompromisoExistente[])));
-  return new Map(ids.map((id, n) => [id, listas[n]]));
+  return compromisosDePersonas(tenantId, ids).catch(() => new Map(ids.map((id) => [id, [] as CompromisoExistente[]])));
 }
 
 /**
@@ -986,10 +985,15 @@ export async function planificarVarios(tenantId: Types.ObjectId, p: any, bodies:
   );
   const todas = partes.flatMap((x) => x.conFechas);
   const hoy = hoyArgentina();
+  // Lo que cada chequeo lee de la base, UNA vez para todo el lote: con 36 personas eran 600 consultas, una lista por persona y por chequeo.
+  const lecturas = await lecturasDeAlta(tenantId, todas.map((x) => x.f.userId));
   await Promise.all(
     todas.map(async (x) => {
       // La regla del alta individual (`compartido/altaVigente.ts`): mensual → sólo Servicios; jornada → no con la misma empresa. Acá avisa, no frena (ver `planDeLote`).
-      const [avisos, decision] = await Promise.all([superposicionesDeAlta(tenantId, x.f.userId, x.pedido), decisionAltaDePersona(tenantId, x.f.userId, x.pedido, x.empresaId || null)]);
+      const [avisos, decision] = await Promise.all([
+        superposicionesDeAlta(tenantId, x.f.userId, x.pedido, undefined, x.f.userId ? lecturas.compromisos.get(x.f.userId) || [] : undefined),
+        decisionAltaDePersona(tenantId, x.f.userId, x.pedido, x.empresaId || null, undefined, lecturas),
+      ]);
       if (decision.mensaje) partes[x.k].ctx.soloServicios!.set(x.f.integranteId, decision.mensaje);
       // La misma persona en otro puesto de ESTA contratación (de este equipo o de otro): todavía no existe en la base.
       const otrosPuestos: CompromisoExistente[] = todas

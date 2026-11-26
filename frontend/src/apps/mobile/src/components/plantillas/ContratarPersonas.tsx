@@ -106,10 +106,13 @@ export default function ContratarPersonas() {
     por qué: tocarlo no hacía nada y parecía colgado. Los recálculos (después de ajustar a alguien) sí
     dejan la lista a la vista, atenuada, y el botón gira hasta que termina.
   */
+  // Cuántas van a ser, según la plantilla: el server todavía no lo dijo, pero el aviso tiene que decir qué espera.
+  const cuantas = p ? p.equipos.filter((e) => estado.equipos[e._id]?.incluido).reduce((s, e) => s + estadoDe(p, e).total, 0) : 0;
+  const avisoDemora = `Calculando ${cuantas === 1 ? "1 solicitud" : `${cuantas} solicitudes`}: se revisa a cada persona contra toda la base. Puede demorar unos segundos.`;
   if (!p || (!previews && !fallo && pedidos.length > 0))
     return (
       <Pantalla titulo="Personas" contexto={p?.nombre} atras={atras} listo={false} pasos={{ actual: 2, etiquetas: PASOS_CONTRATAR }}>
-        <LoadingSpinner message="Cargando datos..." />
+        <LoadingSpinner message={p ? avisoDemora : "Cargando datos..."} />
       </Pantalla>
     );
 
@@ -157,7 +160,7 @@ export default function ContratarPersonas() {
         cargando: calculando,
       }}
       /* Los errores no frenan acá: se ven en la fila y se corrigen con el lápiz; la Revisión es la que no deja enviar. */
-      notaBoton={errores > 0 ? `${errores === 1 ? "1 fila tiene" : `${errores} filas tienen`} algo para corregir` : undefined}
+      notaBoton={calculando ? avisoDemora : errores > 0 ? `${errores === 1 ? "1 fila tiene" : `${errores} filas tienen`} algo para corregir` : undefined}
     >
       {fallo && <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-800 dark:bg-red-500/15 dark:text-red-200">{fallo}</p>}
       {equipos.length === 0 ? (

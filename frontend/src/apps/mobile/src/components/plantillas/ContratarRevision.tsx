@@ -9,7 +9,7 @@ import { Pantalla } from "./Pantalla";
 import { borrarEstado, clavePuntual, EstadoContratar, firmaDePedidos, guardarEstado, leerEstado, nuevaClave, olvidarPreview, pedidosDe, previewRecordado, puntualLimpio, recordarPreview } from "./estadoContratar";
 import { HojaPuntual } from "./ContratarPersonas";
 import { sweetAlert } from "../../utils/sweetAlert";
-import { nombreRoles, nombreTurno, proyectoDelEquipo, puestosDe, rutas } from "./equipoUtil";
+import { estadoDe, nombreRoles, nombreTurno, proyectoDelEquipo, puestosDe, rutas } from "./equipoUtil";
 import { etiquetaProyecto } from "./useCatalogosContratacion";
 import { ChipTurno, fechaCorta, pesos, Pill, textoHorario } from "./comun";
 import { PASOS_CONTRATAR } from "./Pasos";
@@ -144,9 +144,11 @@ export default function ContratarRevision() {
   if (!estado) return <Navigate to={rutas.contratar(id)} replace />;
   const atras = rutas.personas(id);
   if (!p || (!previews && !fallo)) {
+    // Sólo se llega acá sin el cálculo del paso 2 (venció o cambió algo): el mismo aviso de demora que allá.
+    const cuantas = p ? p.equipos.filter((e) => estado.equipos[e._id]?.incluido).reduce((s, e) => s + estadoDe(p, e).total, 0) : 0;
     return (
       <Pantalla titulo="Revisión" contexto={p?.nombre} atras={atras} listo={false} pasos={{ actual: 3, etiquetas: PASOS_CONTRATAR }}>
-        <LoadingSpinner message="Cargando datos..." />
+        <LoadingSpinner message={p ? `Calculando ${cuantas === 1 ? "1 solicitud" : `${cuantas} solicitudes`}: se revisa a cada persona contra toda la base. Puede demorar unos segundos.` : "Cargando datos..."} />
       </Pantalla>
     );
   }
