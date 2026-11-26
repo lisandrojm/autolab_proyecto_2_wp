@@ -2,13 +2,15 @@ import mongoose, { Schema } from "mongoose";
 const orderConfigSchema = new Schema({
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     name: { type: String, required: true, trim: true },
+    isSystem: { type: Boolean, default: false },
+    systemKey: { type: String, trim: true },
     informacion: { type: String, trim: true },
     icon: { type: String, trim: true },
     isActive: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },
     categoryType: {
         type: String,
-        enum: ["fecha", "dinero", "objeto", "otros", "datos_personales"],
+        enum: ["fecha", "dinero", "objeto", "otros", "datos_personales", "cambio_turno"],
         default: "otros",
         index: true,
     },
@@ -49,4 +51,6 @@ const orderConfigSchema = new Schema({
 orderConfigSchema.index({ tenantId: 1, isActive: 1, sortOrder: 1 });
 orderConfigSchema.index({ tenantId: 1, name: 1 }, { unique: true });
 orderConfigSchema.index({ tenantId: 1, categoryType: 1 });
+// Un tipo de sistema por clave y tenant; sparse: los tipos comunes no tienen clave.
+orderConfigSchema.index({ tenantId: 1, systemKey: 1 }, { unique: true, sparse: true });
 export const OrderConfig = mongoose.model("OrderConfig", orderConfigSchema);

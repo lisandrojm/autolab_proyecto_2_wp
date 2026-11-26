@@ -1,0 +1,74 @@
+import { Types } from "mongoose";
+import { OrderConfig } from "../models/OrderConfig.js";
+import { CATEGORIA_CAMBIO_TURNO, NOMBRE_CAMBIO_TURNO, REGLAS_CAMBIO_TURNO_POR_DEFECTO, SYSTEM_KEY_CAMBIO_TURNO } from "../compartido/cambioDeTurno.js";
+/*
+  TIPOS DE PEDIDO DE SISTEMA (26/11/2026). Mismo patrón que `shiftInitService.ts`: al arrancar el server se
+  recorren los tenants y se garantiza que cada uno tenga el tipo «Cambio de turno». Si ya existe uno con ese
+  nombre (alguien lo creó a mano), se lo ASIMILA: se marca `isSystem` y se le pone la clave y el tipo de dato,
+  igual que con el turno «Oficina». Si no, se crea al final del orden, activo y sin firma por defecto.
+
+  Se reconoce por `systemKey`, no por nombre: el nombre se puede cambiar desde la pantalla (como los turnos).
+*/
+export async function ensureDefaultOrderConfigs(tenantId) {
+    const tid = new Types.ObjectId(tenantId);
+    // Igual que los turnos: el tenant de sistema no lleva tipos de pedido.
+    const { Tenant } = await import("../models/Tenant.js");
+    const tenant = await Tenant.findById(tid);
+    if (tenant?.isSystem || tenant?.slug === "superadmin")
+        return;
+    let tipo = await OrderConfig.findOne({ tenantId: tid, systemKey: SYSTEM_KEY_CAMBIO_TURNO });
+    if (!tipo) {
+        // 1. Uno con ese nombre, hecho a mano: se asimila.
+        const porNombre = await OrderConfig.findOne({ tenantId: tid, name: { $regex: new RegExp(`^${NOMBRE_CAMBIO_TURNO}$`, "i") } });
+        if (porNombre) {
+            console.log(`[OrderConfigInit] Asimilando «${porNombre.name}» como tipo de sistema para el tenant ${tid}`);
+            porNombre.isSystem = true;
+            porNombre.systemKey = SYSTEM_KEY_CAMBIO_TURNO;
+            porNombre.categoryType = CATEGORIA_CAMBIO_TURNO;
+            porNombre.config = { ...(porNombre.config || {}), reglasCambioTurno: { ...REGLAS_CAMBIO_TURNO_POR_DEFECTO, ...(porNombre.config?.reglasCambioTurno || {}) } };
+            porNombre.markModified("config");
+            await porNombre.save();
+            tipo = porNombre;
+        }
+        else {
+            // 2. Se crea, al final del orden.
+            const ultimo = await OrderConfig.findOne({ tenantId: tid }).sort({ sortOrder: -1 }).select("sortOrder").lean();
+            console.log(`[OrderConfigInit] Creando «${NOMBRE_CAMBIO_TURNO}» para el tenant ${tid}`);
+            tipo = await OrderConfig.create({
+                tenantId: tid,
+                name: NOMBRE_CAMBIO_TURNO,
+                informacion: "Pedí pasar a otro turno de tu área desde una fecha. Si indicás hasta cuándo, el cambio es temporal y después volvés a tu turno.",
+                isSystem: true,
+                systemKey: SYSTEM_KEY_CAMBIO_TURNO,
+                categoryType: CATEGORIA_CAMBIO_TURNO,
+                isActive: true,
+                sortOrder: (ultimo?.sortOrder ?? 0) + 1,
+                requiresSignature: false,
+                requiresAction: false,
+                config: { reglasCambioTurno: { ...REGLAS_CAMBIO_TURNO_POR_DEFECTO } },
+            });
+        }
+    }
+    else if (!tipo.isSystem || tipo.categoryType !== CATEGORIA_CAMBIO_TURNO) {
+        // Quedó destildado o con otro tipo de dato (datos viejos): se vuelve a dejar como tipo de sistema.
+        tipo.isSystem = true;
+        tipo.categoryType = CATEGORIA_CAMBIO_TURNO;
+        await tipo.save();
+    }
+}
+/** Recorre todos los tenants. Se llama al arrancar (`server.ts`), junto a roles y turnos. */
+export async function ensureAllTenantsHaveDefaultOrderConfigs() {
+    try {
+        const { Tenant } = await import("../models/Tenant.js");
+        const tenants = await Tenant.find({});
+        console.log(`[OrderConfigInit] Verificando tipos de pedido de sistema en ${tenants.length} tenants...`);
+        for (const tenant of tenants) {
+            await ensureDefaultOrderConfigs(new Types.ObjectId(tenant._id));
+        }
+        console.log("[OrderConfigInit] Tipos de pedido de sistema verificados");
+    }
+    catch (error) {
+        console.error("[OrderConfigInit] Error asegurando los tipos de pedido de sistema:", error);
+        throw error;
+    }
+}

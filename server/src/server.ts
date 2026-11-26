@@ -28,6 +28,7 @@ import { sembrarPaisesResidenciaUnaVez } from "./services/paisesResidenciaSeed.j
 import { sembrarFormasPagoUnaVez, transferenciaPorDefectoUnaVez } from "./services/formasPagoSeed.js";
 import { marcarEstadosDeFirmaUnaVez } from "./services/estadosFirmaSeed.js";
 import { ensureAllTenantsHaveDefaultShifts } from "./services/shiftInitService.js";
+import { ensureAllTenantsHaveDefaultOrderConfigs } from "./services/orderConfigInitService.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { initCronScheduler } from "./services/cronService.js";
 import { initBackupScheduler } from "./services/backupService.js";
@@ -430,6 +431,18 @@ connectDB()
       console.log("✅ Shift verification completed successfully");
     } catch (error) {
       console.error("❌ Shift verification failed:", error);
+    }
+
+    // Tipos de pedido de sistema («Cambio de turno»): mismo patrón que los turnos (ver el servicio). Como las
+    // plantillas custom y las modalidades, una copia local contra la base real (SIN_TAREAS_PROGRAMADAS) no escribe.
+    if (process.env.SIN_TAREAS_PROGRAMADAS !== "true") {
+      try {
+        console.log("🔍 Verifying all tenants have system order types...");
+        await ensureAllTenantsHaveDefaultOrderConfigs();
+        console.log("✅ Order type verification completed successfully");
+      } catch (error) {
+        console.error("❌ Order type verification failed:", error);
+      }
     }
 
     // El ABM de Países de residencia arranca con los países de FRAME, UNA sola vez (ver el servicio).

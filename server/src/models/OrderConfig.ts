@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+import type { ReglasCambioTurno } from "../compartido/cambioDeTurno.js";
 
 export type TipoAccionFutura = "documento" | "otra";
 
@@ -26,17 +27,26 @@ export interface IFutureActionConfig {
 export interface ITypeConfig {
   subtipos?: ISubtype[];
   futureActionConfig?: IFutureActionConfig;
+  /** Reglas del tipo de sistema «Cambio de turno» (ver `compartido/cambioDeTurno.ts`). */
+  reglasCambioTurno?: Partial<ReglasCambioTurno>;
   [key: string]: any;
 }
 
 export interface IOrderConfig extends Document {
   tenantId: Types.ObjectId;
   name: string;
+  /**
+   * TIPO DE SISTEMA (26/11/2026): lo crea el server para cada tenant (`services/orderConfigInitService.ts`),
+   * no se borra y no cambia de `categoryType`. Mismo patrón que los turnos (`Shift.isSystem`), más una
+   * `systemKey` para reconocerlo aunque lo renombren.
+   */
+  isSystem: boolean;
+  systemKey?: string;
   informacion?: string;
   icon?: string;
   isActive: boolean;
   sortOrder: number;
-  categoryType: "fecha" | "dinero" | "objeto" | "otros" | "datos_personales";
+  categoryType: "fecha" | "dinero" | "objeto" | "otros" | "datos_personales" | "cambio_turno";
   dateMode?: DateMode;
   maxDays?: number; // Added
   config: ITypeConfig;
@@ -64,13 +74,15 @@ const orderConfigSchema = new Schema<IOrderConfig>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     name: { type: String, required: true, trim: true },
+    isSystem: { type: Boolean, default: false },
+    systemKey: { type: String, trim: true },
     informacion: { type: String, trim: true },
     icon: { type: String, trim: true },
     isActive: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },
     categoryType: {
       type: String,
-      enum: ["fecha", "dinero", "objeto", "otros", "datos_personales"],
+      enum: ["fecha", "dinero", "objeto", "otros", "datos_personales", "cambio_turno"],
       default: "otros",
       index: true,
     },
@@ -114,5 +126,7 @@ const orderConfigSchema = new Schema<IOrderConfig>(
 orderConfigSchema.index({ tenantId: 1, isActive: 1, sortOrder: 1 });
 orderConfigSchema.index({ tenantId: 1, name: 1 }, { unique: true });
 orderConfigSchema.index({ tenantId: 1, categoryType: 1 });
+// Un tipo de sistema por clave y tenant; sparse: los tipos comunes no tienen clave.
+orderConfigSchema.index({ tenantId: 1, systemKey: 1 }, { unique: true, sparse: true });
 
 export const OrderConfig = mongoose.model<IOrderConfig>("OrderConfig", orderConfigSchema);
