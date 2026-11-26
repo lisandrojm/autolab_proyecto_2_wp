@@ -261,6 +261,8 @@ export default function Orders({ onNavigate, initialCategoryType, onIntentConsum
 
     if (selectedCategory?.categoryType === "fecha" && selectedCategory.dateMode === "range") {
       setDynamicValue({ fechaDesde: "", fechaHasta: "" });
+    } else if (selectedCategory?.categoryType === "cambio_turno") {
+      setDynamicValue({});
     } else {
       setDynamicValue("");
     }
@@ -516,6 +518,16 @@ export default function Orders({ onNavigate, initialCategoryType, onIntentConsum
         }
       }
 
+      // Cambio de turno: lo mínimo para mandar; las reglas de verdad las corre el server (422 con la lista).
+      if (selectedCategory?.categoryType === "cambio_turno") {
+        const p = validDynamicValue && typeof validDynamicValue === "object" ? validDynamicValue : {};
+        if (!p.projectId || !p.areaId || !p.shiftActualId || !p.shiftSolicitadoId || !p.fechaDesde || !String(p.motivo || "").trim()) {
+          await sweetAlert.warning("Campos incompletos", "Elegí el turno nuevo, la fecha desde y contá el motivo.");
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const isDocumentType = selectedCategory?.futureActionType === "documento";
 
       const parseLocalDate = (dateVal: any): Date => {
@@ -657,6 +669,12 @@ export default function Orders({ onNavigate, initialCategoryType, onIntentConsum
       setDocument(null);
       setDocumentPreview(null);
     } catch (err: any) {
+      // Cambio de turno: el server contesta 422 con TODOS los motivos; se muestran juntos.
+      const errores: { mensaje: string }[] = err.response?.data?.errores || [];
+      if (errores.length > 0) {
+        await sweetAlert.error("Así no se puede enviar", errores.map((e) => `• ${e.mensaje}`).join("\n"));
+        return;
+      }
       const errorMessage = err.response?.data?.error || "Error al crear pedido";
       const isRetryable = errorMessage.includes("número de pedido único") || errorMessage.includes("duplicate key");
 

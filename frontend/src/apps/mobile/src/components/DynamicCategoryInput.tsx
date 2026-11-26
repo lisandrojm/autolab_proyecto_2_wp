@@ -5,6 +5,7 @@ import { OrderConfig as OrderType } from "../../../../api/orderConfig";
 import { CustomDatePicker } from "./CustomDatePicker";
 import { CustomMultiDatePicker } from "./CustomMultiDatePicker";
 import { PersonalDataForm } from "./PersonalDataForm";
+import { CambioTurnoInput } from "./CambioTurnoInput";
 
 interface DynamicCategoryInputProps {
   category: OrderType | null;
@@ -83,6 +84,9 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
     switch (category.categoryType) {
       case "datos_personales":
         return <PersonalDataForm enabledKeys={category.config?.camposEditables || []} value={dynamicValue || {}} onChange={onDynamicValueChange} />;
+      case "cambio_turno":
+        // Tipo de sistema: el formulario pide al server dónde está la persona y anticipa los errores.
+        return <CambioTurnoInput value={dynamicValue && typeof dynamicValue === "object" ? dynamicValue : null} onChange={onDynamicValueChange} />;
       case "fecha":
         if (category.dateMode === "range") {
           const fechaDesde = dynamicValue?.fechaDesde || "";

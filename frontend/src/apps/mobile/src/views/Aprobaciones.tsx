@@ -153,7 +153,9 @@ export default function Aprobaciones({ onNavigate }: { onNavigate: (view: ViewTy
       setDetalle(null);
       sweetAlert.success("Aprobadas", "Pasan al siguiente paso.");
     } catch (e: any) {
-      sweetAlert.error("No se pudo aprobar", e?.response?.data?.error || "Probá de nuevo.");
+      // Cambio de turno: el server revalida al aprobar y contesta 422 con los motivos.
+      const errores: { mensaje: string }[] = e?.response?.data?.errores || [];
+      sweetAlert.error("No se pudo aprobar", errores.length ? errores.map((x) => `• ${x.mensaje}`).join("\n") : e?.response?.data?.error || "Probá de nuevo.");
       cargar();
     } finally {
       setProcesando(null);

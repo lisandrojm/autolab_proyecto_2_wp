@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faPlus, faGripVertical, faList, faToggleOn, faToggleOff, faEdit, faTrash, faEye } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faPlus, faGripVertical, faList, faToggleOn, faToggleOff, faEdit, faTrash, faEye, faLock } from '@fortawesome/free-solid-svg-icons';
+import { reglasCambioTurnoDe, type ReglasCambioTurno } from '@compartido/cambioDeTurno';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -41,6 +42,7 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderConfig, index, isReorder
     objeto: 'Objeto',
     otros: 'Otros',
     datos_personales: 'Datos personales',
+    cambio_turno: 'Cambio de turno',
   };
 
   const getExpectedTemplateCode = (): string | null => {
@@ -52,6 +54,7 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderConfig, index, isReorder
     if (categoryType === 'objeto') return 'objeto';
     if (categoryType === 'otros') return 'otros';
     if (categoryType === 'datos_personales') return 'datosPersonales';
+    if (categoryType === 'cambio_turno') return 'cambioTurno';
     return null;
   };
 
@@ -87,12 +90,18 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderConfig, index, isReorder
           <span className="text-sm font-medium">{index + 1}</span>
         </td>
         <td className="py-3 px-4" rowSpan={rowCount}>
-          <div className="font-medium text-gray-900 dark:text-gray-100">{orderConfig.name}</div>
+          <div className="flex items-center gap-2 font-medium text-gray-900 dark:text-gray-100">
+            {orderConfig.name}
+            {/* Tipo de sistema: mismo badge que los turnos (ShiftsPage). */}
+            {orderConfig.isSystem && <span className="text-[9px] bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Sistema</span>}
+          </div>
         </td>
         <td className="py-3 px-4" rowSpan={rowCount}>
           <div className="flex flex-col items-start gap-1">
             <div className="flex items-center gap-1 flex-wrap">
-              <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.categoryType === 'fecha' ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200' : orderConfig.categoryType === 'dinero' ? 'bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200' : orderConfig.categoryType === 'objeto' ? 'bg-purple-100 text-purple-800 dark:bg-purple-500/30 dark:text-purple-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200'}`}>{categoryTypeLabels[orderConfig.categoryType] || orderConfig.categoryType}</span>
+              <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.categoryType === 'fecha' ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200' : orderConfig.categoryType === 'dinero' ? 'bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200' : orderConfig.categoryType === 'objeto' ? 'bg-purple-100 text-purple-800 dark:bg-purple-500/30 dark:text-purple-200' : orderConfig.categoryType === 'cambio_turno' ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/30 dark:text-amber-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200'}`}>{categoryTypeLabels[orderConfig.categoryType] || orderConfig.categoryType}</span>
+              {/* Las reglas del cambio de turno, a la vista como los límites del dinero. */}
+              {orderConfig.categoryType === 'cambio_turno' && (() => { const r = reglasCambioTurnoDe(orderConfig.config); return <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200">{`Anticipación: ${r.diasAnticipacion} ${r.diasAnticipacion === 1 ? 'día' : 'días'} · Temporal: ${r.permitirTemporal ? 'Sí' : 'No'} · Cupo: ${r.cupoMaximoPorTurno ?? 'sin tope'}`}</span>; })()}
 
               {orderConfig.categoryType === 'fecha' && <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.dateMode === 'range' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/30 dark:text-indigo-200' : 'bg-sky-100 text-sky-800 dark:bg-sky-500/30 dark:text-sky-200'}`}>{orderConfig.dateMode === 'range' ? 'Rango de Fechas' : 'Fechas Múltiples'}</span>}
               {orderConfig.categoryType === 'dinero' && <span className={`px-2 py-1 rounded text-xs font-medium ${!orderConfig.limitType ? 'bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/30 dark:text-emerald-200'}`}>{!orderConfig.limitType ? 'Sin límite' : orderConfig.limitType === 'monto' ? `Máximo por monto: $${orderConfig.montoMaximo ? orderConfig.montoMaximo.toLocaleString('es-ES') : 0}` : `Máximo por porcentaje de sueldo: ${orderConfig.porcentajeMaximo ?? 0}%`}</span>}
@@ -145,9 +154,15 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderConfig, index, isReorder
           <button onClick={() => onEdit(orderConfig)} disabled={isReorderMode} className={`p-1.5 rounded text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? 'opacity-50 cursor-not-allowed' : ''}`} title="Editar">
             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
           </button>
-          <button onClick={() => onDelete(orderConfig)} disabled={isReorderMode} className={`p-1.5 rounded text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? 'opacity-50 cursor-not-allowed' : ''}`} title="Eliminar">
-            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-          </button>
+          {!orderConfig.isSystem ? (
+            <button onClick={() => onDelete(orderConfig)} disabled={isReorderMode} className={`p-1.5 rounded text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? 'opacity-50 cursor-not-allowed' : ''}`} title="Eliminar">
+              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+            </button>
+          ) : (
+            <div className="p-1.5 text-gray-400" title="Tipo de pedido de sistema protegido">
+              <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
+            </div>
+          )}
         </div>
       </td>
     ) : null;
@@ -230,6 +245,9 @@ export const OrderTypesTab: React.FC = () => {
     pdfId?: string;
     pdfText?: string;
     camposEditables?: string[];
+    /** Tipo de sistema: tipo de dato bloqueado, sin Eliminar. */
+    isSystem?: boolean;
+    reglasCambioTurno?: ReglasCambioTurno;
   }>({
     name: '',
     informacion: '',
@@ -257,6 +275,7 @@ export const OrderTypesTab: React.FC = () => {
     pdfText: '',
     repayment: undefined,
     camposEditables: [],
+    isSystem: false,
   });
   const [submitting, setSubmitting] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -344,6 +363,7 @@ export const OrderTypesTab: React.FC = () => {
       requiresUserConfirmation: false,
       pdfText: '',
       camposEditables: [],
+      isSystem: false,
     });
     setShowModal(true);
   };
@@ -395,6 +415,8 @@ export const OrderTypesTab: React.FC = () => {
       requiresUserConfirmation: orderType.requiresUserConfirmation ?? false,
       pdfId: orderType.pdfId,
       pdfText: orderType.pdfText || '',
+      isSystem: !!orderType.isSystem,
+      reglasCambioTurno: orderType.categoryType === 'cambio_turno' ? reglasCambioTurnoDe(orderType.config) : undefined,
     });
     setShowModal(true);
   };
@@ -506,6 +528,11 @@ export const OrderTypesTab: React.FC = () => {
       // Datos personales: guardar la lista de campos editables habilitados en config.
       if (formData.categoryType === 'datos_personales') {
         payload.config = { ...(payload.config || {}), camposEditables: formData.camposEditables || [] };
+      }
+
+      // Cambio de turno (tipo de sistema): la config son sólo sus reglas; el server descarta todo lo demás.
+      if (formData.categoryType === 'cambio_turno') {
+        payload.config = { reglasCambioTurno: reglasCambioTurnoDe({ reglasCambioTurno: formData.reglasCambioTurno }) };
       }
 
       // If there are subtipos and category is dinero, copy any repayment fields from formData.subtipos into payload
@@ -718,7 +745,16 @@ export const OrderTypesTab: React.FC = () => {
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={editingOrderType ? 'Editar Tipo de Pedido' : 'Nuevo Tipo de Pedido'}
+        title={
+          editingOrderType ? (
+            <span className="flex items-center gap-2">
+              Editar Tipo de Pedido
+              {editingOrderType.isSystem && <span className="text-[10px] bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded uppercase font-bold">Sistema</span>}
+            </span>
+          ) : (
+            'Nuevo Tipo de Pedido'
+          )
+        }
         size="lg"
         footer={
           <div className="flex gap-3 w-full">

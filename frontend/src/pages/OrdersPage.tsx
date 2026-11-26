@@ -18,6 +18,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { mapOrderStatusToStatusType, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../utils/statusHelpers";
 import { getFormattedOrderNumber } from "../utils/orderHelpers";
 import { ProposedPersonalDataDetails } from "../components/orders/ProposedPersonalDataDetails";
+import { CambioTurnoDetails } from "../components/orders/CambioTurnoDetails";
 import { isBankingProposal } from "../config/personalDataFields";
 
 // 🔥 IMPORTAR HELP
@@ -316,7 +317,9 @@ export const OrdersPage: React.FC = () => {
       await sweetAlert.success("Aprobado", successMessage);
     } catch (error: any) {
       setUpdatingStatus(false);
-      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo aprobar el pedido");
+      // Cambio de turno: el server revalida al aprobar y contesta 422 con la lista de motivos.
+      const errores: { mensaje: string }[] = error?.response?.data?.errores || [];
+      await sweetAlert.error(errores.length ? "No se pudo aprobar" : "Error", errores.length ? `${error?.response?.data?.error || ""}\n${errores.map((e) => `• ${e.mensaje}`).join("\n")}`.trim() : error?.response?.data?.error || "No se pudo aprobar el pedido");
     }
   };
 
@@ -1241,6 +1244,7 @@ export const OrdersPage: React.FC = () => {
               {(selectedOrder.categoryId as any)?.categoryType === "datos_personales" && (selectedOrder as any).metadata?.proposedUserData && (
                 <ProposedPersonalDataDetails proposedUserData={(selectedOrder as any).metadata.proposedUserData} />
               )}
+              {(selectedOrder.categoryId as any)?.categoryType === "cambio_turno" && <CambioTurnoDetails order={selectedOrder} />}
               {isBankingProposal((selectedOrder as any).metadata?.proposedUserData) && (
                 (selectedOrder as any).metadata?.bankChangeConfirmed ? (
                   <div className="flex items-start gap-3 rounded-lg border border-emerald-300 dark:border-emerald-700/60 bg-emerald-50 dark:bg-emerald-900/20 p-4">

@@ -10,6 +10,7 @@ import { InfoModal } from "../ui/InfoModal";
 import { tipoAccionFuturaLabels, deadlineModeLabels } from "../../types/orderFutureAction";
 import { PERSONAL_DATA_FIELDS, PERSONAL_DATA_SECTION_LABELS, PersonalDataSection } from "../../config/personalDataFields";
 import { LinkSiPuede } from "../LinkSiPuede";
+import { REGLAS_CAMBIO_TURNO_POR_DEFECTO, type ReglasCambioTurno } from "@compartido/cambioDeTurno";
 
 interface OrderCategoryFormProps {
   formData: {
@@ -39,6 +40,9 @@ interface OrderCategoryFormProps {
     pdfText?: string;
     repayment?: RepaymentConfig;
     camposEditables?: string[];
+    /** Tipo de sistema: el tipo de dato no se cambia y se muestran sus reglas en vez de fechas/opciones. */
+    isSystem?: boolean;
+    reglasCambioTurno?: ReglasCambioTurno;
   };
   setFormData: React.Dispatch<React.SetStateAction<any>>;
   onSubmit: (e: React.FormEvent) => void;
@@ -63,6 +67,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
     if (categoryType === "objeto") return "objeto";
     if (categoryType === "otros") return "otros";
     if (categoryType === "datos_personales") return "datosPersonales";
+    if (categoryType === "cambio_turno") return "cambioTurno";
     return null;
   };
 
@@ -236,7 +241,9 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
       <form id="order-category-form" onSubmit={onSubmit} className="space-y-4">
         {/* Nombre */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Nombre {formData.isSystem && <span className="text-[10px] bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded ml-2 uppercase font-bold">Sistema</span>}
+          </label>
           <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Nombre del tipo de pedido" />
         </div>
 
@@ -259,14 +266,69 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
             </button>
           </div>
-          <select required value={formData.categoryType} onChange={(e) => setFormData({ ...formData, categoryType: e.target.value as CategoryType })} className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+          {/* En un tipo de sistema el tipo de dato no se cambia (el server también lo rechaza). «Cambio de turno» no se ofrece para tipos nuevos: lo crea la plataforma. */}
+          <select
+            required
+            value={formData.categoryType}
+            disabled={!!formData.isSystem}
+            onChange={(e) => setFormData({ ...formData, categoryType: e.target.value as CategoryType })}
+            className={`w-full rounded border border-gray-300 dark:border-gray-600 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 ${formData.isSystem ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed" : "bg-white dark:bg-gray-700"}`}
+          >
             <option value="fecha">Fecha</option>
             <option value="dinero">Dinero</option>
             <option value="objeto">Objeto</option>
             <option value="otros">Otros</option>
             <option value="datos_personales">Datos personales</option>
+            {formData.categoryType === "cambio_turno" && <option value="cambio_turno">Cambio de turno</option>}
           </select>
+          {formData.isSystem && <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">Tipo de pedido generado por el sistema: se puede renombrar, activar o desactivar y ajustar sus reglas, pero no cambiar su tipo de dato ni eliminarlo.</p>}
         </div>
+
+        {/* Cambio de turno: sus reglas, en lugar de Modo de Fecha / Opciones / Fecha de reset. */}
+        {formData.categoryType === "cambio_turno" && (
+          <div className="border border-amber-200 dark:border-amber-800 p-4 rounded space-y-4">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Reglas del cambio de turno</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Días de anticipación</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={365}
+                  value={formData.reglasCambioTurno?.diasAnticipacion ?? REGLAS_CAMBIO_TURNO_POR_DEFECTO.diasAnticipacion}
+                  onChange={(e) => setFormData({ ...formData, reglasCambioTurno: { ...(formData.reglasCambioTurno || REGLAS_CAMBIO_TURNO_POR_DEFECTO), diasAnticipacion: Math.max(0, parseInt(e.target.value || "0", 10) || 0) } })}
+                  className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white"
+                />
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Mínimo de días entre hoy y la fecha desde del pedido. 0 = se puede pedir para hoy.</p>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Cupo máximo por turno</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={formData.reglasCambioTurno?.cupoMaximoPorTurno ?? ""}
+                  onChange={(e) => setFormData({ ...formData, reglasCambioTurno: { ...(formData.reglasCambioTurno || REGLAS_CAMBIO_TURNO_POR_DEFECTO), cupoMaximoPorTurno: e.target.value ? Math.max(1, parseInt(e.target.value, 10) || 1) : null } })}
+                  placeholder="Sin tope"
+                  className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white"
+                />
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Si el turno de destino ya tiene esta cantidad de personas, el pedido se rechaza. Vacío = sin tope.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="permitirTemporal"
+                checked={formData.reglasCambioTurno?.permitirTemporal ?? REGLAS_CAMBIO_TURNO_POR_DEFECTO.permitirTemporal}
+                onChange={(e) => setFormData({ ...formData, reglasCambioTurno: { ...(formData.reglasCambioTurno || REGLAS_CAMBIO_TURNO_POR_DEFECTO), permitirTemporal: e.target.checked } })}
+                className="w-4 h-4 text-blue-600"
+              />
+              <label htmlFor="permitirTemporal" className="text-sm text-gray-700 dark:text-gray-300">
+                Permitir cambios temporales (con fecha hasta)
+              </label>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Al aprobarse (y firmarse, si el tipo firma), el cambio se aplica en el equipo del proyecto el día de la fecha desde; con fecha hasta, la persona vuelve a su turno al día siguiente.</p>
+          </div>
+        )}
 
         {/* Datos personales: selección de campos editables */}
         {formData.categoryType === "datos_personales" && (
@@ -321,7 +383,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
         )}
 
         {/* Subtipos */}
-        {formData.categoryType !== "datos_personales" && (
+        {formData.categoryType !== "datos_personales" && formData.categoryType !== "cambio_turno" && (
         <div>
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">

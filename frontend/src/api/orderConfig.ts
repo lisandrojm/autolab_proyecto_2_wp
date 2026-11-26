@@ -1,4 +1,5 @@
 import axios from "./axiosConfig";
+import type { ReglasCambioTurno } from "@compartido/cambioDeTurno";
 
 export type TipoAccionFutura = "documento" | "otra";
 
@@ -22,6 +23,8 @@ export interface TypeConfig {
   repayment?: RepaymentConfig;
   // Campos de datos personales habilitados para modificación (categoryType === "datos_personales").
   camposEditables?: string[];
+  // Reglas del tipo de sistema «Cambio de turno» (categoryType === "cambio_turno").
+  reglasCambioTurno?: Partial<ReglasCambioTurno>;
   [key: string]: any;
 }
 
@@ -32,12 +35,15 @@ export interface RepaymentConfig {
   resetOnPaid?: boolean; // si al completarse se resetea el monto a cero
 }
 
-export type CategoryType = "fecha" | "dinero" | "objeto" | "otros" | "datos_personales";
+export type CategoryType = "fecha" | "dinero" | "objeto" | "otros" | "datos_personales" | "cambio_turno";
 
 export interface OrderConfig {
   _id: string;
   tenantId: string;
   name: string;
+  /** Tipo de SISTEMA (lo crea el server, no se borra ni cambia de tipo de dato), con su clave. */
+  isSystem?: boolean;
+  systemKey?: string;
   informacion?: string;
   icon?: string;
   isActive: boolean;
