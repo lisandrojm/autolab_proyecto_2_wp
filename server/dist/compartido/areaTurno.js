@@ -135,3 +135,41 @@ export function sedeParaGuardar(areasConfig, areaId, sedeFila, sedePrincipal) {
 }
 /** «Edición · Libertador» (o sólo «Edición» sin sede). */
 export const etiquetaArea = (areaNombre, sedeNombre) => (sedeNombre ? `${areaNombre} · ${sedeNombre}` : areaNombre);
+/**
+ * MOVER A UNA PERSONA DE UN TURNO A OTRO DENTRO DE LA MISMA FILA DE ÁREA (Equipos en la app, 26/11/2026).
+ *
+ * Toca sólo la fila donde está: le saca `deShiftId` y le pone `aShiftId` (sin repetir); las demás áreas
+ * de la persona quedan como estaban. Con más de un turno en la fila (Mañana y Tarde → sacar Mañana) se
+ * queda con el resto más el nuevo. La fila se reconoce con la misma regla que las claves (`sedeEnArea`):
+ * una asignación sin sede en un área de una sola fila ES esa fila.
+ *
+ * La sede guardada en la fila movida: la que ya tenía; si no tenía, la que corresponde a esa fila
+ * (`sedeParaGuardar`), para que en un área con varias sedes no quede «falta elegir sede».
+ *
+ * Devuelve null si la persona NO está en ese turno de esa fila (la lista que miraba quedó vieja): ahí
+ * no hay nada que mover y conviene decirlo, no inventar una asignación.
+ */
+export function cambiarTurnoEnFila(assignments, cambio, ctx) {
+    const areaId = idDe(cambio.areaId);
+    const de = idDe(cambio.deShiftId);
+    const a = idDe(cambio.aShiftId);
+    if (!areaId || !de || !a)
+        return null;
+    let movida = false;
+    const nuevas = (assignments || [])
+        .map((asa) => {
+        const propia = idDe(asa?.areaId);
+        const shiftIds = [...new Set((asa?.shiftIds || []).map(idDe).filter(Boolean))];
+        const sede = sedeDe(asa?.sedeId);
+        const base = { areaId: propia, shiftIds, ...(sede ? { sedeId: sede } : {}) };
+        if (movida || propia !== areaId || !shiftIds.includes(de))
+            return base;
+        if (sedeEnArea(ctx.areasConfig, propia, asa?.sedeId, ctx.sedePrincipal) !== cambio.sedeId)
+            return base;
+        movida = true;
+        const guardar = sede ?? sedeParaGuardar(ctx.areasConfig, propia, cambio.sedeId, ctx.sedePrincipal);
+        return { areaId: propia, shiftIds: [...new Set([...shiftIds.filter((s) => s !== de), a])], ...(guardar ? { sedeId: guardar } : {}) };
+    })
+        .filter((asa) => asa.areaId);
+    return movida ? nuevas : null;
+}

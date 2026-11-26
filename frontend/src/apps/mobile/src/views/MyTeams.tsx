@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSitemap, faLayerGroup, faChevronDown, faChevronRight, faUserTie, faUserShield, faSearch, faXmark, faFileContract, faCircleInfo, faLocationDot, faClock } from "@fortawesome/free-solid-svg-icons";
+import { faSitemap, faLayerGroup, faChevronDown, faChevronRight, faUserTie, faUserShield, faSearch, faXmark, faFileContract, faCircleInfo, faLocationDot, faClock, faArrowRightArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import SectionHeader from "../components/SectionHeader";
 import MenuDeTarjetas, { type OpcionDeMenu } from "../components/MenuDeTarjetas";
 import ContratoMiembroModal from "../components/ContratoMiembroModal";
+import CambiarTurnoModal from "../components/CambiarTurnoModal";
+import { sweetAlert } from "../utils/sweetAlert";
 import ProyectoInfoModal from "../components/ProyectoInfoModal";
 import { BadgeCentroCosto, SelectorDeProyecto, etiquetaDeProyecto } from "../components/SelectorDeProyecto";
 import { useAuthStore } from "../../../../stores/authStore";
@@ -15,7 +17,7 @@ import { areasAPI, Area } from "../../../../api/areas";
 import { shiftsAPI, Shift } from "../../../../api/shifts";
 import { claveOrdenTurno, etiquetaDeTurno, textoDeDias } from "../../../../utils/jerarquiaTurnos";
 import { infoAPI } from "../../../../api/info";
-import { claveAreaTurno, claveFilaArea, sedeDe, sedePrincipalDe } from "@compartido/areaTurno";
+import { claveAreaTurno, claveFilaArea, partirClaveFilaArea, sedeDe, sedePrincipalDe } from "@compartido/areaTurno";
 
 interface MyTeamsProps {
   onNavigate: (view: ViewType) => void;
@@ -26,9 +28,10 @@ interface MyTeamsProps {
  * MIS EQUIPOS: LA JERARQUÍA DEL PROYECTO, VISTA DESDE EL QUE MANDA
  * ═══════════════════════════════════════════════════════════════════════
  *
- * Es la pestaña Jerarquía de Gestionar Equipo (panel web) en el celular, y de sólo lectura: mismo
- * orden, mismos nombres y mismos números, para que un supervisor vea en la app exactamente lo que
- * después ve en el escritorio.
+ * Es la pestaña Jerarquía de Gestionar Equipo (panel web) en el celular: mismo orden, mismos nombres y
+ * mismos números, para que un supervisor vea en la app exactamente lo que después ve en el escritorio.
+ * Lo único que se toca desde acá es el TURNO de una persona (26/11/2026, ver `cambiarTurno`): sólo el
+ * coordinador del proyecto, dentro de la misma área, y con eso la persona pasa a otro supervisor.
  *
  *   · Supervisor  — es el responsable del proyecto (`metadata.responsableId` = su id de FRAME), así que
  *                   ve todas las áreas y turnos, y además quiénes del equipo no tienen área.
@@ -63,7 +66,7 @@ const chip = (ok: boolean) => `rounded px-1 py-0.5 text-[9px] font-bold uppercas
 /** Para buscar sin que importen tildes ni mayúsculas: «agustin» encuentra a «Agustín». */
 const normalizar = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-interface TurnoACargo {
+export interface TurnoACargo {
   clave: string;
   shiftId: string;
   /** «Mañana», «Tarde»: sin el rango ni los días que suele traer el nombre guardado. */
@@ -75,7 +78,7 @@ interface TurnoACargo {
   coordinadorNombre: string;
 }
 
-interface AreaACargo {
+export interface AreaACargo {
   areaId: string;
   /** La fila de «Configuración por Área» (área + sede): la misma área puede estar una vez por sede. */
   filaKey: string;
@@ -111,6 +114,10 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
   const [buscaSinArea, setBuscaSinArea] = useState("");
   /** La persona cuyo contrato se está viendo (sólo el coordinador del proyecto; ver `tarjeta`). */
   const [contratoDe, setContratoDe] = useState<{ userId: string; nombre: string } | null>(null);
+  /** La persona a la que se le está cambiando el turno, con dónde está hoy (sólo el coordinador del proyecto). */
+  const [cambioDe, setCambioDe] = useState<{ persona: AreaShiftMember; area: AreaACargo; turno: TurnoACargo } | null>(null);
+  /** Sube para volver a pedir la lista de personas sin cambiar de proyecto (después de un cambio de turno). */
+  const [recarga, setRecarga] = useState(0);
   /** La ficha del proyecto (cliente, sede, centro de costo, empresas): la misma que el escritorio. */
   const [verInfoProyecto, setVerInfoProyecto] = useState(false);
   const [sedesCatalogo, setSedesCatalogo] = useState<Array<{ name?: string; data?: any }>>([]);
@@ -254,8 +261,21 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
     if (!proyectoId) return;
     setAbiertosEstado(leerAbiertos(proyectoId));
     setBuscaSinArea("");
+  }, [proyectoId]);
+
+  /*
+    La gente del proyecto. Al cambiar de proyecto la lista se vacía mientras llega la nueva; en una RECARGA
+    (después de cambiar a alguien de turno) se deja la vieja a la vista hasta que llega la nueva: si no, lo
+    abierto se cerraría y la pantalla saltaría para volver a lo mismo con una persona de lugar.
+  */
+  const proyectoCargado = useRef("");
+  useEffect(() => {
+    if (!proyectoId) return;
     let cancelado = false;
-    setPersonas(null);
+    if (proyectoCargado.current !== proyectoId) {
+      proyectoCargado.current = proyectoId;
+      setPersonas(null);
+    }
     projectsAPI
       .getProjectMembersStatus(proyectoId)
       .then((ms) => !cancelado && setPersonas(ms))
@@ -263,7 +283,7 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
     return () => {
       cancelado = true;
     };
-  }, [proyectoId]);
+  }, [proyectoId, recarga]);
 
   /*
     Lo abierto se GUARDA AL TOCAR, no desde un efecto. Con un efecto, al cambiar de proyecto se escribía
@@ -361,7 +381,39 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
 
   const nombreDe = (m: AreaShiftMember) => `${m.firstName || ""} ${m.lastName || ""}`.trim() || m.email;
 
-  const tarjeta = (m: AreaShiftMember, esCoordinador: boolean) => (
+  /** Cuántos suman y cuántos hay en un turno: para las opciones de «Cambiar de turno». */
+  const cuentaDe = (clave: string) => {
+    const lista = porTurno.get(clave) || [];
+    return { suman: lista.filter((x) => x.cuenta).length, total: lista.length };
+  };
+
+  /*
+    CAMBIAR DE TURNO (26/11/2026). Sólo el coordinador del proyecto, y el server lo vuelve a controlar. Se
+    mueve dentro de la misma área (misma fila): el server escribe el equipo, el historial y el contrato que
+    rige, igual que la Jerarquía del panel. Con eso la persona pasa sola al supervisor del turno nuevo.
+    Después se vuelve a pedir la lista y se abre el turno de destino, para verla ahí.
+    Un 409 es «ya no está en ese turno» (otro la movió, cambió el contrato que rige): se recarga y listo.
+  */
+  const cambiarTurno = async (destino: TurnoACargo) => {
+    if (!cambioDe || !equipo) return;
+    const { persona, area, turno } = cambioDe;
+    try {
+      await projectsAPI.cambiarTurnoDeMiembro(equipo.proyecto._id, persona._id, { areaId: area.areaId, sedeId: partirClaveFilaArea(area.filaKey).sedeId, deShiftId: turno.shiftId, aShiftId: destino.shiftId });
+      setCambioDe(null);
+      setAbiertos(new Set([...abiertos, destino.clave]));
+      setRecarga((n) => n + 1);
+      sweetAlert.success(`${nombreDe(persona)} pasó a ${destino.nombre}`, destino.coordinadorNombre ? `Ahora está a cargo de ${destino.coordinadorNombre}.` : "Ese turno todavía no tiene supervisor.");
+    } catch (e: any) {
+      sweetAlert.error("No se pudo cambiar el turno", e?.response?.data?.error || "Probá de nuevo en un momento.");
+      if (e?.response?.status === 409) {
+        setCambioDe(null);
+        setRecarga((n) => n + 1);
+      }
+    }
+  };
+
+  /** `lugar`: el área y turno en que se muestra la tarjeta. Sin él (Sin área asignada) no hay de dónde cambiarla de turno. */
+  const tarjeta = (m: AreaShiftMember, esCoordinador: boolean, lugar?: { area: AreaACargo; turno: TurnoACargo }) => (
     <div
       key={m._id}
       className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${m.cuenta ? "border-green-300 bg-green-50 dark:border-green-800/70 dark:bg-green-950/20" : "border-red-300 bg-red-50 dark:border-red-900/70 dark:bg-red-950/20"}`}
@@ -390,6 +442,23 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
         EL CONTRATO, en sólo lectura. Sólo para el coordinador del proyecto (el responsable): trae sueldos,
         y quien supervisa áreas y turnos no lo ve. El server lo vuelve a controlar.
       */}
+      {/*
+        CAMBIAR DE TURNO: sólo el coordinador del proyecto (el server lo vuelve a controlar), y no sobre el
+        supervisor del turno: a ése lo mueve la Jerarquía, que además lo saca de supervisar. Con un solo
+        turno en el área no hay a dónde ir, y se dice.
+      */}
+      {equipo?.supervisa && lugar && !esCoordinador && (
+        <button
+          type="button"
+          onClick={() => setCambioDe({ persona: m, area: lugar.area, turno: lugar.turno })}
+          disabled={lugar.area.turnos.length < 2}
+          title={lugar.area.turnos.length < 2 ? "El área tiene un solo turno" : "Cambiar de turno"}
+          aria-label={`Cambiar de turno a ${nombreDe(m)}`}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-white text-blue-600 active:bg-blue-50 disabled:opacity-40 dark:border-blue-900 dark:bg-slate-900 dark:text-blue-400 dark:active:bg-slate-800"
+        >
+          <FontAwesomeIcon icon={faArrowRightArrowLeft} className="h-4 w-4" />
+        </button>
+      )}
       {equipo?.supervisa && (
         <button
           type="button"
@@ -447,7 +516,7 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
         titulo={enMenu || !opcionActiva ? "Equipos" : opcionActiva.label}
         onBack={() => (enMenu || !conMenu ? onNavigate("home") : setElegida("menu"))}
         info={
-          "Las áreas y turnos que tenés a cargo, con la gente de cada uno: lo mismo que la Jerarquía del proyecto en el escritorio.\n\nSi coordinás el proyecto hay dos botones: los equipos que supervisás directamente y los de tus supervisores, cada área con sus turnos y quién supervisa cada uno.\n\nArranca todo cerrado. Cada área muestra sus turnos con cuántas personas suman sobre el total asignado (suman las activas con contrato vigente). Tocá un área para ver sus turnos, y un turno para ver quiénes lo integran.\n\nSi estás en más de un proyecto, elegí cuál ver."
+          "Las áreas y turnos que tenés a cargo, con la gente de cada uno: lo mismo que la Jerarquía del proyecto en el escritorio.\n\nSi coordinás el proyecto hay dos botones: los equipos que supervisás directamente y los de tus supervisores, cada área con sus turnos y quién supervisa cada uno.\n\nArranca todo cerrado. Cada área muestra sus turnos con cuántas personas suman sobre el total asignado (suman las activas con contrato vigente). Tocá un área para ver sus turnos, y un turno para ver quiénes lo integran.\n\nSi coordinás el proyecto, con las flechas de cada persona la cambiás de turno dentro de su área: pasa a estar a cargo del supervisor del turno nuevo.\n\nSi estás en más de un proyecto, elegí cuál ver."
         }
       />
 
@@ -619,11 +688,11 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
                                                   </>
                                                 )}
                                               </p>
-                                              {suman.map((m) => tarjeta(m, m._id === t.coordinadorId))}
+                                              {suman.map((m) => tarjeta(m, m._id === t.coordinadorId, { area: a, turno: t }))}
                                               {noSuman.length > 0 && (
                                                 <>
                                                   <p className="pt-2 text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">No suman al total ({noSuman.length})</p>
-                                                  {noSuman.map((m) => tarjeta(m, m._id === t.coordinadorId))}
+                                                  {noSuman.map((m) => tarjeta(m, m._id === t.coordinadorId, { area: a, turno: t }))}
                                                 </>
                                               )}
                                             </>
@@ -694,6 +763,11 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
       </div>
 
       <ContratoMiembroModal isOpen={!!contratoDe && !!equipo} onClose={() => setContratoDe(null)} projectId={equipo?.proyecto._id || ""} userId={contratoDe?.userId || ""} nombre={contratoDe?.nombre || ""} />
+
+      {/* `key`: cada apertura arranca sin turno elegido. */}
+      {cambioDe && equipo && (
+        <CambiarTurnoModal key={`${cambioDe.persona._id}::${cambioDe.turno.clave}`} isOpen onClose={() => setCambioDe(null)} persona={nombreDe(cambioDe.persona)} area={cambioDe.area} turnoActual={cambioDe.turno} cuentaDe={cuentaDe} onConfirmar={cambiarTurno} />
+      )}
 
       <ProyectoInfoModal isOpen={verInfoProyecto && !!equipo} onClose={() => setVerInfoProyecto(false)} proyecto={equipo?.proyecto || null} supervisorNombre={equipo?.supervisorNombre || ""} areas={areasDelProyecto} />
     </div>

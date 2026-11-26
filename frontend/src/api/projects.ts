@@ -669,6 +669,15 @@ class ProjectsAPI {
     await axios.patch(`/projects/${projectId}/team-config/${userId}/areas`, { areaShiftAssignments }, { headers: this.getHeaders() });
   }
 
+  /**
+   * Cambia de turno a una persona DENTRO DE LA MISMA FILA DE ÁREA (área + sede), desde Equipos en la app.
+   * Sólo el coordinador del proyecto (el server lo controla). `sedeId` es la sede de la fila: null = la fila sin sede.
+   * Escribe lo mismo que la Jerarquía: equipo, historial y el contrato que rige (`routes/contratoMiembro.ts`).
+   */
+  async cambiarTurnoDeMiembro(projectId: string, userId: string, cambio: { areaId: string; sedeId: number | null; deShiftId: string; aShiftId: string }): Promise<void> {
+    await axios.patch(`/projects/${projectId}/miembros/${userId}/turno`, cambio, { headers: this.getHeaders() });
+  }
+
   async updateTeamConfig(
     projectId: string,
     config: {

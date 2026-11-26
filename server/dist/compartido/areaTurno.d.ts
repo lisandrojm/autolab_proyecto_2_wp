@@ -95,3 +95,29 @@ export declare const filasDelArea: (areasConfig: FilaAreaConfig[] | undefined, a
 export declare function sedeParaGuardar(areasConfig: FilaAreaConfig[] | undefined, areaId: unknown, sedeFila: unknown, sedePrincipal: unknown): number | undefined;
 /** «Edición · Libertador» (o sólo «Edición» sin sede). */
 export declare const etiquetaArea: (areaNombre: string, sedeNombre?: string | null) => string;
+export interface CambioDeTurno {
+    areaId: unknown;
+    /** La fila (sede) del área en la que está la persona: null = la fila sin sede. */
+    sedeId: number | null;
+    deShiftId: unknown;
+    aShiftId: unknown;
+}
+/**
+ * MOVER A UNA PERSONA DE UN TURNO A OTRO DENTRO DE LA MISMA FILA DE ÁREA (Equipos en la app, 26/11/2026).
+ *
+ * Toca sólo la fila donde está: le saca `deShiftId` y le pone `aShiftId` (sin repetir); las demás áreas
+ * de la persona quedan como estaban. Con más de un turno en la fila (Mañana y Tarde → sacar Mañana) se
+ * queda con el resto más el nuevo. La fila se reconoce con la misma regla que las claves (`sedeEnArea`):
+ * una asignación sin sede en un área de una sola fila ES esa fila.
+ *
+ * La sede guardada en la fila movida: la que ya tenía; si no tenía, la que corresponde a esa fila
+ * (`sedeParaGuardar`), para que en un área con varias sedes no quede «falta elegir sede».
+ *
+ * Devuelve null si la persona NO está en ese turno de esa fila (la lista que miraba quedó vieja): ahí
+ * no hay nada que mover y conviene decirlo, no inventar una asignación.
+ */
+export declare function cambiarTurnoEnFila(assignments: any[] | undefined, cambio: CambioDeTurno, ctx: ContextoDeSede): Array<{
+    areaId: string;
+    shiftIds: string[];
+    sedeId?: number;
+}> | null;

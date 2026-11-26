@@ -3,7 +3,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { claveAreaTurno, partirClaveAreaTurno, claveFilaArea, sedeEnArea, clavesDelMiembro, sedeDe, pendientesDeSede, sedeParaGuardar, sedePrincipalDe } from "./areaTurno.js";
+import { claveAreaTurno, partirClaveAreaTurno, claveFilaArea, sedeEnArea, clavesDelMiembro, sedeDe, pendientesDeSede, sedeParaGuardar, sedePrincipalDe, cambiarTurnoEnFila } from "./areaTurno.js";
 
 describe("la clave de área × turno × sede", () => {
   it("sin sede es la de siempre", () => {
@@ -54,5 +54,34 @@ describe("en qué fila (sede) del área está una persona: explícito", () => {
   });
   it("sin contexto, la sede de la asignación tal cual", () => {
     assert.deepEqual([...clavesDelMiembro([{ areaId: "ED", shiftIds: ["M"], sedeId: 1 }])], ["ED::M::s1"]);
+  });
+});
+
+describe("cambiar de turno dentro de la fila (Equipos en la app)", () => {
+  const unaFila = { areasConfig: [{ areaId: "A", shiftIds: ["M", "T", "N"] }, { areaId: "B", shiftIds: ["M"] }], sedePrincipal: 1 };
+
+  it("saca el turno viejo, pone el nuevo y no toca las otras áreas", () => {
+    const r = cambiarTurnoEnFila([{ areaId: "A", shiftIds: ["M"] }, { areaId: "B", shiftIds: ["M"] }], { areaId: "A", sedeId: null, deShiftId: "M", aShiftId: "N" }, unaFila);
+    assert.deepEqual(r, [{ areaId: "A", shiftIds: ["N"] }, { areaId: "B", shiftIds: ["M"] }]);
+  });
+  it("con dos turnos en la fila se queda con el otro más el nuevo, sin repetir", () => {
+    const r = cambiarTurnoEnFila([{ areaId: "A", shiftIds: ["M", "T"] }], { areaId: "A", sedeId: null, deShiftId: "M", aShiftId: "T" }, unaFila);
+    assert.deepEqual(r, [{ areaId: "A", shiftIds: ["T"] }]);
+  });
+  it("si la persona no está en ese turno, null (la lista quedó vieja)", () => {
+    assert.equal(cambiarTurnoEnFila([{ areaId: "A", shiftIds: ["T"] }], { areaId: "A", sedeId: null, deShiftId: "M", aShiftId: "N" }, unaFila), null);
+    assert.equal(cambiarTurnoEnFila([], { areaId: "A", sedeId: null, deShiftId: "M", aShiftId: "N" }, unaFila), null);
+  });
+  it("en un área con varias sedes mueve sólo la fila de esa sede y guarda la sede", () => {
+    const ctx = { areasConfig: [{ areaId: "A", shiftIds: ["M", "T"] }, { areaId: "A", sedeId: 2, shiftIds: ["M", "T"] }], sedePrincipal: 1 };
+    // La fila sin sede es la principal: una asignación con sede 1 está ahí, y al moverla conserva su sede.
+    assert.deepEqual(cambiarTurnoEnFila([{ areaId: "A", shiftIds: ["M"], sedeId: 1 }], { areaId: "A", sedeId: null, deShiftId: "M", aShiftId: "T" }, ctx), [{ areaId: "A", shiftIds: ["T"], sedeId: 1 }]);
+    // La de la sede 2 no es la fila pedida (null): nada que mover.
+    assert.equal(cambiarTurnoEnFila([{ areaId: "A", shiftIds: ["M"], sedeId: 2 }], { areaId: "A", sedeId: null, deShiftId: "M", aShiftId: "T" }, ctx), null);
+    assert.deepEqual(cambiarTurnoEnFila([{ areaId: "A", shiftIds: ["M"], sedeId: 2 }], { areaId: "A", sedeId: 2, deShiftId: "M", aShiftId: "T" }, ctx), [{ areaId: "A", shiftIds: ["T"], sedeId: 2 }]);
+  });
+  it("acepta ids poblados y ObjectId-like", () => {
+    const r = cambiarTurnoEnFila([{ areaId: { _id: "A" }, shiftIds: [{ _id: "M" }] }], { areaId: "A", sedeId: null, deShiftId: { _id: "M" }, aShiftId: "N" }, unaFila);
+    assert.deepEqual(r, [{ areaId: "A", shiftIds: ["N"] }]);
   });
 });

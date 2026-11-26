@@ -44,6 +44,7 @@ import { claveAreaTurnoDelMiembro } from "../utils/areaTurno.js";
 import { partirClaveAreaTurno, sedeDe, sedePrincipalDe, pendientesDeSede, idDe as idDeArea } from "../compartido/areaTurno.js";
 import { ponerSedeEnArea } from "../services/sedeDeArea.js";
 import { llevarAreasAlContratoQueRige } from "../services/areasDelContratoQueRige.js";
+import { asignarAreasDeMiembro, type AsignacionDeArea } from "../services/areasDeMiembro.js";
 import { equipoSegunContratos, superponerContratos, turnosPorContrato } from "../services/equipoSegunContratos.js";
 import { FRECUENCIAS_MINUTOS, MAX_INTENTOS_AUTOMATICOS, configDe, proximaDeLaCola, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { Tenant } from "../models/Tenant.js";
@@ -1662,35 +1663,8 @@ router.patch("/projects/:projectId/team-config/:userId/areas", requireTenant, au
     const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId });
     if (!project) return res.status(404).json({ error: "Project not found" });
 
-    const asignaciones = areaShiftAssignments.map((a) => ({
-      areaId: new Types.ObjectId(a.areaId),
-      shiftIds: a.shiftIds.map((s) => new Types.ObjectId(s)),
-      ...(a.sedeId ? { sedeId: a.sedeId } : {}),
-    }));
-
-    const entrada: any = (project.teamConfig || []).find((c: any) => String(c.userId) === String(userId));
-    const uid = new Types.ObjectId(userId);
-    const marca = { updatedBy: req.user?.userId && Types.ObjectId.isValid(req.user.userId) ? new Types.ObjectId(req.user.userId) : undefined, updatedAt: new Date() };
-    /*
-      POR PERSONA, CON UN UPDATE A LA BASE (30/10/2026): antes se guardaba el array entero del documento
-      cargado, y un cambio de otro hecho en el medio se perdía. Los campos viejos (un área, un turno) siguen
-      a la primera asignación: el parte del móvil los leía y anotaba a quien se movió en su área anterior.
-    */
-    const campos = { areaShiftAssignments: asignaciones, areaId: asignaciones[0]?.areaId ?? null, shiftId: asignaciones[0]?.shiftIds?.[0] ?? null, ...marca };
-    const ponerEnLaFila = () => Project.updateOne({ _id: project._id }, { $set: Object.fromEntries(Object.entries(campos).map(([k, v]) => [`teamConfig.$[f].${k}`, v])) }, { arrayFilters: [{ "f.userId": uid }] });
-    const cambio = firmaDeAreas(entrada?.areaShiftAssignments) !== firmaDeAreas(asignaciones);
-    if (entrada) {
-      if (cambio) await ponerEnLaFila();
-    } else {
-      // Alguien del equipo que todavía no tenía fila propia: se crea con los defaults del modelo, sin inventarle horario.
-      const r = await Project.updateOne({ _id: project._id, "teamConfig.userId": { $ne: uid } }, { $push: { teamConfig: { userId: uid, canRegister: true, useProjectSchedule: true, ...campos } } });
-      if (!r.modifiedCount) await ponerEnLaFila();
-    }
-    if (cambio || !entrada) {
-      await registrarCambiosDelEquipo({ tenantId: req.tenantObjectId, projectId: project._id, porUserId: req.user?.userId, origen: "jerarquia", payload: { areaShiftAssignments }, cambios: [{ userId: uid, campo: "areas", antes: JSON.parse(firmaDeAreas(entrada?.areaShiftAssignments)), despues: JSON.parse(firmaDeAreas(asignaciones)) }] });
-    }
-    // El equipo y el contrato que rige, iguales (también si ya estaban desparejos de antes).
-    await llevarAreasAlContratoQueRige(project._id, new Map([[String(uid), asignaciones]]));
+    // Lo que escribe (fila por persona, historial, contrato que rige) vive en `services/areasDeMiembro.ts`: lo comparte con la app.
+    await asignarAreasDeMiembro({ tenantId: req.tenantObjectId, project, userId, asignaciones: areaShiftAssignments as AsignacionDeArea[], porUserId: req.user?.userId, origen: "jerarquia", payload: { areaShiftAssignments } });
     const actualizado: any = await Project.findById(project._id).select("teamConfig").lean();
 
     res.json({ teamConfig: await equipoSegunContratos(String(project._id), actualizado?.teamConfig) });

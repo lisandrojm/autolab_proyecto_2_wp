@@ -16,6 +16,11 @@ import { ArcaSucursal } from "../models/ArcaSucursal.js";
 import { Info } from "../models/Info.js";
 import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
 import { esContratoVigente, fechaISO, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
+import { z } from "zod";
+import { cambiarTurnoEnFila, idDe, sedeDe, sedePrincipalDe, type CambioDeTurno } from "../compartido/areaTurno.js";
+import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
+import { superponerContratos } from "../services/equipoSegunContratos.js";
+import { asignarAreasDeMiembro } from "../services/areasDeMiembro.js";
 
 /*
   EL CONTRATO DE UN MIEMBRO, EN SÓLO LECTURA (Mis equipos → ícono de contrato, en la app).
@@ -35,6 +40,19 @@ const nada = Promise.resolve(null);
 const idValido = (x: unknown) => !!x && Types.ObjectId.isValid(String(x));
 const num = (v: unknown): number | null => (v === null || v === undefined || v === "" || Number.isNaN(Number(v)) ? null : Number(v));
 
+/**
+ * ¿Quien pide es el COORDINADOR DEL PROYECTO (el responsable, `metadata.responsableId`) o un admin? Es la
+ * puerta de todo lo que la app deja hacer sobre el equipo de un proyecto: ver contratos, cambiar de turno.
+ * Quien supervisa áreas y turnos no pasa, aunque tenga a la persona a cargo.
+ */
+async function coordinaElProyecto(req: AuthenticatedRequest, tenantId: Types.ObjectId, projectId: string): Promise<boolean> {
+  const roles = ((req.user as any)?.roles || []).map((r: unknown) => String(r).toLowerCase());
+  const primario = String((req.user as any)?.primaryRole || "").toLowerCase();
+  if (roles.includes("admin") || roles.includes("superadmin") || primario === "admin" || primario === "superadmin") return true;
+  const { proyectos } = await alcanceDeResponsable(tenantId, req.user!.userId);
+  return proyectos.some((p) => String(p) === String(projectId));
+}
+
 router.get("/projects/:projectId/miembros/:userId/contrato", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { projectId, userId } = req.params;
@@ -50,15 +68,9 @@ router.get("/projects/:projectId/miembros/:userId/contrato", requireTenant, auth
       return;
     }
 
-    const roles = ((req.user as any)?.roles || []).map((r: unknown) => String(r).toLowerCase());
-    const primario = String((req.user as any)?.primaryRole || "").toLowerCase();
-    const esAdmin = roles.includes("admin") || roles.includes("superadmin") || primario === "admin" || primario === "superadmin";
-    if (!esAdmin) {
-      const { proyectos } = await alcanceDeResponsable(tenantId, req.user!.userId);
-      if (!proyectos.some((p) => String(p) === String(projectId))) {
-        res.status(403).json({ error: "Sólo el coordinador del proyecto puede ver los contratos de su equipo." });
-        return;
-      }
+    if (!(await coordinaElProyecto(req, tenantId, projectId))) {
+      res.status(403).json({ error: "Sólo el coordinador del proyecto puede ver los contratos de su equipo." });
+      return;
     }
 
     const [asignacion, persona]: any[] = await Promise.all([
@@ -147,6 +159,94 @@ router.get("/projects/:projectId/miembros/:userId/contrato", requireTenant, auth
   } catch (error) {
     console.error("Contrato de miembro error:", error);
     res.status(500).json({ error: "No se pudo cargar el contrato." });
+  }
+});
+
+/*
+  CAMBIAR DE TURNO A UNA PERSONA DESDE LA APP (Equipos, 26/11/2026).
+
+  Pedido: «tendría que poder cambiarlos de turno desde la plataforma mobile; una vez cambiados ya le pertenecen
+  a otro supervisor; esto sólo lo puede hacer el coordinador». Lo último es lo que distingue a este endpoint
+  del PATCH .../team-config/:userId/areas de la Jerarquía (que pasa con cualquier rol): acá sólo el
+  coordinador del proyecto o un admin (`coordinaElProyecto`).
+
+  Mueve a la persona de `deShiftId` a `aShiftId` DENTRO DE LA MISMA FILA DE ÁREA (área + sede): la regla es
+  `cambiarTurnoEnFila` (compartido/areaTurno.ts). Sus otras áreas quedan como estaban. Cambiar de área sigue
+  siendo de la Jerarquía del panel.
+
+  Lo que escribe es exactamente lo mismo que la Jerarquía (`services/areasDeMiembro.ts`): la fila del equipo,
+  el historial y el área/turno del contrato que rige. El supervisor nuevo sale solo: supervisor = quien tiene
+  esa área y turno en `coordinatorAssignments`.
+
+  La situación actual de la persona se lee como la ve la pantalla: el equipo con el contrato que rige
+  superpuesto (`superponerContratos`). Si ya no está en ese turno —otro la movió, cambió el contrato que
+  rige— se contesta 409 y la app vuelve a cargar la lista, en vez de inventarle una asignación.
+*/
+const cambiarTurnoSchema = z.object({
+  areaId: z.string().refine(idValido, "Área inválida."),
+  sedeId: z.coerce.number().int().positive().nullable().optional().transform((v) => v ?? null),
+  deShiftId: z.string().refine(idValido, "Turno de origen inválido."),
+  aShiftId: z.string().refine(idValido, "Turno de destino inválido."),
+});
+
+router.patch("/projects/:projectId/miembros/:userId/turno", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { projectId, userId } = req.params;
+    if (!idValido(projectId) || !idValido(userId)) {
+      res.status(400).json({ error: "Proyecto o persona inválidos." });
+      return;
+    }
+    // Con `strictNullChecks` apagado zod infiere todo opcional: el esquema ya exigió cada campo.
+    const cambio = cambiarTurnoSchema.parse(req.body) as CambioDeTurno & { areaId: string; deShiftId: string; aShiftId: string };
+    if (cambio.deShiftId === cambio.aShiftId) {
+      res.status(400).json({ error: "Elegí un turno distinto del actual." });
+      return;
+    }
+    const tenantId = req.tenantObjectId!;
+
+    const project = await Project.findOne({ _id: projectId, tenantId }).select("teamConfig areasConfig metadata.sedeIds metadata.sedeId");
+    if (!project) {
+      res.status(404).json({ error: "Proyecto no encontrado." });
+      return;
+    }
+    if (!(await coordinaElProyecto(req, tenantId, projectId))) {
+      res.status(403).json({ error: "Sólo el coordinador del proyecto puede cambiar de turno a su gente." });
+      return;
+    }
+
+    // El destino tiene que ser un turno de ESA fila del área (área + sede) en el proyecto.
+    const ctx = { areasConfig: (project as any).areasConfig as any[], sedePrincipal: sedePrincipalDe((project as any).metadata) };
+    const fila = (ctx.areasConfig || []).find((f: any) => idDe(f.areaId) === cambio.areaId && sedeDe(f.sedeId) === cambio.sedeId);
+    if (!fila || !(fila.shiftIds || []).some((s: unknown) => idDe(s) === cambio.aShiftId)) {
+      res.status(400).json({ error: "Ese turno no está en el área del proyecto." });
+      return;
+    }
+
+    const persona = await User.findOne({ _id: userId, tenantId, projectIds: project._id }).select("_id").lean();
+    if (!persona) {
+      res.status(404).json({ error: "La persona no está en el equipo de este proyecto." });
+      return;
+    }
+
+    // Dónde está hoy, como lo muestra Equipos: la fila del equipo con el contrato que rige encima.
+    const contratoDe = await contratosQueRigenDelProyecto(String(project._id), hoyArgentina());
+    const filaDelEquipo = superponerContratos((project as any).teamConfig, contratoDe).find((c: any) => String(c.userId?._id ?? c.userId) === String(userId));
+    const actuales: any[] = filaDelEquipo ? filaDelEquipo.areaShiftAssignments || [] : contratoDe.get(String(userId))?.areaShiftAssignments || [];
+    const nuevas = cambiarTurnoEnFila(actuales, cambio, ctx);
+    if (!nuevas) {
+      res.status(409).json({ error: "La persona ya no está en ese turno. Se vuelve a cargar la lista." });
+      return;
+    }
+
+    await asignarAreasDeMiembro({ tenantId, project, userId, asignaciones: nuevas, porUserId: req.user?.userId, origen: "mobile-equipos", payload: cambio });
+    res.json({ ok: true });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: error.errors[0]?.message || "Datos inválidos.", details: error.errors });
+      return;
+    }
+    console.error("Cambiar turno de miembro error:", error);
+    res.status(500).json({ error: "No se pudo cambiar el turno." });
   }
 });
 
