@@ -15,18 +15,33 @@ interface ModalProps {
   customHeader?: React.ReactNode;
 }
 
+/*
+  EL BLOQUEO DEL SCROLL DEL BODY, CON CONTADOR (26/11/2026).
+
+  Cada modal guardaba el `overflow` que encontraba al correr su efecto y lo devolvía al cerrarse. Un
+  modal que corre su efecto MIENTRAS otro está abierto —se monta adentro de él, o al lado en el mismo
+  render, o se abre con una hoja del móvil abierta— guarda "hidden" y lo devuelve más tarde: el body
+  queda bloqueado y la página no scrollea más, sin ningún modal a la vista.
+
+  Con un contador de modales abiertos, el scroll se devuelve cuando se cierra el ÚLTIMO, y lo que se
+  devuelve es lo que había antes del PRIMERO; un "hidden" encontrado al abrir nunca se guarda como
+  «lo de antes». Lo mismo que hace `HojaModal` en el móvil.
+*/
+let modalesAbiertos = 0;
+let overflowAntesDelPrimero = "";
+
 export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, children, size = "md", footer, zIndex = 50, customHeader }) => {
   useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = originalOverflow;
-    }
-
+    if (!isOpen) return;
+    if (modalesAbiertos === 0) overflowAntesDelPrimero = document.body.style.overflow === "hidden" ? "" : document.body.style.overflow;
+    modalesAbiertos += 1;
+    document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = originalOverflow;
+      modalesAbiertos -= 1;
+      if (modalesAbiertos <= 0) {
+        modalesAbiertos = 0;
+        document.body.style.overflow = overflowAntesDelPrimero;
+      }
     };
   }, [isOpen]);
   if (!isOpen) return null;

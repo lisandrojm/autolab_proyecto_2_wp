@@ -49,7 +49,8 @@ export function HojaModal({ abierta, titulo, subtitulo, onCerrar, children, pie,
     if (!abierta) return;
     const tecla = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
     window.addEventListener("keydown", tecla);
-    if (hojasAbiertas === 0) overflowOriginal = document.body.style.overflow;
+    // Un "hidden" ajeno (otro modal abierto) no es «lo de antes»: devolverlo dejaría la página sin scroll.
+    if (hojasAbiertas === 0) overflowOriginal = document.body.style.overflow === "hidden" ? "" : document.body.style.overflow;
     hojasAbiertas += 1;
     document.body.style.overflow = "hidden";
     return () => {
