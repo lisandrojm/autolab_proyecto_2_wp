@@ -33,6 +33,11 @@ interface MyTeamsProps {
  *                   ve todas las áreas y turnos, y además quiénes del equipo no tienen área.
  *   · Coordinador — ve las combinaciones área/turno que tiene asignadas (`coordinatorAssignments`).
  *
+ * DOS SECCIONES PARA QUIEN COORDINA EL PROYECTO (26/11/2026): primero los equipos que supervisa
+ * directamente (sus filas de `coordinatorAssignments`) y después, aparte, «Supervisores a tu cargo»: el
+ * resto de las áreas y turnos del proyecto, con quién supervisa cada turno. Antes veía el proyecto entero
+ * en una sola lista y sus propios turnos quedaban mezclados con los de los demás.
+ *
  * TODO ARRANCA COLAPSADO, igual que en el panel: un proyecto grande son decenas de turnos y en un
  * celular se abre sólo lo que se quiere ver. Cerrada, cada área igual dice cuántos suman en cada turno
  * («Mañana · 3/7»): alcanza para saber qué está supervisando sin abrir nada. Se recuerda por proyecto.
@@ -154,67 +159,82 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
         const supervisa = miIdFrame != null && p.metadata?.responsableId != null && String(p.metadata.responsableId) === String(miIdFrame);
         const coordinaciones = (p.coordinatorAssignments || []).filter(esMia);
 
-        // Las combinaciones que me tocan: todas las del proyecto si lo superviso.
-        // Cada combinación con la sede de su fila (área × turno × sede): sin sedes por área, null como siempre.
-        const combos: { areaId: string; shiftId: string; sedeId: number | null }[] = supervisa
-          ? (p.areasConfig || []).flatMap((ac: any) => (ac.shiftIds || []).map((s: any) => ({ areaId: idDe(ac.areaId), shiftId: idDe(s), sedeId: sedeDe(ac.sedeId) })))
-          : coordinaciones.map((a: any) => ({ areaId: idDe(a.areaId), shiftId: idDe(a.shiftId), sedeId: sedeDe(a.sedeId) }));
+        /*
+          DOS LISTAS (26/11/2026). Lo que superviso directamente —mis filas de `coordinatorAssignments`— y, si
+          coordino el proyecto, lo que llevan los demás supervisores: todas las combinaciones del proyecto menos
+          las mías. Antes el coordinador veía el proyecto entero en una sola lista, con sus propios turnos
+          mezclados con los de los otros supervisores.
+          Cada combinación con la sede de su fila (área × turno × sede): sin sedes por área, null como siempre.
+        */
+        type Combo = { areaId: string; shiftId: string; sedeId: number | null };
+        const delProyecto: Combo[] = (p.areasConfig || []).flatMap((ac: any) => (ac.shiftIds || []).map((s: any) => ({ areaId: idDe(ac.areaId), shiftId: idDe(s), sedeId: sedeDe(ac.sedeId) })));
+        const areasConfiguradas = new Set(delProyecto.map((c) => c.areaId));
+        const filasConfiguradas = new Set(delProyecto.map((c) => claveFilaArea(c)));
+        // Una asignación a una sede que el área ya no tiene (de antes de las sedes) no es un equipo: se omite.
+        const mias: Combo[] = coordinaciones
+          .map((a: any) => ({ areaId: idDe(a.areaId), shiftId: idDe(a.shiftId), sedeId: sedeDe(a.sedeId) }))
+          .filter((c) => !areasConfiguradas.has(c.areaId) || filasConfiguradas.has(claveFilaArea(c)));
+        const clavesMias = new Set(mias.map((c) => claveAreaTurno(c)));
+        const deOtros: Combo[] = supervisa ? delProyecto.filter((c) => !clavesMias.has(claveAreaTurno(c))) : [];
         const nombreSede = (id: number | null) => {
           if (!id) return "";
           const sd = sedesCatalogo.find((x) => Number(x.data?.id) === id);
           return String(sd?.data?.nombre || sd?.name || `Sede ${id}`);
         };
 
-        const porArea = new Map<string, AreaACargo>();
-        for (const c of combos) {
-          if (!c.areaId || !c.shiftId) continue;
-          const filaKey = claveFilaArea(c);
-          const nombreBase = nombreArea.get(c.areaId) || (p.areasConfig || []).map((ac: any) => ac.areaId).find((a: any) => idDe(a) === c.areaId)?.name || "Área";
-          const area =
-            porArea.get(filaKey) ||
-            ({
-              areaId: c.areaId,
-              filaKey,
-              nombre: nombreBase,
-              // La sede va aparte, como badge: la fila sin sede es la de la sede principal del proyecto.
-              sedeEtiqueta: c.sedeId ? nombreSede(c.sedeId) : sedePrincipalDe(p.metadata) ? `${nombreSede(sedePrincipalDe(p.metadata))} · principal` : "",
-              diasComunes: "",
-              turnos: [],
-            } as AreaACargo);
-          if (area.turnos.some((t) => t.shiftId === c.shiftId)) continue;
-          const turno = turnoPorId.get(c.shiftId);
-          const clave = claveAreaTurno(c);
-          const coord: any = (p.coordinatorAssignments || []).find((a: any) => claveAreaTurno(a) === clave)?.userId;
-          area.turnos.push({
-            // La misma clave que manda el server en `claves` (con la sede si la fila la tiene).
-            clave,
-            shiftId: c.shiftId,
-            nombre: etiquetaDeTurno(turno?.name || "Turno"),
-            horario: turno?.startTime && turno?.endTime ? `${turno.startTime} a ${turno.endTime}` : "",
-            dias: textoDeDias(turno?.days),
-            // El orden que se fijó en el admin (Turnos → Ordenar); a igual orden, por horario.
-            orden: claveOrdenTurno(turno),
-            coordinadorId: idDe(coord),
-            coordinadorNombre: coord && typeof coord === "object" ? `${coord.firstName || ""} ${coord.lastName || ""}`.trim() : "",
-          });
-          porArea.set(filaKey, area);
-        }
 
-        const areasACargo = [...porArea.values()]
-          .map((a) => {
-            const ordenados = a.turnos.sort((x, y) => x.orden.localeCompare(y.orden));
-            // Los días suben al encabezado del área sólo si TODOS sus turnos coinciden. Si no, mentiría.
-            const distintos = new Set(ordenados.map((t) => t.dias));
-            return { ...a, turnos: ordenados, diasComunes: distintos.size === 1 ? ordenados[0].dias : "" };
-          })
-          .sort((a, b) => a.nombre.localeCompare(b.nombre) || a.sedeEtiqueta.localeCompare(b.sedeEtiqueta));
+        const agrupar = (combos: Combo[]): AreaACargo[] => {
+          const porArea = new Map<string, AreaACargo>();
+          for (const c of combos) {
+            if (!c.areaId || !c.shiftId) continue;
+            const filaKey = claveFilaArea(c);
+            const nombreBase = nombreArea.get(c.areaId) || (p.areasConfig || []).map((ac: any) => ac.areaId).find((a: any) => idDe(a) === c.areaId)?.name || "Área";
+            const area =
+              porArea.get(filaKey) ||
+              ({
+                areaId: c.areaId,
+                filaKey,
+                nombre: nombreBase,
+                // La sede va aparte, como badge: la fila sin sede es la de la sede principal del proyecto.
+                sedeEtiqueta: c.sedeId ? nombreSede(c.sedeId) : sedePrincipalDe(p.metadata) ? `${nombreSede(sedePrincipalDe(p.metadata))} · principal` : "",
+                diasComunes: "",
+                turnos: [],
+              } as AreaACargo);
+            if (area.turnos.some((t) => t.shiftId === c.shiftId)) continue;
+            const turno = turnoPorId.get(c.shiftId);
+            const clave = claveAreaTurno(c);
+            const coord: any = (p.coordinatorAssignments || []).find((a: any) => claveAreaTurno(a) === clave)?.userId;
+            area.turnos.push({
+              // La misma clave que manda el server en `claves` (con la sede si la fila la tiene).
+              clave,
+              shiftId: c.shiftId,
+              nombre: etiquetaDeTurno(turno?.name || "Turno"),
+              horario: turno?.startTime && turno?.endTime ? `${turno.startTime} a ${turno.endTime}` : "",
+              dias: textoDeDias(turno?.days),
+              // El orden que se fijó en el admin (Turnos → Ordenar); a igual orden, por horario.
+              orden: claveOrdenTurno(turno),
+              coordinadorId: idDe(coord),
+              coordinadorNombre: coord && typeof coord === "object" ? `${coord.firstName || ""} ${coord.lastName || ""}`.trim() : "",
+            });
+            porArea.set(filaKey, area);
+          }
+
+          return [...porArea.values()]
+            .map((a) => {
+              const ordenados = a.turnos.sort((x, y) => x.orden.localeCompare(y.orden));
+              // Los días suben al encabezado del área sólo si TODOS sus turnos coinciden. Si no, mentiría.
+              const distintos = new Set(ordenados.map((t) => t.dias));
+              return { ...a, turnos: ordenados, diasComunes: distintos.size === 1 ? ordenados[0].dias : "" };
+            })
+            .sort((a, b) => a.nombre.localeCompare(b.nombre) || a.sedeEtiqueta.localeCompare(b.sedeEtiqueta));
+        };
 
         // El supervisor ya viene resuelto en el listado de proyectos: no hace falta otra consulta.
         const resp: any = p.metadataResolutions?.responsable;
         const supervisorNombre = resp ? resp.name || `${resp.firstName || ""} ${resp.lastName || ""}`.trim() : supervisa ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim() : "";
-        return { proyecto: p, supervisa, supervisorId: idDe(resp), supervisorNombre, areas: areasACargo };
+        return { proyecto: p, supervisa, supervisorId: idDe(resp), supervisorNombre, areas: agrupar(mias), areasDeSupervisores: agrupar(deOtros) };
       })
-      .filter((e) => e.areas.length > 0)
+      .filter((e) => e.areas.length > 0 || e.areasDeSupervisores.length > 0)
       .sort((a, b) => a.proyecto.name.localeCompare(b.proyecto.name));
   }, [proyectos, areas, turnos, misIds, miEmail, miIdFrame, user, sedesCatalogo]);
 
@@ -387,6 +407,21 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
     </div>
   );
 
+  /*
+    LAS DOS SECCIONES (26/11/2026). Lo que superviso directamente y, para quien coordina el proyecto, lo que
+    llevan sus supervisores. Un supervisor que no coordina el proyecto ve sólo la primera, sin título: nada cambia.
+  */
+  const secciones = equipo
+    ? equipo.supervisa
+      ? [
+          { clave: "propias", titulo: "Equipos que supervisás", icono: faLayerGroup, vacio: "No supervisás ningún turno directamente: abajo están los equipos de tus supervisores.", areas: equipo.areas, conSupervisor: false },
+          { clave: "supervisores", titulo: "Supervisores a tu cargo", icono: faUserTie, vacio: "Todos los turnos del proyecto los supervisás vos.", areas: equipo.areasDeSupervisores, conSupervisor: true },
+        ]
+      : [{ clave: "propias", titulo: "", icono: faLayerGroup, vacio: "", areas: equipo.areas, conSupervisor: false }]
+    : [];
+  /** La misma fila puede estar en las dos secciones (mis turnos y los de los demás): lo abierto se recuerda por sección. */
+  const claveDeArea = (seccion: string, a: AreaACargo) => `area::${seccion}::${a.filaKey}`;
+
   return (
     <div className="flex-1 pb-24">
       {/* HEADER */}
@@ -395,7 +430,7 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
         titulo="Equipos"
         onBack={() => onNavigate("home")}
         info={
-          "Las áreas y turnos que tenés a cargo, con la gente de cada uno: lo mismo que la Jerarquía del proyecto en el escritorio.\n\nArranca todo cerrado. Cada área muestra sus turnos con cuántas personas suman sobre el total asignado (suman las activas con contrato vigente). Tocá un área para ver sus turnos, y un turno para ver quiénes lo integran.\n\nSi estás en más de un proyecto, elegí cuál ver."
+          "Las áreas y turnos que tenés a cargo, con la gente de cada uno: lo mismo que la Jerarquía del proyecto en el escritorio.\n\nSi coordinás el proyecto, primero están los equipos que supervisás directamente y después, aparte, los de tus supervisores: cada área con sus turnos y quién supervisa cada uno.\n\nArranca todo cerrado. Cada área muestra sus turnos con cuántas personas suman sobre el total asignado (suman las activas con contrato vigente). Tocá un área para ver sus turnos, y un turno para ver quiénes lo integran.\n\nSi estás en más de un proyecto, elegí cuál ver."
         }
       />
 
@@ -446,7 +481,7 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
                 <div className="flex items-center justify-end gap-2 text-xs font-semibold">
                   <button
                     type="button"
-                    onClick={() => setAbiertos(new Set([...equipo.areas.map((a) => "area::" + a.filaKey), ...equipo.areas.flatMap((a) => a.turnos.map((t) => t.clave)), ...(sinAsignar ? ["sin-asignar"] : [])]))}
+                    onClick={() => setAbiertos(new Set([...secciones.flatMap((sec) => sec.areas.map((a) => claveDeArea(sec.clave, a))), ...secciones.flatMap((sec) => sec.areas.flatMap((a) => a.turnos.map((t) => t.clave))), ...(sinAsignar ? ["sin-asignar"] : [])]))}
                     className="text-blue-600 dark:text-blue-400"
                   >
                     Expandir todo
@@ -457,125 +492,141 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
                   </button>
                 </div>
 
-                {/* Un bloque por área. Dentro, sus turnos en orden de horario. */}
-                {equipo.areas.map((a) => {
-                  const areaAbierta = abiertos.has("area::" + a.filaKey);
-                  return (
-                    <section key={a.filaKey} className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900/60">
-                      <button
-                        type="button"
-                        onClick={() => alternar("area::" + a.filaKey)}
-                        aria-expanded={areaAbierta}
-                        className={`flex w-full flex-wrap items-center gap-2 text-left ${areaAbierta ? "mb-3 border-b border-slate-200 pb-2 dark:border-slate-700" : ""}`}
-                      >
-                        <FontAwesomeIcon icon={areaAbierta ? faChevronDown : faChevronRight} className="h-3 w-3 text-slate-400" />
-                        <FontAwesomeIcon icon={faLayerGroup} className="h-3.5 w-3.5 text-blue-500" />
-                        <span className="flex flex-col items-start">
-                          <span className="text-sm font-black uppercase tracking-wide text-slate-900 dark:text-slate-100">{a.nombre}</span>
-                          {/* La sede, siempre (también la principal sola): cada sede de un área es su propio equipo. */}
-                          {a.sedeEtiqueta && (
-                            <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300">
-                              <FontAwesomeIcon icon={faLocationDot} className="h-2.5 w-2.5" />
-                              {a.sedeEtiqueta}
-                            </span>
-                          )}
+                {/* Las secciones (ver `secciones`): dentro, un bloque por área con sus turnos en orden de horario. */}
+                {secciones.map((sec) => (
+                  <div key={sec.clave} className="space-y-4">
+                    {sec.titulo && (
+                      <p className="flex items-center gap-2 pt-1 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                        <FontAwesomeIcon icon={sec.icono} className="h-3 w-3" />
+                        {sec.titulo}
+                        <span className="font-semibold normal-case tracking-normal text-slate-400">
+                          · {sec.areas.length} {sec.areas.length === 1 ? "equipo" : "equipos"}
                         </span>
-                        {a.diasComunes && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{a.diasComunes}</span>}
-                        <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                          {a.turnos.length} {a.turnos.length === 1 ? "turno" : "turnos"}
-                        </span>
-                        {/* Cerrada, el área igual dice cuántos suman en cada turno. En el celular van en su propio renglón. */}
-                        {!areaAbierta && (
-                          <span className="flex w-full flex-wrap gap-1.5 pl-5">
-                            {a.turnos.map((t) => {
-                              const lista = porTurno.get(t.clave) || [];
-                              const cuentan = lista.filter((m) => m.cuenta).length;
-                              return (
-                                <span key={t.clave} className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                                  {t.nombre}
-                                  {personas !== null && (
-                                    <>
-                                      {" · "}
-                                      <span className="text-green-600 dark:text-green-400">{cuentan}</span>
-                                      {lista.length !== cuentan && <span className="text-slate-400">/{lista.length}</span>}
-                                    </>
-                                  )}
+                      </p>
+                    )}
+                    {sec.titulo && sec.areas.length === 0 && <p className="rounded-xl border border-dashed border-slate-300 p-3 text-xs italic text-slate-500 dark:border-slate-600 dark:text-slate-400">{sec.vacio}</p>}
+                    {sec.areas.map((a) => {
+                      const areaAbierta = abiertos.has(claveDeArea(sec.clave, a));
+                      return (
+                        <section key={a.filaKey} className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900/60">
+                          <button
+                            type="button"
+                            onClick={() => alternar(claveDeArea(sec.clave, a))}
+                            aria-expanded={areaAbierta}
+                            className={`flex w-full flex-wrap items-center gap-2 text-left ${areaAbierta ? "mb-3 border-b border-slate-200 pb-2 dark:border-slate-700" : ""}`}
+                          >
+                            <FontAwesomeIcon icon={areaAbierta ? faChevronDown : faChevronRight} className="h-3 w-3 text-slate-400" />
+                            <FontAwesomeIcon icon={faLayerGroup} className="h-3.5 w-3.5 text-blue-500" />
+                            <span className="flex flex-col items-start">
+                              <span className="text-sm font-black uppercase tracking-wide text-slate-900 dark:text-slate-100">{a.nombre}</span>
+                              {/* La sede, siempre (también la principal sola): cada sede de un área es su propio equipo. */}
+                              {a.sedeEtiqueta && (
+                                <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300">
+                                  <FontAwesomeIcon icon={faLocationDot} className="h-2.5 w-2.5" />
+                                  {a.sedeEtiqueta}
                                 </span>
-                              );
-                            })}
-                          </span>
-                        )}
-                      </button>
-
-                      {areaAbierta && (
-                        <div className="space-y-2">
-                          {a.turnos.map((t) => {
-                            const lista = porTurno.get(t.clave) || [];
-                            const suman = lista.filter((m) => m.cuenta).sort((x, y) => nombreDe(x).localeCompare(nombreDe(y)));
-                            const noSuman = lista.filter((m) => !m.cuenta).sort((x, y) => nombreDe(x).localeCompare(nombreDe(y)));
-                            const abierto = abiertos.has(t.clave);
-                            return (
-                              <div key={t.clave} className="rounded-lg border border-slate-200 dark:border-slate-700">
-                                <button type="button" onClick={() => alternar(t.clave)} aria-expanded={abierto} className="flex w-full items-start gap-2 px-3 py-2 text-left">
-                                  <FontAwesomeIcon icon={abierto ? faChevronDown : faChevronRight} className="mt-1 h-3 w-3 shrink-0 text-slate-400" />
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex flex-wrap items-baseline gap-x-2">
-                                      <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{t.nombre}</span>
-                                      {/* Los días sólo acá cuando los turnos del área no coinciden: si no, ya están arriba. */}
-                                      {!a.diasComunes && t.dias && <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">{t.dias}</span>}
-                                    </div>
-                                    {t.horario && <p className="text-[11px] text-slate-500 dark:text-slate-400">{t.horario}</p>}
-                                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
-                                      <span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-                                        <FontAwesomeIcon icon={faUserTie} className="h-2.5 w-2.5" />
-                                        {t.coordinadorNombre || "Sin supervisor"}
-                                      </span>
-                                      {personas === null ? (
-                                        <span className="text-slate-400">Cargando…</span>
-                                      ) : (
+                              )}
+                            </span>
+                            {a.diasComunes && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{a.diasComunes}</span>}
+                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                              {a.turnos.length} {a.turnos.length === 1 ? "turno" : "turnos"}
+                            </span>
+                            {/* Cerrada, el área igual dice cuántos suman en cada turno. En el celular van en su propio renglón. */}
+                            {!areaAbierta && (
+                              <span className="flex w-full flex-wrap gap-1.5 pl-5">
+                                {a.turnos.map((t) => {
+                                  const lista = porTurno.get(t.clave) || [];
+                                  const cuentan = lista.filter((m) => m.cuenta).length;
+                                  return (
+                                    <span key={t.clave} className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                                      {t.nombre}
+                                      {/* En «Supervisores a tu cargo», quién lleva cada turno, a la vista sin abrir nada. */}
+                                      {sec.conSupervisor && <span className="text-amber-700 dark:text-amber-300"> · {t.coordinadorNombre || "Sin supervisor"}</span>}
+                                      {personas !== null && (
                                         <>
-                                          <span className="rounded border border-green-200 bg-green-50 px-1.5 py-0.5 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">{suman.length} suman</span>
-                                          {noSuman.length > 0 && <span className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-red-700 dark:border-red-900/70 dark:bg-red-950/20 dark:text-red-300">{noSuman.length} no suman</span>}
+                                          {" · "}
+                                          <span className="text-green-600 dark:text-green-400">{cuentan}</span>
+                                          {lista.length !== cuentan && <span className="text-slate-400">/{lista.length}</span>}
                                         </>
                                       )}
-                                    </div>
-                                  </div>
-                                </button>
+                                    </span>
+                                  );
+                                })}
+                              </span>
+                            )}
+                          </button>
 
-                                {abierto && personas !== null && (
-                                  <div className="space-y-1.5 border-t border-slate-200 p-3 dark:border-slate-700">
-                                    {lista.length === 0 ? (
-                                      <p className="text-center text-xs italic text-slate-400">No hay personas asignadas a este turno.</p>
-                                    ) : (
-                                      <>
-                                        <p className="rounded-lg border border-green-200 bg-green-50 px-2 py-1.5 text-[11px] text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
-                                          <strong>{suman.length}</strong> {suman.length === 1 ? "persona activa" : "personas activas"} con contrato vigente
-                                          {noSuman.length > 0 && (
+                          {areaAbierta && (
+                            <div className="space-y-2">
+                              {a.turnos.map((t) => {
+                                const lista = porTurno.get(t.clave) || [];
+                                const suman = lista.filter((m) => m.cuenta).sort((x, y) => nombreDe(x).localeCompare(nombreDe(y)));
+                                const noSuman = lista.filter((m) => !m.cuenta).sort((x, y) => nombreDe(x).localeCompare(nombreDe(y)));
+                                const abierto = abiertos.has(t.clave);
+                                return (
+                                  <div key={t.clave} className="rounded-lg border border-slate-200 dark:border-slate-700">
+                                    <button type="button" onClick={() => alternar(t.clave)} aria-expanded={abierto} className="flex w-full items-start gap-2 px-3 py-2 text-left">
+                                      <FontAwesomeIcon icon={abierto ? faChevronDown : faChevronRight} className="mt-1 h-3 w-3 shrink-0 text-slate-400" />
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-baseline gap-x-2">
+                                          <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{t.nombre}</span>
+                                          {/* Los días sólo acá cuando los turnos del área no coinciden: si no, ya están arriba. */}
+                                          {!a.diasComunes && t.dias && <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">{t.dias}</span>}
+                                        </div>
+                                        {t.horario && <p className="text-[11px] text-slate-500 dark:text-slate-400">{t.horario}</p>}
+                                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
+                                          <span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                                            <FontAwesomeIcon icon={faUserTie} className="h-2.5 w-2.5" />
+                                            {t.coordinadorNombre || "Sin supervisor"}
+                                          </span>
+                                          {personas === null ? (
+                                            <span className="text-slate-400">Cargando…</span>
+                                          ) : (
                                             <>
-                                              {" "}
-                                              · <strong>{lista.length}</strong> {lista.length === 1 ? "asignada" : "asignadas"} en total
+                                              <span className="rounded border border-green-200 bg-green-50 px-1.5 py-0.5 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">{suman.length} suman</span>
+                                              {noSuman.length > 0 && <span className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-red-700 dark:border-red-900/70 dark:bg-red-950/20 dark:text-red-300">{noSuman.length} no suman</span>}
                                             </>
                                           )}
-                                        </p>
-                                        {suman.map((m) => tarjeta(m, m._id === t.coordinadorId))}
-                                        {noSuman.length > 0 && (
+                                        </div>
+                                      </div>
+                                    </button>
+
+                                    {abierto && personas !== null && (
+                                      <div className="space-y-1.5 border-t border-slate-200 p-3 dark:border-slate-700">
+                                        {lista.length === 0 ? (
+                                          <p className="text-center text-xs italic text-slate-400">No hay personas asignadas a este turno.</p>
+                                        ) : (
                                           <>
-                                            <p className="pt-2 text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">No suman al total ({noSuman.length})</p>
-                                            {noSuman.map((m) => tarjeta(m, m._id === t.coordinadorId))}
+                                            <p className="rounded-lg border border-green-200 bg-green-50 px-2 py-1.5 text-[11px] text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
+                                              <strong>{suman.length}</strong> {suman.length === 1 ? "persona activa" : "personas activas"} con contrato vigente
+                                              {noSuman.length > 0 && (
+                                                <>
+                                                  {" "}
+                                                  · <strong>{lista.length}</strong> {lista.length === 1 ? "asignada" : "asignadas"} en total
+                                                </>
+                                              )}
+                                            </p>
+                                            {suman.map((m) => tarjeta(m, m._id === t.coordinadorId))}
+                                            {noSuman.length > 0 && (
+                                              <>
+                                                <p className="pt-2 text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">No suman al total ({noSuman.length})</p>
+                                                {noSuman.map((m) => tarjeta(m, m._id === t.coordinadorId))}
+                                              </>
+                                            )}
                                           </>
                                         )}
-                                      </>
+                                      </div>
                                     )}
                                   </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </section>
-                  );
-                })}
+                                );
+                              })}
+                            </div>
+                          )}
+                        </section>
+                      );
+                    })}
+                  </div>
+                ))}
 
                 {/* Los que no están en ningún turno: sólo el supervisor los ve, es quien los acomoda. */}
                 {sinAsignar && (
