@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendarAlt, faCheck, faChevronRight, faCircleCheck, faClock, faFilePdf, faHourglassHalf, faPen, faPlus, faTrash, faTriangleExclamation, faUmbrellaBeach } from "@fortawesome/free-solid-svg-icons";
+import { faCalendarAlt, faCheck, faChevronRight, faCircleCheck, faCircleInfo, faClock, faFilePdf, faHourglassHalf, faPen, faPlus, faTrash, faTriangleExclamation, faUmbrellaBeach } from "@fortawesome/free-solid-svg-icons";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { campaniasVacacionesAPI, errorDeCampania, type MiInvitacion, type Tramo } from "../../../../api/campaniasVacaciones";
 import { fechaCorta } from "@compartido/planVacaciones/fechas";
@@ -9,6 +9,7 @@ import { TEXTO_ESTADO_VACACION, encabezado, erroresDelTramoEnPantalla, motivoDel
 import { getImageUrl } from "../../../../utils/imageHelpers";
 import SectionHeader from "../components/SectionHeader";
 import MenuDeTarjetas from "../components/MenuDeTarjetas";
+import ModalInfo from "../components/ModalInfo";
 import CalendarioVacaciones, { type ModoCalendario } from "../components/CalendarioVacaciones";
 import { useVacations } from "../hooks/useVacations";
 import { useProfile } from "../hooks/useProfile";
@@ -53,6 +54,8 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
   const [datos, setDatos] = useState<MiInvitacion | null | undefined>(undefined);
   // Paso B: la persona entró a elegir (lo demás lo decide el server).
   const [eligiendo, setEligiendo] = useState(false);
+  // El ⓘ de la tarjeta del paso A: qué le toca y qué pasa si no elige (pedido del 27/11/2026: en un info, no a la vista).
+  const [verInvitacion, setVerInvitacion] = useState(false);
   const [tramos, setTramos] = useState<Tramo[]>([TRAMO_VACIO]);
   const [enviando, setEnviando] = useState(false);
   // El calendario de «Mis Vacaciones», abierto para un tramo.
@@ -214,11 +217,17 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
       {paso === "A" && (
         <div className="space-y-3 px-4 pt-4">
           <div className={caja}>
-            <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">{c.nombre}</p>
-            <p className="mt-1 text-2xl font-black text-slate-900 dark:text-slate-100">
-              {datos.diasDisponibles} {datos.diasDisponibles === 1 ? "día" : "días"}
-            </p>
-            <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-300">{parrafoDeInvitacion(pantalla)}</p>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">{c.nombre}</p>
+                <p className="mt-1 text-2xl font-black text-slate-900 dark:text-slate-100">
+                  {datos.diasDisponibles} {datos.diasDisponibles === 1 ? "día" : "días"}
+                </p>
+              </div>
+              <button type="button" onClick={() => setVerInvitacion(true)} aria-label="Qué te toca y hasta cuándo" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 active:bg-slate-100 dark:active:bg-slate-800">
+                <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+              </button>
+            </div>
             {pantalla.rechazoMotivo != null && (
               <p className="mt-3 flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">
                 <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5 shrink-0" />
@@ -366,6 +375,8 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
           <MenuDeTarjetas opciones={[misSolicitudes]} onElegir={elegir} />
         </div>
       )}
+
+      {verInvitacion && <ModalInfo icono={faUmbrellaBeach} titulo={c.nombre} texto={parrafoDeInvitacion(pantalla)} onCerrar={() => setVerInvitacion(false)} />}
 
       {/* Ver la propuesta completa; se puede cancelar mientras nada esté aprobado, nunca editar. */}
       <VacationDetailModal
