@@ -894,15 +894,16 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const porDiasSueltos = contratoElegido?.data?.modoFechas === "dias";
   /*
     SERVICIOS POR DÍA, CON LOS DÍAS DE LA SEMANA (27/11/2026, pedido del usuario: «falta la elección de días en
-    Editar Solicitud»). Un tipo por días sueltos con trámite constancia de CUIT («Servicios Adicional»,
-    «Servicios Intercambio») se pide como un período —el rango del calendario— y, en «Cómo trabaja en este
-    turno», los días de la semana que trabaja: la lista de días es el rango filtrado por esos días, una jornada
-    cada uno, y se guarda como siempre (`fechasTrabajadas`). Antes el rango era entero (domingos incluidos) y
-    el panel sólo mostraba la lista. Los tipos por día de ARCA («Jornada») siguen con el rango entero: cada día
+    Editar Solicitud», «como la solicitud de contratación»). Un tipo por días sueltos con trámite constancia
+    de CUIT («Servicios Adicional», «Servicios Intercambio») se pide como un período —Desde y Hasta, no el
+    calendario— y, en «Cómo trabaja en este turno», los días de la semana que trabaja: la lista de días es el
+    período filtrado por esos días, una jornada cada uno, y se guarda como siempre (`fechasTrabajadas`). Antes
+    iba por el calendario entero (domingos incluidos) y el panel sólo mostraba la lista. Los tipos por día de ARCA («Jornada») siguen con el rango entero: cada día
     es un alta, y días no correlativos van en contratos separados (decisión del 04/11). Igual que en el
     escritorio (`rangoConDiasWizard` en ProjectTeamPage).
   */
-  const rangoConDias = porDiasSueltos && esServicios;
+  // Por el trámite y no por `esServicios`: ése es «sin convenio ni categoría», que desde el 09/10 no es ninguno.
+  const rangoConDias = porDiasSueltos && formData.tipoImpositivo === "constancia_cuit";
   /** La lista de días del rango que caen en los días de la semana elegidos, con lo que de ella se deduce. */
   const fechasDeRango = (desde: string, hasta: string, dias: number[]) => {
     const fechas = fechasDelCalendario(desde, hasta, dias);
@@ -919,35 +920,26 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
    * de la semana y el mismo período, y no son lo mismo.
    */
   const elegirDiasSueltos = (fechas: string[]) => {
-    const marcados = [...new Set(fechas.filter(Boolean))].sort();
-    if (marcados.length === 0) {
+    const dias = [...new Set(fechas.filter(Boolean))].sort();
+    if (dias.length === 0) {
       setFormData((p) => ({ ...p, fechasTrabajadas: [], startDate: "", dueDate: "", workdaysCount: "", diasSemana: [], diasPorSemana: "" }));
       return;
     }
-    const diasDe = (lista: string[]) => [...new Set(lista.map((d) => new Date(`${d}T00:00:00`).getDay()))].sort((a, b) => a - b);
-    setFormData((p) => {
-      /*
-        Servicios por día (ver `rangoConDias`): el rango se filtra por los días de la semana ya elegidos; sin
-        ninguno elegido, o si ninguno cae en el rango, valen los días que el rango trae (y quedan elegidos).
-      */
-      const filtrados = rangoConDias && p.diasSemana.length ? fechasDelCalendario(marcados[0], marcados[marcados.length - 1], p.diasSemana) : [];
-      const dias = filtrados.length ? filtrados : marcados;
-      const diasSemana = rangoConDias && filtrados.length ? p.diasSemana : diasDe(dias);
-      return {
-        ...p,
-        fechasTrabajadas: dias,
-        startDate: dias[0],
-        dueDate: dias[dias.length - 1],
-        diasSemana,
-        diasPorSemana: String(diasSemana.length),
-        diasRotativos: false,
-        workdaysCount: String(dias.length),
-        // Es el número real de jornadas, no un ajuste a mano: cada día marcado es una.
-        workdaysOverridden: false,
-        workdaysOverrideReason: "",
-        workdaysOverrideNote: "",
-      };
-    });
+    const diasSemana = [...new Set(dias.map((d) => new Date(`${d}T00:00:00`).getDay()))].sort((a, b) => a - b);
+    setFormData((p) => ({
+      ...p,
+      fechasTrabajadas: dias,
+      startDate: dias[0],
+      dueDate: dias[dias.length - 1],
+      diasSemana,
+      diasPorSemana: String(diasSemana.length),
+      diasRotativos: false,
+      workdaysCount: String(dias.length),
+      // Es el número real de jornadas, no un ajuste a mano: cada día marcado es una.
+      workdaysOverridden: false,
+      workdaysOverrideReason: "",
+      workdaysOverrideNote: "",
+    }));
   };
 
   /*
@@ -2764,7 +2756,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Días que trabaja</p>
               <p className="flex h-12 items-center rounded-xl border border-dashed border-slate-300 px-4 text-sm text-slate-400 dark:border-slate-600">Elegí primero el tipo de contrato</p>
             </div>
-          ) : porDiasSueltos ? (
+          ) : porDiasSueltos && !rangoConDias ? (
             <div className="space-y-1">
               {/*
                 SE PUEDEN MARCAR DÍAS QUE YA PASARON (pedido del 08/10/2026).
@@ -2787,14 +2779,15 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                     , entre el {new Date(`${formData.startDate}T00:00:00`).toLocaleDateString("es-AR")} y el {new Date(`${formData.dueDate}T00:00:00`).toLocaleDateString("es-AR")}.
                   </>
                 ) : (
-                  <>«{contratoElegido?.name}» se contrata por día: {rangoConDias ? "elegí el rango en el calendario; qué días de la semana trabaja se elige abajo, en «Cómo trabaja en este turno», y cada uno es una jornada." : "marcá los días en el calendario. Cada uno es una jornada."}</>
+                  <>«{contratoElegido?.name}» se contrata por día: marcá los días en el calendario. Cada uno es una jornada.</>
                 )}
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <CustomDatePicker label="Desde" value={formData.startDate} onChange={(date) => setFormData((p) => ({ ...p, startDate: date }))} />
+                {/* Servicios por día (ver `rangoConDias`): desde y hasta como un período; la lista de días se rearma con cada cambio. */}
+                <CustomDatePicker label="Desde" value={formData.startDate} onChange={(date) => setFormData((p) => ({ ...p, startDate: date, ...(rangoConDias ? fechasDeRango(date, p.dueDate, p.diasSemana) : {}) }))} />
               </div>
               {/*
                 TIEMPO INDETERMINADO: NO HAY «HASTA».
@@ -2814,7 +2807,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                 </div>
               ) : (
                 <div className="space-y-1">
-                  <CustomDatePicker label="Hasta" value={formData.dueDate} onChange={(date) => setFormData((p) => ({ ...p, dueDate: date }))} />
+                  <CustomDatePicker label="Hasta" value={formData.dueDate} onChange={(date) => setFormData((p) => ({ ...p, dueDate: date, ...(rangoConDias ? fechasDeRango(p.startDate, date, p.diasSemana) : {}) }))} />
                 </div>
               )}
             </div>
@@ -2832,7 +2825,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         */}
         {!hayFechasCargadas ? (
           <p className="rounded-lg border border-dashed border-slate-300 p-4 text-center text-xs text-slate-500 dark:border-slate-600 dark:text-slate-400">
-            {!formData.contratoId && contratos.length > 0 ? "Elegí el tipo de contrato y las fechas" : porDiasSueltos ? "Marcá los días que trabaja" : indeterminado ? "Cargá la fecha de inicio" : "Cargá desde y hasta"} para seguir: el área y turno, los días y los importes dependen de las fechas.
+            {!formData.contratoId && contratos.length > 0 ? "Elegí el tipo de contrato y las fechas" : porDiasSueltos && !rangoConDias ? "Marcá los días que trabaja" : indeterminado ? "Cargá la fecha de inicio" : "Cargá desde y hasta"} para seguir: el área y turno, los días y los importes dependen de las fechas.
           </p>
         ) : (
         <>
@@ -3569,7 +3562,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             setFormData((prev) => {
               // Los días por semana del tipo («6x6» → 6), precargados y no sólo como tope. Con días sueltos de ARCA no aplica; Servicios por día (ver `rangoConDias`) sí, y rearma la lista si ya hay rango.
               const tipo = contratos.find((c) => c._id === id);
-              const rango = tipo?.data?.modoFechas === "dias" && tramiteSinConvenioNiCategoria(tramitePorContrato.get(id));
+              const rango = tipo?.data?.modoFechas === "dias" && tramitePorContrato.get(id) === "constancia_cuit";
               const semana = tipo?.data?.modoFechas === "dias" && !rango ? null : semanaDelTipoDeContrato(tipo?.data?.diasPorSemana, prev.diasSemana, rango ? false : prev.diasRotativos);
               const dias = semana ? semana.dias : prev.diasSemana;
               return {

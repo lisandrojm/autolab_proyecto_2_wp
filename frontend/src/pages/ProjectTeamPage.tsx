@@ -1288,7 +1288,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     marcado es un alta. La lista se rearma al tocar el desde, el hasta, los días o el tipo; no sola al
     abrir, para no cambiarle los días a una solicitud que se está aprobando.
   */
-  const rangoConDiasWizard = porDiasSueltosWizard && esServicios;
+  // Por el trámite y no por `esServicios`: ése es «sin convenio ni categoría», que desde el 09/10 no es ninguno.
+  const rangoConDiasWizard = porDiasSueltosWizard && tramitePorContrato.get(wizardData.contrato_id) === 'constancia_cuit';
   const fechasDeRango = (desde: string, hasta: string, dias: number[]) => {
     const fechas = fechasDelCalendario(desde, hasta, dias);
     return { fechas_trabajadas: fechas, cantidad_jornadas_laborales: fechas.length };
@@ -2908,7 +2909,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const contratoSel = contratos.find((c) => c._id === wizardData.contrato_id);
     const diasSueltos = contratoSel?.data?.modoFechas === 'dias';
     // Servicios por día (ver `rangoConDiasWizard`): desde/hasta como un período, y la lista de días sale de los de la semana.
-    const rango = diasSueltos && esServicios;
+    const rango = diasSueltos && tramitePorContrato.get(wizardData.contrato_id) === 'constancia_cuit';
     if (diasSueltos && !rango && wizardData.fechas_trabajadas.length === 0) faltan.push('Días que trabaja (marcalos en el calendario)');
     if (rango && wizardData.fecha_alta_contrato && wizardData.fecha_baja_contrato && wizardData.fechas_trabajadas.length === 0) faltan.push('Días que trabaja (ningún día de la semana elegido cae entre el desde y el hasta)');
     // Antes venía siempre precargada (hoy o la del contrato); renovar la deja vacía a propósito.
@@ -4852,7 +4853,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       */
                       setWizardData((prev) => {
                         // Servicios por día (ver `rangoConDiasWizard`): desde/hasta y días de la semana, no el calendario; la semana del tipo sí aplica.
-                        const rango = contrato?.data?.modoFechas === 'dias' && tramiteSinConvenioNiCategoria(tramitePorContrato.get(contratoId));
+                        const rango = contrato?.data?.modoFechas === 'dias' && tramitePorContrato.get(contratoId) === 'constancia_cuit';
                         const semana = contrato?.data?.modoFechas === 'dias' && !rango ? null : semanaDelTipoDeContrato(contrato?.data?.diasPorSemana, prev.dias_semana, rango ? false : prev.dias_rotativos);
                         return {
                         ...prev,
