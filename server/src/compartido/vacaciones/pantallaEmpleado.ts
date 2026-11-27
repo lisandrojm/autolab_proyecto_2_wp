@@ -125,6 +125,13 @@ export function parrafoDeInvitacion(d: DatosDePantalla): string {
   return `Tenés ${dias} para tomar entre el ${fechaCorta(d.ventanaDesde)} y el ${fechaCorta(d.ventanaHasta)}. Si no elegís antes del ${fechaCorta(d.fechaLimite)}, la empresa te propone unas fechas.`;
 }
 
+/** La cuenta regresiva de la tarjeta «Solicitar vacaciones»: cuántos días quedan para elegir (hasta la fecha límite). */
+export function cuentaRegresiva(diasParaLaFechaLimite: number): string {
+  if (diasParaLaFechaLimite < 0) return "Venció el plazo";
+  if (diasParaLaFechaLimite === 0) return "Hoy es el último día";
+  return diasParaLaFechaLimite === 1 ? "Queda 1 día" : `Quedan ${diasParaLaFechaLimite} días`;
+}
+
 /** Paso B, en una línea: lo único que importa para repartir. */
 export function reglaDelPaso(d: Pick<DatosDePantalla, "diasDisponibles" | "minPorTramo" | "diasDeInicio">): string {
   const inicio = normalizarDiasDeInicio(d.diasDeInicio);

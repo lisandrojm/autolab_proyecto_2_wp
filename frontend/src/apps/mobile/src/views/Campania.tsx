@@ -5,11 +5,11 @@ import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { campaniasVacacionesAPI, errorDeCampania, type MiInvitacion, type Tramo } from "../../../../api/campaniasVacaciones";
 import { fechaCorta } from "@compartido/planVacaciones/fechas";
 import { contarDiasTramo, erroresDePropuesta, erroresDelTramo, minimoDelTramo } from "@compartido/vacaciones/campania";
-import { TEXTO_ESTADO_VACACION, encabezado, erroresDelTramoEnPantalla, motivoDelBoton, parrafoDeInvitacion, pasoDe, progreso, puedeAgregarTramo, reglaDelPaso, situacionDe, textoDeFechas, textoDeRegreso, textoDelTramo, type DatosDePantalla } from "@compartido/vacaciones/pantallaEmpleado";
+import { TEXTO_ESTADO_VACACION, cuentaRegresiva, encabezado, erroresDelTramoEnPantalla, motivoDelBoton, parrafoDeInvitacion, pasoDe, progreso, puedeAgregarTramo, reglaDelPaso, situacionDe, textoDeFechas, textoDeRegreso, textoDelTramo, type DatosDePantalla } from "@compartido/vacaciones/pantallaEmpleado";
 import { getImageUrl } from "../../../../utils/imageHelpers";
 import SectionHeader from "../components/SectionHeader";
 import MenuDeTarjetas from "../components/MenuDeTarjetas";
-import ModalInfo from "../components/ModalInfo";
+import { ModalInfo } from "../components/ModalInfo";
 import CalendarioVacaciones, { type ModoCalendario } from "../components/CalendarioVacaciones";
 import { useVacations } from "../hooks/useVacations";
 import { useProfile } from "../hooks/useProfile";
@@ -254,7 +254,7 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
             </div>
           )}
 
-          <MenuDeTarjetas opciones={[misSolicitudes, { id: "solicitar", label: "Solicitar vacaciones", icon: faCalendarAlt, disabled: !datos.puedeProponer || enviando }]} onElegir={elegir} />
+          <MenuDeTarjetas opciones={[misSolicitudes, { id: "solicitar", label: "Solicitar vacaciones", icon: faCalendarAlt, subtitulo: cuentaRegresiva(datos.diasParaLaFechaLimite), disabled: !datos.puedeProponer || enviando }]} onElegir={elegir} />
         </div>
       )}
 

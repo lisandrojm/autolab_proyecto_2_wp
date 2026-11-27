@@ -18,6 +18,8 @@ export interface OpcionDeMenu<T extends string> {
   icon: IconDefinition;
   /** Cuántas cosas hay para mirar; 0 o sin dato, sin globo. */
   contador?: number;
+  /** Una línea chica debajo del label (p. ej. la cuenta regresiva de «Solicitar vacaciones», 27/11/2026). */
+  subtitulo?: string;
   disabled?: boolean;
 }
 
@@ -33,7 +35,10 @@ export default function MenuDeTarjetas<T extends string>({ opciones, onElegir, c
           className={`relative flex min-h-[68px] items-center gap-2 rounded-xl border p-4 text-left shadow-sm transition-transform ${o.disabled ? "cursor-not-allowed border-slate-300 bg-slate-200 opacity-40 dark:border-slate-600 dark:bg-slate-800" : "border-slate-200 bg-white hover:scale-[1.02] active:scale-[0.98] dark:border-slate-600 dark:bg-slate-900/70"}`}
         >
           <FontAwesomeIcon icon={o.icon} className={`h-3 w-3 shrink-0 ${o.disabled ? "text-slate-400 dark:text-slate-500" : "text-primary"}`} />
-          <h2 className="min-w-0 break-words text-[15px] font-bold leading-tight text-slate-900 dark:text-slate-100">{o.label}</h2>
+          <div className="min-w-0">
+            <h2 className="break-words text-[15px] font-bold leading-tight text-slate-900 dark:text-slate-100">{o.label}</h2>
+            {o.subtitulo && <p className="mt-0.5 text-[11px] font-medium leading-tight text-slate-500 dark:text-slate-400">{o.subtitulo}</p>}
+          </div>
           {!!o.contador && (
             <span className="absolute right-2 top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-500/20 px-1 text-[10px] font-black leading-none text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-300">
               {o.contador > 99 ? "99+" : o.contador}

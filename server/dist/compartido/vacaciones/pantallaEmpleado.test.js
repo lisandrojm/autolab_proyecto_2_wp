@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { erroresDePropuesta } from "./campania.js";
-import { diaDeRegreso, encabezado, erroresDelTramoEnPantalla, fechaSinAnio, motivoDelBoton, parrafoDeInvitacion, pasoDe, primerInicioElegible, progreso, puedeAgregarTramo, quienLaTiene, reglaDelPaso, situacionDe, textoDeFechas, textoDeRegreso, textoDelTramo } from "./pantallaEmpleado.js";
+import { cuentaRegresiva, diaDeRegreso, encabezado, erroresDelTramoEnPantalla, fechaSinAnio, motivoDelBoton, parrafoDeInvitacion, pasoDe, primerInicioElegible, progreso, puedeAgregarTramo, quienLaTiene, reglaDelPaso, situacionDe, textoDeFechas, textoDeRegreso, textoDelTramo } from "./pantallaEmpleado.js";
 const base = {
     estado: "invitado",
     puedeProponer: true,
@@ -40,6 +40,12 @@ test("encabezado y párrafo del paso A", () => {
     assert.equal(encabezado(con({ estado: "propuso_fechas", estadoVisible: "propuso_fechas", puedeProponer: false })), "Vacaciones 2026/27 · 21 días · Propuso fechas");
     assert.equal(parrafoDeInvitacion(base), "Tenés 21 días corridos para tomar entre el 01/12/2026 y el 30/04/2027. Si no elegís antes del 18/12/2026, la empresa te propone unas fechas.");
     assert.equal(fechaSinAnio("2026-12-18"), "18/12");
+});
+test("la cuenta regresiva de «Solicitar vacaciones»", () => {
+    assert.equal(cuentaRegresiva(21), "Quedan 21 días");
+    assert.equal(cuentaRegresiva(1), "Queda 1 día");
+    assert.equal(cuentaRegresiva(0), "Hoy es el último día");
+    assert.equal(cuentaRegresiva(-1), "Venció el plazo");
 });
 test("la regla del paso B, en una línea, según el saldo y los días de inicio", () => {
     assert.equal(reglaDelPaso(base), "Tenés que repartir los 21 días. Cada tramo empieza los lunes y dura al menos 7.");

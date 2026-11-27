@@ -68,6 +68,8 @@ export declare function textoDelTramo(t: Tramo, diasCorridos: boolean): string;
 export declare function encabezado(d: DatosDePantalla): string;
 /** Paso A, en dos líneas: qué le toca y qué pasa si no elige. */
 export declare function parrafoDeInvitacion(d: DatosDePantalla): string;
+/** La cuenta regresiva de la tarjeta «Solicitar vacaciones»: cuántos días quedan para elegir (hasta la fecha límite). */
+export declare function cuentaRegresiva(diasParaLaFechaLimite: number): string;
 /** Paso B, en una línea: lo único que importa para repartir. */
 export declare function reglaDelPaso(d: Pick<DatosDePantalla, "diasDisponibles" | "minPorTramo" | "diasDeInicio">): string;
 export interface Progreso {
