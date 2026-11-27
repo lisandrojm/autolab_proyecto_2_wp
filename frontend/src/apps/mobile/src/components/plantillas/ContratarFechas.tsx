@@ -8,7 +8,7 @@ import { CatalogosContratacion, OpcionAreaTurno } from "./useCatalogosContrataci
 import { usePlantilla, usePlantillas } from "./contexto";
 import { Pantalla, Vacio } from "./Pantalla";
 import { EstadoContratar, faltaDe, formaDe, guardarEstado, leerEstado, nuevaClave } from "./estadoContratar";
-import { estadoDe, nombreTurno, rutas } from "./equipoUtil";
+import { contratoPropio, estadoDe, nombreTurno, puestosDe, rutas } from "./equipoUtil";
 import { ChipTurno, fechaCorta, Pill, textoHorario } from "./comun";
 import { PASOS_CONTRATAR } from "./Pasos";
 import { cambiosDeContrato } from "./Condiciones";
@@ -17,8 +17,11 @@ import { CampoTipoContrato, ModalTipoContrato } from "../contratacion/SelectorTi
 /*
   CONTRATAR · PASO 1 DE 3 · CONTRATO Y FECHAS.
 
-  Arriba, EL TIPO DE CONTRATO, uno para todos. Se elige acá y no al armar el equipo: medido en
-  producción, es el dato que más cambia entre una contratación y la siguiente (227 de 867 vínculos
+  Arriba, EL TIPO DE CONTRATO GENERAL: vale para los puestos que van con el contrato del equipo; el
+  puesto que tiene el suyo propio (un «Servicios Adicional» en un equipo «Jornada») lo conserva, y la
+  nota debajo del campo dice cuántos son (27/11/2026: antes el general pisaba también a ésos, y los
+  Servicios de la plantilla salían siempre como Jornada). Se elige acá y no al armar el equipo: medido
+  en producción, es el dato que más cambia entre una contratación y la siguiente (227 de 867 vínculos
   tuvieron más de uno), así que fijarlo en la plantilla era fijar justo lo que más cambia. Y hay que
   elegirlo PRIMERO porque de él depende qué fechas se piden: un «Jornada» se contrata por días sueltos
   en el calendario, un plazo fijo por desde/hasta. Quien necesite otro para una persona lo cambia en
@@ -75,6 +78,9 @@ export default function ContratarFechas() {
   const cambiar = (equipoId: string, x: Partial<EstadoContratar["equipos"][string]>) => setEstado((s) => (s ? { ...s, equipos: { ...s.equipos, [equipoId]: { ...s.equipos[equipoId], ...x } } } : s));
   const incluidos = p.equipos.filter((e) => estado.equipos[e._id]?.incluido);
   const sinContrato = !estado.contratoId && catalogos.contratos.length > 0;
+  // Los puestos que conservan su propio tipo de contrato, para decirlo debajo del campo: «el general no los toca».
+  const propios = incluidos.flatMap((e) => puestosDe(p, e).filter((x) => contratoPropio(x, e)).map((x) => x.efectivo.nombreContrato || catalogos.contratos.find((c) => c._id === x.efectivo.contratoId)?.name || ""));
+  const nombresPropios = [...new Set(propios.filter(Boolean))];
   const falta = sinContrato ? "Elegí el tipo de contrato" : incluidos.length === 0 ? "Elegí al menos un equipo" : incluidos.map((e) => faltaDe(p, e, estado.equipos[e._id], catalogos, estado)).find(Boolean) || "";
   const equipoQueFalta = incluidos.find((e) => faltaDe(p, e, estado.equipos[e._id], catalogos, estado));
   // Con su nombre y su trámite, como viajan siempre los tres (ver `cambiosDeContrato`).
@@ -98,8 +104,13 @@ export default function ContratarFechas() {
       pasos={{ actual: 1, etiquetas: PASOS_CONTRATAR }}
     >
       {/* El mismo campo y la misma ventana que el alta individual: el nombre con su badge de trámite, y la lista con radio. */}
-      <div id="campo-contrato" className="mb-5 scroll-mt-24">
+      <div id="campo-contrato" className="mb-5 scroll-mt-24 space-y-2">
         <CampoTipoContrato contratos={catalogos.contratos} contratoId={estado.contratoId} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onAbrir={() => setEligiendoContrato(true)} />
+        {propios.length > 0 && (
+          <p className="text-xs text-slate-600 dark:text-slate-300">
+            {`Vale para los puestos que van con el contrato del equipo. ${propios.length === 1 ? "1 puesto tiene" : `${propios.length} puestos tienen`} su propio tipo de contrato${nombresPropios.length ? ` (${nombresPropios.join(", ")})` : ""} y lo ${propios.length === 1 ? "conserva" : "conservan"}.`}
+          </p>
+        )}
       </div>
       <ModalTipoContrato abierto={eligiendoContrato} onCerrar={() => setEligiendoContrato(false)} contratos={catalogos.contratos} contratoId={estado.contratoId} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onElegir={elegirContrato} />
       {p.equipos.length === 0 ? (

@@ -60,6 +60,12 @@ export interface IntegranteParaPlan {
   nombreContrato?: string | null;
   /** El trámite del tipo de contrato («constancia_cuit» = servicios). */
   tipoImpositivo?: string | null;
+  /**
+   * `true`: `contratoId` NO es del puesto sino de las CONDICIONES DEL EQUIPO (las que valen para todos
+   * sus puestos): el general de la contratación lo pisa. Sin esto, es PROPIO del puesto —su asignación
+   * en este equipo, o el puesto en la plantilla— y le gana al general (27/11/2026, ver `planDeLote`).
+   */
+  contratoDelEquipo?: boolean;
   reemplazadoDePersonaId?: string | null;
 }
 
@@ -69,8 +75,9 @@ export interface IntegranteParaPlan {
  * EL TIPO DE CONTRATO SE ELIGE AL CONTRATAR, no al armar el equipo. Medido en producción: de 867
  * vínculos persona-proyecto, 227 tuvieron más de un tipo a lo largo de su historia; era el campo que
  * más cambia entre una contratación y la siguiente, y el único que la plantilla congelaba. Acá viene
- * uno general para todos los puestos —lo normal: un fin de semana de jornaleros va entero por
- * «Jornada»— y quien necesite otro lo trae en su `Puntual`.
+ * uno general —lo normal: un fin de semana de jornaleros va entero por «Jornada»— que vale para los
+ * puestos que van con el contrato DEL EQUIPO; el puesto que tiene el suyo propio lo conserva
+ * (27/11/2026), y quien necesite otro para alguien sólo esta vez lo trae en su `Puntual`.
  *
  * Como puede haber de los dos modos en el mismo lote, viajan las dos formas de fecha: los puestos por
  * días sueltos usan `fechas`, los demás `desde`/`hasta`.
@@ -78,7 +85,8 @@ export interface IntegranteParaPlan {
 export interface FechasDeContratacion {
   /**
    * El tipo de contrato general de esta contratación, con su nombre y su trámite: los tres viajan
-   * juntos siempre, como en el puesto y en el equipo. Sin él, vale el del puesto o el de la plantilla.
+   * juntos siempre, como en el puesto y en el equipo. Pisa al del equipo, no al propio de un puesto.
+   * Sin él, vale el del puesto, el del equipo o el de la plantilla.
    */
   contratoId?: string;
   nombreContrato?: string;
@@ -161,9 +169,9 @@ export interface Contexto {
    */
   superposiciones: Map<string, AvisoDeSuperposicionPlan[]>;
   /**
-   * CON UN CONTRATO DE ARCA EN ESAS FECHAS, SÓLO SERVICIOS (17/11/2026, la regla del alta individual
-   * del 05/11): por PUESTO, el mensaje de `mensajeSoloServicios` si la persona ya tiene uno. Un puesto
-   * que va por ARCA no se contrata; uno de Servicios pasa.
+   * CON UN CONTRATO DE ARCA MENSUAL EN ESAS FECHAS, SÓLO SERVICIOS (17/11/2026, la regla del alta
+   * individual del 05/11): por PUESTO, el mensaje de `mensajeSoloServicios` si la persona ya tiene uno.
+   * Un puesto que va por ARCA es un ERROR (27/11/2026, como en el individual); uno de Servicios pasa.
    */
   soloServicios?: Map<string, string>;
   /** La sede principal del proyecto (`data.id`): la que lleva cada solicitud del lote, como en el alta individual. */
@@ -232,13 +240,20 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
     /*
       ── El tipo de contrato de esta persona ──
 
-      Puntual → general del pedido → puesto → plantilla vieja. El general le gana al puesto a propósito:
-      lo que se elige al contratar es lo que vale para todos, y el que necesite otro lo dice en su fila.
-      Si el puesto tuviera un contrato propio guardado y pesara más que el general, «elegí Jornada para
-      todos» dejaría a uno en Plazo fijo sin que nada lo avise. El nombre y el trámite vienen de la
-      misma fuente que el id: nunca se mezclan los de una capa con el id de otra.
+      Puntual → PROPIO del puesto → general del pedido → del equipo → plantilla vieja.
+
+      Hasta el 27/11/2026 el general le ganaba al puesto («elegí Jornada para todos»), pero el Paso 1 lo
+      precarga con el contrato del equipo y lo exige, así que un puesto guardado como «Servicios
+      Adicional» en un equipo «Jornada» salía SIEMPRE como Jornada: el tipo por puesto no servía para
+      contratar (lote del 26/11: 8 Servicios salieron Jornada y hubo que corregirlos a mano). Ahora el
+      general reemplaza sólo lo que venía del equipo —para eso está: cambiarle el tipo a todo el
+      equipo esta vez— y el puesto que tiene el suyo lo conserva. Que nadie quede con otro tipo sin
+      aviso lo cubre la pantalla: el Paso 1 dice cuántos puestos conservan el propio y cada fila del
+      Paso 2 muestra el que rige. El nombre y el trámite vienen de la misma fuente que el id: nunca se
+      mezclan los de una capa con el id de otra.
     */
-    const fuente = p.contratoId ? p : contratacion.contratoId ? contratacion : integ.contratoId ? integ : plantilla;
+    const propio = !!integ.contratoId && !integ.contratoDelEquipo;
+    const fuente = p.contratoId ? p : propio ? integ : contratacion.contratoId ? contratacion : integ.contratoId ? integ : plantilla;
     const contratoId = String(fuente.contratoId || "");
     const nombreContrato = fuente.nombreContrato || "";
     const tipoImpositivo = fuente.tipoImpositivo || "";
@@ -342,13 +357,15 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
     const sup = ctx.superposiciones.get(integ._id) || [];
     for (const s of sup) advertencias.push(s.mensaje);
     /*
-      CON UN CONTRATO DE ARCA EN ESAS FECHAS, SÓLO SERVICIOS: en las plantillas es un AVISO, no un error
-      (decisión del usuario, 19/11/2026: «son diferentes contratos, no importa la superposición»; y ya el
-      05/11 las altas masivas habían quedado afuera de la regla del alta individual). El supervisor lo ve
-      y manda igual; la fila sigue informando `soloServicios` para que la ventana del tipo lo muestre.
+      CON UN CONTRATO DE ARCA MENSUAL EN ESAS FECHAS, SÓLO SERVICIOS: es un ERROR, como en el alta
+      individual (`rechazoAltaArcaConContrato` en routes/users.ts). Del 19/11 al 27/11/2026 fue un aviso
+      («son diferentes contratos, no importa la superposición»), y en el lote del 26/11 se enviaron así
+      5 personas con Plazo fijo vigente: en 36 filas el aviso no se vio. La fila ya ofrece sólo tipos de
+      Servicios cuando esto aparece, así que se corrige ahí antes de enviar; `soloServicios` sigue
+      viajando para que la ventana del tipo lo muestre. Un puesto de Servicios pasa sin más.
     */
     const soloServicios = ctx.soloServicios?.get(integ._id) || "";
-    if (soloServicios && tipoImpositivo === "alta_temprana_afip") advertencias.push(soloServicios);
+    if (soloServicios && tipoImpositivo === "alta_temprana_afip") errores.push(soloServicios);
 
     const datos: DatosSolicitud | null = persona
       ? {

@@ -167,6 +167,20 @@ export function puestoEnEquipo(puesto, asignacion, equipo) {
     return efectivo;
 }
 /**
+ * ¿El tipo de contrato que rige este puesto en el equipo viene de las CONDICIONES DEL EQUIPO (las que
+ * valen para todos sus puestos) y no del puesto? Es la misma lectura que `puestoEnEquipo`: la asignación
+ * pisa al equipo, y el equipo al puesto. Al contratar, el general del Paso 1 reemplaza al del equipo y
+ * respeta al propio del puesto (27/11/2026, ver `planDeLote`). Un puesto sin contrato en ninguna capa
+ * tampoco es «del equipo»: ahí rige el general o el de la plantilla vieja.
+ */
+export function contratoEsDelEquipo(asignacion, equipo) {
+    const c = asignacion?.condiciones || {};
+    if ("contratoId" in c)
+        return false;
+    const deEquipo = equipo?.condiciones || {};
+    return "contratoId" in deEquipo && !!deEquipo.contratoId;
+}
+/**
  * El proyecto, la empresa y el convenio de un equipo: los suyos o, en las plantillas viejas (que los
  * tenían en la plantilla), los de la plantilla.
  */
@@ -944,6 +958,8 @@ function paraPlan(p, equipoId) {
             contratoId: s(i.contratoId) || null,
             nombreContrato: i.nombreContrato || null,
             tipoImpositivo: i.tipoImpositivo || null,
+            // Si el contrato es del equipo, el general de la contratación lo pisa; si es del puesto, no.
+            contratoDelEquipo: contratoEsDelEquipo(a, equipo),
         })),
     };
 }

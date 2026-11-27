@@ -26,6 +26,14 @@ export interface Acceso {
  */
 export declare function puestoEnEquipo(puesto: any, asignacion: any, equipo?: any): any;
 /**
+ * ¿El tipo de contrato que rige este puesto en el equipo viene de las CONDICIONES DEL EQUIPO (las que
+ * valen para todos sus puestos) y no del puesto? Es la misma lectura que `puestoEnEquipo`: la asignación
+ * pisa al equipo, y el equipo al puesto. Al contratar, el general del Paso 1 reemplaza al del equipo y
+ * respeta al propio del puesto (27/11/2026, ver `planDeLote`). Un puesto sin contrato en ninguna capa
+ * tampoco es «del equipo»: ahí rige el general o el de la plantilla vieja.
+ */
+export declare function contratoEsDelEquipo(asignacion: any, equipo?: any): boolean;
+/**
  * El proyecto, la empresa y el convenio de un equipo: los suyos o, en las plantillas viejas (que los
  * tenían en la plantilla), los de la plantilla.
  */

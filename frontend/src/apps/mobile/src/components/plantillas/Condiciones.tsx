@@ -49,8 +49,9 @@ export const cambiosDeContrato = (catalogos: CatalogosContratacion, contratoId: 
   05/11). `soloServicios` es el mensaje del server (`mensajeSoloServicios`) o vacío: con él, la ventana
   del tipo ofrece SÓLO los tipos de Servicios (pedido del usuario, 19/11: «si sólo podría pedir Servicios,
   no debería mostrar los de ARCA»), en la fila de la persona y en el puesto. El tipo general («para
-  todos») no se acota: si es de ARCA, la fila lo muestra marcado y el server lo devuelve como AVISO que
-  no frena (`planDeLote`, decisión del 19/11); al tocar la fila sólo se puede pasar a Servicios.
+  todos») no se acota: si es de ARCA, la fila lo muestra marcado y el server lo devuelve como ERROR
+  que no deja enviar (`planDeLote`, 27/11/2026, como el alta individual; del 19/11 al 27/11 fue un
+  aviso); al tocar la fila sólo se puede pasar a Servicios.
 */
 export const contratosParaElegir = (catalogos: CatalogosContratacion, soloServicios?: string | null) => (soloServicios ? catalogos.contratos.filter((c) => catalogos.tramitePorContrato.get(c._id) === "constancia_cuit") : catalogos.contratos);
 
@@ -60,7 +61,7 @@ export function AvisoSoloServicios({ mensaje, contratoId, catalogos }: { mensaje
   return (
     <p className={`rounded-lg p-2 text-xs font-semibold ${esArca ? "bg-red-50 text-red-800 dark:bg-red-500/10 dark:text-red-200" : "bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200"}`}>
       {mensaje}
-      {esArca && " Tocá el tipo de contrato para pasarlo a Servicios; si se envía así, va como aviso."}
+      {esArca && " Tocá el tipo de contrato para pasarlo a Servicios: así no se puede enviar."}
     </p>
   );
 }

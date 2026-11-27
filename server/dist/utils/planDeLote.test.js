@@ -275,27 +275,58 @@ test("tipo de contrato por puesto: servicios en un puesto no vuelve servicios al
     assert.equal(filas[1].datos.tipoImpositivo, "constancia_cuit");
     assert.deepEqual(filas[1].errores, []);
 });
-test("tipo de contrato elegido al contratar: vale para todos y le gana al del puesto; el puntual le gana a todos", () => {
-    // La plantilla dice «c5x7» y el puesto 2 tiene guardado «cServ»; al contratar se eligió «Jornada» (c1x1) para todos.
+test("tipo de contrato elegido al contratar: pisa a la plantilla y al del equipo, NO al propio del puesto; el puntual le gana a todos (27/11/2026)", () => {
+    // La plantilla vieja dice «c5x7»; el puesto 1 va con el contrato DEL EQUIPO y el puesto 2 tiene guardado «cServ» propio.
+    // Al contratar se eligió «Jornada» (c1x1) como general.
+    const delEquipo = integ("1", { contratoId: "c5x7", nombreContrato: "Plazo fijo 5x7", tipoImpositivo: "alta_temprana", contratoDelEquipo: true });
     const servicios = integ("2", { contratoId: "cServ", nombreContrato: "Servicios", tipoImpositivo: "constancia_cuit", dailyRateManual: 5000 });
     const general = { ...SEPT, fechas: ["2026-09-05", "2026-09-06"], contratoId: "c1x1", nombreContrato: "Jornada", tipoImpositivo: "alta_temprana" };
-    const { filas } = planDeLote(plantilla, [integ("1"), servicios], general, {}, ctx());
-    // Los dos van por Jornada: el general pisa tanto a la plantilla como al contrato guardado en el puesto.
-    for (const f of filas) {
-        assert.deepEqual(f.errores, []);
-        assert.equal(f.datos.contratoId, "c1x1");
-        assert.equal(f.datos.nombreContrato, "Jornada");
-        assert.equal(f.datos.tipoImpositivo, "alta_temprana");
-        assert.equal(f.datos.esServicios, false);
-        assert.equal(f.datos.porDiasSueltos, true);
-        assert.equal(f.jornadas, 2);
-    }
-    // El puesto 2 vuelve a Servicios sólo esta vez: el puntual manda sobre el general.
-    const conPuntual = planDeLote(plantilla, [integ("1"), servicios], general, { i2: { contratoId: "cServ", nombreContrato: "Servicios", tipoImpositivo: "constancia_cuit" } }, ctx());
-    assert.equal(conPuntual.filas[0].datos.contratoId, "c1x1");
-    assert.equal(conPuntual.filas[1].datos.contratoId, "cServ");
-    assert.equal(conPuntual.filas[1].datos.tipoImpositivo, "constancia_cuit");
+    const { filas } = planDeLote(plantilla, [delEquipo, servicios], general, {}, ctx());
+    // El puesto 1 va por Jornada: el general reemplaza al contrato del equipo (y a la plantilla vieja).
+    assert.deepEqual(filas[0].errores, []);
+    assert.equal(filas[0].datos.contratoId, "c1x1");
+    assert.equal(filas[0].datos.nombreContrato, "Jornada");
+    assert.equal(filas[0].datos.tipoImpositivo, "alta_temprana");
+    assert.equal(filas[0].datos.porDiasSueltos, true);
+    assert.equal(filas[0].jornadas, 2);
+    // El puesto 2 conserva su Servicios: el general no toca al propio del puesto. Nombre y trámite, de la misma capa.
+    assert.deepEqual(filas[1].errores, []);
+    assert.equal(filas[1].datos.contratoId, "cServ");
+    assert.equal(filas[1].datos.nombreContrato, "Servicios");
+    assert.equal(filas[1].datos.tipoImpositivo, "constancia_cuit");
+    assert.equal(filas[1].datos.porDiasSueltos, false);
+    assert.equal(filas[1].jornadas, 22);
+    // Un puesto sin contrato en ninguna capa toma el general.
+    const sinContrato = planDeLote(plantilla, [integ("3", { contratoId: null, contratoDelEquipo: false })], general, {}, ctx());
+    assert.equal(sinContrato.filas[0].datos.contratoId, "c1x1");
+    // Los puntuales mandan sobre todo: el 1 a Servicios, el 2 a Jornada, sólo esta vez.
+    const conPuntual = planDeLote(plantilla, [delEquipo, servicios], general, { i1: { contratoId: "cServ", nombreContrato: "Servicios", tipoImpositivo: "constancia_cuit", dailyRate: 5000 }, i2: { contratoId: "c1x1", nombreContrato: "Jornada", tipoImpositivo: "alta_temprana" } }, ctx());
+    assert.equal(conPuntual.filas[0].datos.contratoId, "cServ");
+    assert.equal(conPuntual.filas[0].datos.tipoImpositivo, "constancia_cuit");
+    assert.equal(conPuntual.filas[1].datos.contratoId, "c1x1");
+    assert.equal(conPuntual.filas[1].datos.tipoImpositivo, "alta_temprana");
+    assert.deepEqual(conPuntual.filas[0].errores, []);
     assert.deepEqual(conPuntual.filas[1].errores, []);
+});
+test("el caso del 26/11/2026: equipo «Jornada», un puesto con «Servicios Adicional» propio → dos solicitudes con tipos distintos", () => {
+    // Como lo guarda la plantilla real: el equipo pone Jornada en sus condiciones para todos, y en la
+    // asignación de un puesto se eligió Servicios Adicional. El Paso 1 precarga el general con el del equipo.
+    const c = ctx();
+    c.contratos.set("cJornada", { modoFechas: "dias", multiplicadorDiario: 1 });
+    c.contratos.set("cServAdic", { modoFechas: "dias" });
+    const jornada = integ("1", { contratoId: "cJornada", nombreContrato: "Jornada", tipoImpositivo: "alta_temprana_afip", contratoDelEquipo: true });
+    const servicios = integ("2", { contratoId: "cServAdic", nombreContrato: "Servicios Adicional", tipoImpositivo: "constancia_cuit", dailyRateManual: 8000 });
+    const general = { fechas: ["2026-11-28"], contratoId: "cJornada", nombreContrato: "Jornada", tipoImpositivo: "alta_temprana_afip" };
+    const { filas, totales } = planDeLote(plantilla, [jornada, servicios], general, {}, c);
+    assert.equal(totales.conErrores, 0);
+    const tipos = filas.map((f) => [f.datos.nombreContrato, f.datos.tipoImpositivo]);
+    assert.deepEqual(tipos, [
+        ["Jornada", "alta_temprana_afip"],
+        ["Servicios Adicional", "constancia_cuit"],
+    ]);
+    // Los payloads que salen son los que irán a la base: cada uno con su contrato.
+    assert.equal(armarPayloadDeSolicitud(filas[0].datos).metadata.contratoId, "cJornada");
+    assert.equal(armarPayloadDeSolicitud(filas[1].datos).metadata.contratoId, "cServAdic");
 });
 test("fechas propias de una persona: su desde/hasta pisa el del equipo sólo para ella", () => {
     // El equipo va todo septiembre; Beto entra recién el 15.
@@ -329,16 +360,24 @@ test("tipo «6x6» con 30 jornadas: semana de 6 días, jornadas en base 30 y la 
     assert.equal(filas[0].importes.total, 30000);
     assert.equal(filas[0].datos.sedeId, 7);
 });
-test("con un contrato de ARCA en esas fechas: en las plantillas es un AVISO, no frena (19/11/2026; antes error, 17/11)", () => {
-    const msg = "Tiene un contrato de ARCA en esas fechas (LN+, desde el 01/06/2023, sin fecha de baja): sólo se puede contratar con un tipo de contrato de Servicios.";
+test("con un contrato de ARCA mensual en esas fechas: un puesto por ARCA es ERROR, como en el alta individual (27/11/2026; aviso del 19/11 al 27/11)", () => {
+    const msg = "Tiene un contrato de ARCA mensual en esas fechas (LN+, Plazo fijo 6x6, 01/10/2026 → 31/12/2026): Sólo se puede contratar con un tipo de contrato de Servicios.";
     const c = ctx({ soloServicios: new Map([["i1", msg]]) });
     const arca = planDeLote({ ...plantilla, tipoImpositivo: "alta_temprana_afip" }, [integ("1"), integ("2")], SEPT, {}, c);
-    assert.deepEqual(arca.filas[0].errores, [], "no frena el envío");
-    assert.ok(arca.filas[0].advertencias.includes(msg), "pero se avisa");
+    assert.ok(arca.filas[0].errores.includes(msg), "frena el envío hasta que se pase a Servicios");
+    assert.ok(!arca.filas[0].advertencias.includes(msg), "no es un aviso");
     assert.equal(arca.filas[0].soloServicios, msg);
-    assert.ok(!arca.filas[1].advertencias.includes(msg), "a otra persona no le toca");
+    assert.equal(arca.totales.conErrores, 1);
+    assert.ok(erroresDelLote(arca).some((e) => /1 integrante tiene errores/.test(e)), "el lote entero no sale");
+    assert.deepEqual(arca.filas[1].errores, [], "a otra persona no le toca");
     assert.equal(arca.filas[1].soloServicios, "");
+    // Pasado a Servicios —en el puesto o sólo esta vez— pasa sin más.
     const servicios = planDeLote(plantilla, [integ("1", { contratoId: "cServ", nombreContrato: "Servicios", tipoImpositivo: "constancia_cuit" })], SEPT, {}, c);
-    assert.ok(!servicios.filas[0].errores.includes(msg) && !servicios.filas[0].advertencias.includes(msg), "un puesto de Servicios no tiene nada que avisar");
-    assert.equal(servicios.filas[0].soloServicios, msg, "igual se informa, para que la ventana lo muestre");
+    assert.ok(!servicios.filas[0].errores.includes(msg) && !servicios.filas[0].advertencias.includes(msg), "un puesto de Servicios no tiene nada que corregir");
+    assert.equal(servicios.filas[0].soloServicios, msg, "igual se informa, para que la ventana del tipo ofrezca sólo Servicios");
+    const puntual = planDeLote({ ...plantilla, tipoImpositivo: "alta_temprana_afip" }, [integ("1")], SEPT, { i1: { contratoId: "cServ", nombreContrato: "Servicios", tipoImpositivo: "constancia_cuit" } }, c);
+    assert.ok(!puntual.filas[0].errores.includes(msg));
+    // Y si la plantilla dice Jornada (ARCA) para alguien con un mensual vigente: error aunque sea el contrato del equipo.
+    const equipoJornada = planDeLote(plantilla, [integ("1", { contratoId: "c1x1", nombreContrato: "Jornada", tipoImpositivo: "alta_temprana_afip", contratoDelEquipo: true })], { fechas: ["2026-09-05"] }, {}, c);
+    assert.ok(equipoJornada.filas[0].errores.includes(msg));
 });

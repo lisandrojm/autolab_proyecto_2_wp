@@ -3,7 +3,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { datosDelEquipo, puestoEnEquipo, reemplazoDe } from "./plantillasEquipo.js";
+import { contratoEsDelEquipo, datosDelEquipo, puestoEnEquipo, reemplazoDe } from "./plantillasEquipo.js";
 
 const puesto = { _id: "p1", rolesFrame: ["r1"], categoriaSatId: "cat1", inTime: "09:00", outTime: "17:00", shiftId: "sViejo" };
 const equipo = { condiciones: { shiftId: "sNoche", inTime: "18:00", outTime: "00:00", diasSemana: [6] } };
@@ -19,6 +19,23 @@ test("la diferencia del puesto pisa al equipo", () => {
   const e = puestoEnEquipo(puesto, { condiciones: { inTime: "16:00" } }, equipo);
   assert.equal(e.inTime, "16:00");
   assert.equal(e.outTime, "00:00");
+});
+
+test("de quién es el tipo de contrato que rige el puesto: del equipo (lo pisa el general al contratar) o propio (se conserva)", () => {
+  const equipoJornada = { condiciones: { contratoId: "cJornada", nombreContrato: "Jornada" } };
+  // El equipo pone Jornada para todos y el puesto no dice nada: es del equipo.
+  assert.equal(contratoEsDelEquipo(null, equipoJornada), true);
+  assert.equal(contratoEsDelEquipo({ userId: "u1", condiciones: { inTime: "16:00" } }, equipoJornada), true);
+  // La asignación eligió otro para este puesto en este equipo: es propio, aunque el equipo tenga el suyo.
+  assert.equal(contratoEsDelEquipo({ condiciones: { contratoId: "cServAdic", nombreContrato: "Servicios Adicional" } }, equipoJornada), false);
+  // El equipo no fija contrato: lo que rija (el del puesto en la plantilla, o ninguno) no es del equipo.
+  assert.equal(contratoEsDelEquipo(null, { condiciones: { inTime: "18:00" } }), false);
+  assert.equal(contratoEsDelEquipo(null, {}), false);
+  assert.equal(contratoEsDelEquipo(null, { condiciones: { contratoId: null } }), false);
+  // Coherente con `puestoEnEquipo`: lo que éste devuelve como contrato es lo que la marca califica.
+  const puestoServ = { _id: "p1", rolesFrame: ["r1"], contratoId: "cServ" };
+  assert.equal(puestoEnEquipo(puestoServ, null, equipoJornada).contratoId, "cJornada");
+  assert.equal(puestoEnEquipo(puestoServ, { condiciones: { contratoId: "cServAdic" } }, equipoJornada).contratoId, "cServAdic");
 });
 
 test("reemplazo explícito, y el «Entró en lugar de» viejo como reemplazo a revisar", () => {

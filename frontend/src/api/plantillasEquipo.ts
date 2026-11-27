@@ -201,9 +201,10 @@ export interface PedidoDeContratacion {
   /** El equipo elegido: de ahí sale quién ocupa cada puesto. */
   equipoId?: string;
   /**
-   * El tipo de contrato de ESTA contratación, para todos los puestos (el que tenga otro lo trae en su
-   * puntual). Se elige al contratar y no al armar el equipo: es lo que más cambia entre una vez y la
-   * siguiente. Con su nombre y su trámite, como viajan siempre los tres.
+   * El tipo de contrato general de ESTA contratación: el server lo aplica a los puestos que van con el
+   * contrato del equipo; el puesto con uno propio lo conserva (27/11/2026), y el que necesite otro sólo
+   * esta vez lo trae en su puntual. Se elige al contratar y no al armar el equipo: es lo que más cambia
+   * entre una vez y la siguiente. Con su nombre y su trámite, como viajan siempre los tres.
    */
   contratoId?: string;
   nombreContrato?: string;

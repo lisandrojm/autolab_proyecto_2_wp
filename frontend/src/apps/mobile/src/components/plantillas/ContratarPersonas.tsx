@@ -4,7 +4,7 @@ import { tramiteSinConvenioNiCategoria } from "@compartido/tramiteSinEscala";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faPen, faUsers } from "@fortawesome/free-solid-svg-icons";
-import { FilaPreview, plantillasEquipoAPI, Preview, Puntual } from "../../../../../api/plantillasEquipo";
+import { Equipo, FilaPreview, plantillasEquipoAPI, Preview, Puntual } from "../../../../../api/plantillasEquipo";
 import { ImportesDelContrato } from "../../../../../components/contratacion/ImportesDelContrato";
 import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
 import { CampoTipoContrato, ModalTipoContrato } from "../contratacion/SelectorTipoContrato";
@@ -176,7 +176,7 @@ export default function ContratarPersonas() {
                   const k = clavePuntual(e._id, x.puesto._id);
                   const pt = estado.puntuales[k];
                   const fila = pv?.filas.find((f) => f.integranteId === x.puesto._id);
-                  const contratoRige = contratoDelPuesto(estado, e._id, x.puesto._id, x.efectivo.contratoId);
+                  const contratoRige = contratoDelPuesto(estado, e, x);
                   const nombre = fila?.nombre || (pt?.userId ? estado.nombres[pt.userId] : x.asignacion?.userId ? x.asignacion.nombre : "");
                   const excluido = !!pt?.excluido;
                   const reemplazo = pt?.isReplacement ? { nombre: pt.replacedUserId ? estado.nombres[pt.replacedUserId] || "alguien" : "", motivo: pt.motivoReemplazoId } : x.asignacion?.reemplazo ? { nombre: x.asignacion.reemplazo.nombre, motivo: x.asignacion.reemplazo.motivoReemplazoId } : null;
@@ -270,7 +270,7 @@ export default function ContratarPersonas() {
 /* ─────────────────────────────────────────────────────────────────────────────────────────── */
 
 interface HojaProps {
-  equipo: { _id: string; nombre: string; projectId: string | null; empresaContratoId: string | null; convenioId: string | null };
+  equipo: Pick<Equipo, "_id" | "nombre" | "projectId" | "empresaContratoId" | "convenioId" | "condiciones">;
   x: PuestoDelEquipo;
   fila: FilaPreview | undefined;
   estado: EstadoContratar;
@@ -306,7 +306,8 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
   // Sin categoría en el puesto, rige la del nivel del proyecto (la misma que manda `pedidosDe`): ya viene elegida.
   const categoriaPorDefecto = x.efectivo.categoriaSatId ? "" : catalogos.categoriaPorDefectoPara(proyecto, empresaId, convenioId, x.efectivo.rolesFrame, x.efectivo.contratoId);
   const base = {
-    contratoId: estado.contratoId || x.efectivo.contratoId || "",
+    // El propio del puesto, o el general del paso 1 si el puesto va con el contrato del equipo (la cadena de `contratoDelPuesto`).
+    contratoId: contratoDelPuesto({ ...estado, puntuales: {} }, equipo, x),
     inTime: x.efectivo.inTime || "",
     outTime: x.efectivo.outTime || "",
     categoriaSatId: x.efectivo.categoriaSatId || categoriaPorDefecto || "",

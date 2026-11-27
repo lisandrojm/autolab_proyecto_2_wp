@@ -42,6 +42,17 @@ export function puestosDe(plantilla: Plantilla, equipo: Equipo): PuestoDelEquipo
     });
 }
 
+/**
+ * ¿El tipo de contrato que rige el puesto es PROPIO —de su asignación en este equipo, o del puesto en la
+ * plantilla— y no el de las condiciones del equipo? Al contratar, el general del Paso 1 reemplaza al del
+ * equipo y respeta al propio (27/11/2026). Es la misma lectura que `contratoEsDelEquipo` del server.
+ */
+export function contratoPropio(x: Pick<PuestoDelEquipo, "efectivo" | "asignacion">, equipo: Pick<Equipo, "condiciones">): boolean {
+  if (!x.efectivo.contratoId) return false;
+  if (x.asignacion?.condiciones && "contratoId" in x.asignacion.condiciones) return true;
+  return !(equipo.condiciones && "contratoId" in equipo.condiciones && equipo.condiciones.contratoId);
+}
+
 export function sacadosDe(plantilla: Plantilla, equipo: Equipo) {
   return plantilla.integrantes.map((puesto, i) => ({ puesto, n: i + 1 })).filter(({ puesto }) => !usaElPuesto(equipo, puesto._id));
 }

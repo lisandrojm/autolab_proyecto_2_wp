@@ -1,6 +1,6 @@
 import { Equipo, PedidoDeContratacion, Plantilla, Preview, Puntual } from "../../../../../api/plantillasEquipo";
 import { CatalogosContratacion } from "./useCatalogosContratacion";
-import { proyectoDelEquipo, puestosDe } from "./equipoUtil";
+import { contratoPropio, proyectoDelEquipo, PuestoDelEquipo, puestosDe } from "./equipoUtil";
 import { porDiasSueltos } from "./Condiciones";
 
 /*
@@ -10,7 +10,8 @@ import { porDiasSueltos } from "./Condiciones";
 
   TRES CAPAS, Y NINGUNA TOCA LA PLANTILLA:
 
-    · el CONTRATO GENERAL de esta contratación, para todos los puestos (paso 1). Se elige acá y no al
+    · el CONTRATO GENERAL de esta contratación (paso 1): vale para los puestos que van con el contrato
+      del equipo; el puesto que tiene el suyo propio lo conserva (27/11/2026). Se elige acá y no al
       armar el equipo porque es lo que más cambia entre una vez y la siguiente;
     · las FECHAS de cada equipo (paso 1): días sueltos o desde/hasta, según ese contrato;
     · lo PUNTUAL de cada persona (paso 2): persona, reemplazo, horario, categoría, importe, días propios,
@@ -27,7 +28,7 @@ export interface FechasEquipo {
 }
 
 export interface EstadoContratar {
-  /** El tipo de contrato de ESTA contratación, para todos. Con su nombre y su trámite, como viajan siempre los tres. Vacío = el de cada puesto. */
+  /** El tipo de contrato de ESTA contratación, para los puestos que van con el del equipo. Con su nombre y su trámite, como viajan siempre los tres. Vacío = el de cada puesto. */
   contratoId: string;
   nombreContrato: string;
   tipoImpositivo: string;
@@ -77,17 +78,22 @@ export function borrarEstado(id: string) {
 }
 
 /**
- * EL TIPO DE CONTRATO QUE RIGE UN PUESTO EN ESTA CONTRATACIÓN: el suyo puntual → el general → el del
- * puesto (que ya incluye el del equipo). La misma cadena que el server, para que lo que se ve acá —qué
- * fechas se piden, qué dice cada fila— sea lo que después se calcula.
+ * EL TIPO DE CONTRATO QUE RIGE UN PUESTO EN ESTA CONTRATACIÓN: el suyo puntual → el PROPIO del puesto
+ * (su asignación en el equipo, o el puesto en la plantilla) → el general del paso 1 → el del equipo. La
+ * misma cadena que el server (`planDeLote`), para que lo que se ve acá —qué fechas se piden, qué dice
+ * cada fila— sea lo que después se calcula. Hasta el 27/11/2026 el general le ganaba al propio, y un
+ * «Servicios Adicional» guardado en el puesto salía siempre con el Jornada del equipo.
  */
-export function contratoDelPuesto(estado: EstadoContratar | null | undefined, equipoId: string, puestoId: string, delPuesto: string | null | undefined): string {
-  return estado?.puntuales?.[clavePuntual(equipoId, puestoId)]?.contratoId || estado?.contratoId || delPuesto || "";
+export function contratoDelPuesto(estado: EstadoContratar | null | undefined, equipo: Pick<Equipo, "_id" | "condiciones">, x: Pick<PuestoDelEquipo, "puesto" | "efectivo" | "asignacion">): string {
+  const puntual = estado?.puntuales?.[clavePuntual(equipo._id, x.puesto._id)]?.contratoId;
+  if (puntual) return puntual;
+  if (contratoPropio(x, equipo)) return x.efectivo.contratoId || "";
+  return estado?.contratoId || x.efectivo.contratoId || "";
 }
 
 /** Qué fechas pide un equipo según los contratos que rigen sus puestos: días sueltos, período o los dos. */
 export function formaDe(plantilla: Plantilla, equipo: Equipo, catalogos: CatalogosContratacion, estado?: EstadoContratar | null) {
-  const contratos = puestosDe(plantilla, equipo).map((x) => contratoDelPuesto(estado, equipo._id, x.puesto._id, x.efectivo.contratoId));
+  const contratos = puestosDe(plantilla, equipo).map((x) => contratoDelPuesto(estado, equipo, x));
   const conDias = contratos.some((c) => porDiasSueltos(catalogos, c));
   const porPeriodo = contratos.filter((c) => !porDiasSueltos(catalogos, c));
   const conPeriodo = porPeriodo.length > 0;
@@ -122,7 +128,7 @@ export function puntualLimpio(p: Puntual | undefined): Puntual {
   return r as Puntual;
 }
 
-/** Los pedidos para el server: uno por equipo incluido, con el contrato general, sus fechas y sus puntuales. */
+/** Los pedidos para el server: uno por equipo incluido, con el contrato general (que el server aplica a los puestos sin uno propio), sus fechas y sus puntuales. */
 export function pedidosDe(plantilla: Plantilla, estado: EstadoContratar, catalogos: CatalogosContratacion): PedidoDeContratacion[] {
   return plantilla.equipos
     .filter((e) => estado.equipos[e._id]?.incluido)

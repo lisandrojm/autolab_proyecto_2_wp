@@ -34,6 +34,12 @@ export interface IntegranteParaPlan {
     nombreContrato?: string | null;
     /** El trámite del tipo de contrato («constancia_cuit» = servicios). */
     tipoImpositivo?: string | null;
+    /**
+     * `true`: `contratoId` NO es del puesto sino de las CONDICIONES DEL EQUIPO (las que valen para todos
+     * sus puestos): el general de la contratación lo pisa. Sin esto, es PROPIO del puesto —su asignación
+     * en este equipo, o el puesto en la plantilla— y le gana al general (27/11/2026, ver `planDeLote`).
+     */
+    contratoDelEquipo?: boolean;
     reemplazadoDePersonaId?: string | null;
 }
 /**
@@ -42,8 +48,9 @@ export interface IntegranteParaPlan {
  * EL TIPO DE CONTRATO SE ELIGE AL CONTRATAR, no al armar el equipo. Medido en producción: de 867
  * vínculos persona-proyecto, 227 tuvieron más de un tipo a lo largo de su historia; era el campo que
  * más cambia entre una contratación y la siguiente, y el único que la plantilla congelaba. Acá viene
- * uno general para todos los puestos —lo normal: un fin de semana de jornaleros va entero por
- * «Jornada»— y quien necesite otro lo trae en su `Puntual`.
+ * uno general —lo normal: un fin de semana de jornaleros va entero por «Jornada»— que vale para los
+ * puestos que van con el contrato DEL EQUIPO; el puesto que tiene el suyo propio lo conserva
+ * (27/11/2026), y quien necesite otro para alguien sólo esta vez lo trae en su `Puntual`.
  *
  * Como puede haber de los dos modos en el mismo lote, viajan las dos formas de fecha: los puestos por
  * días sueltos usan `fechas`, los demás `desde`/`hasta`.
@@ -51,7 +58,8 @@ export interface IntegranteParaPlan {
 export interface FechasDeContratacion {
     /**
      * El tipo de contrato general de esta contratación, con su nombre y su trámite: los tres viajan
-     * juntos siempre, como en el puesto y en el equipo. Sin él, vale el del puesto o el de la plantilla.
+     * juntos siempre, como en el puesto y en el equipo. Pisa al del equipo, no al propio de un puesto.
+     * Sin él, vale el del puesto, el del equipo o el de la plantilla.
      */
     contratoId?: string;
     nombreContrato?: string;
@@ -142,9 +150,9 @@ export interface Contexto {
      */
     superposiciones: Map<string, AvisoDeSuperposicionPlan[]>;
     /**
-     * CON UN CONTRATO DE ARCA EN ESAS FECHAS, SÓLO SERVICIOS (17/11/2026, la regla del alta individual
-     * del 05/11): por PUESTO, el mensaje de `mensajeSoloServicios` si la persona ya tiene uno. Un puesto
-     * que va por ARCA no se contrata; uno de Servicios pasa.
+     * CON UN CONTRATO DE ARCA MENSUAL EN ESAS FECHAS, SÓLO SERVICIOS (17/11/2026, la regla del alta
+     * individual del 05/11): por PUESTO, el mensaje de `mensajeSoloServicios` si la persona ya tiene uno.
+     * Un puesto que va por ARCA es un ERROR (27/11/2026, como en el individual); uno de Servicios pasa.
      */
     soloServicios?: Map<string, string>;
     /** La sede principal del proyecto (`data.id`): la que lleva cada solicitud del lote, como en el alta individual. */
