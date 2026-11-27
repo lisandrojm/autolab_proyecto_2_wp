@@ -100,6 +100,25 @@ export const jornadasDelCalendario = (desde: string | undefined, hasta: string |
 };
 
 /**
+ * Los días ("YYYY-MM-DD") del período en que caen los días de semana marcados, en orden. Es la lista
+ * que `jornadasDelCalendario` cuenta: la usa Servicios por día (27/11/2026), donde el contrato se pide
+ * con desde/hasta y días de la semana y guarda igual la lista exacta de días, una jornada cada uno.
+ * `[]` si no hay período válido o no hay días marcados.
+ */
+export const fechasDelCalendario = (desde: string | undefined, hasta: string | undefined, dias: number[]): string[] => {
+  const total = diasCorridos(desde, hasta);
+  if (total === null || dias.length === 0) return [];
+  const marcados = new Set(dias);
+  const inicio = utc(desde)!;
+  const fechas: string[] = [];
+  for (let i = 0; i < total; i++) {
+    const d = new Date(inicio + i * DIA_MS);
+    if (marcados.has(d.getUTCDay())) fechas.push(d.toISOString().slice(0, 10));
+  }
+  return fechas;
+};
+
+/**
  * LAS JORNADAS QUE DA EL CALENDARIO, según cómo se pide el contrato:
  *  - por DÍAS SUELTOS («Jornada»): los días marcados, uno por jornada. NO los días de la semana que
  *    caen en el período: «el martes 1 y el martes 15» son 2 jornadas, aunque entre los dos haya otro

@@ -12,7 +12,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { anclaDesdeJornada, derivarImportes, mesesParaImportes, sueldosDelContrato, diasCorridos, erroresDeJornadas, hayAjuste, importePorJornada, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "./jornadas.js";
+import { anclaDesdeJornada, derivarImportes, mesesParaImportes, sueldosDelContrato, diasCorridos, erroresDeJornadas, fechasDelCalendario, hayAjuste, importePorJornada, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, jornadasDelCalendario, mesesEquivalentes, periodoDeCalculo } from "./jornadas.js";
 const LU_VI = [1, 2, 3, 4, 5];
 const cerca = (a, b) => assert.ok(a !== null && Math.abs(a - b) < 1e-9, `${a} ≠ ${b}`);
 test("diasCorridos: ambos extremos inclusive; null si falta una fecha o el fin es anterior", () => {
@@ -20,6 +20,19 @@ test("diasCorridos: ambos extremos inclusive; null si falta una fecha o el fin e
     assert.equal(diasCorridos("2026-09-01", "2026-09-30"), 30);
     assert.equal(diasCorridos("2026-09-30", "2026-09-01"), null);
     assert.equal(diasCorridos("", "2026-09-01"), null);
+});
+test("fechasDelCalendario: los días del período que caen en los días marcados (Servicios por día, 27/11/2026)", () => {
+    assert.deepEqual(fechasDelCalendario("2026-09-07", "2026-09-13", LU_VI), ["2026-09-07", "2026-09-08", "2026-09-09", "2026-09-10", "2026-09-11"]);
+    // Del miércoles 28/10 al lunes 16/11, de lunes a sábado: 20 días corridos menos 3 domingos.
+    const luSa = fechasDelCalendario("2026-10-28", "2026-11-16", [1, 2, 3, 4, 5, 6]);
+    assert.equal(luSa.length, 17);
+    assert.ok(!luSa.includes("2026-11-01") && !luSa.includes("2026-11-08") && !luSa.includes("2026-11-15"));
+    assert.equal(luSa[0], "2026-10-28");
+    assert.equal(luSa[luSa.length - 1], "2026-11-16");
+    assert.equal(luSa.length, jornadasDelCalendario("2026-10-28", "2026-11-16", [1, 2, 3, 4, 5, 6]), "la misma cuenta que las jornadas");
+    assert.deepEqual(fechasDelCalendario("2026-09-13", "2026-09-07", LU_VI), [], "fin antes del inicio");
+    assert.deepEqual(fechasDelCalendario("2026-09-07", "2026-09-13", []), [], "sin días marcados");
+    assert.deepEqual(fechasDelCalendario("", "2026-09-13", LU_VI), [], "sin desde");
 });
 test("jornadasDelCalendario: cuenta los días marcados que caen en el período", () => {
     // Lunes 7 a domingo 13: una semana entera.

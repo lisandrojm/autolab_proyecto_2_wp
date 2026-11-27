@@ -107,10 +107,12 @@ interface Props {
   errorDias?: string;
   /** `mobile` usa la paleta de esa app; `desk` usa las clases del formulario de escritorio. */
   variante?: "desk" | "mobile";
+  /** Sin el switch de «Días rotativos»: Servicios por día (27/11/2026) arma la lista de días con los de la semana, y rotando no hay lista. */
+  sinRotativos?: boolean;
   className?: string;
 }
 
-export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos, onRotativos, dias, onDias, desde, hasta, jornadasTotales, onJornadasTotales, limiteContrato, errorDiasPorSemana, errorDias, variante = "desk", className = "" }) => {
+export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos, onRotativos, dias, onDias, desde, hasta, jornadasTotales, onJornadasTotales, limiteContrato, errorDiasPorSemana, errorDias, variante = "desk", className = "", sinRotativos }) => {
   const [verTope, setVerTope] = useState(false);
   const estimadas = jornadasEstimadas(desde, hasta, jornadas);
   const mobile = variante === "mobile";
@@ -225,6 +227,7 @@ export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos
         */}
         <div className="flex items-center justify-between gap-3">
           <label className={etiqueta}>{rotativos ? "Rota entre estos días" : "Días que trabaja"}</label>
+          {!sinRotativos && (
           <label className="flex cursor-pointer select-none items-center gap-2">
             <span className={`text-sm ${mobile ? "text-slate-700 dark:text-slate-200" : "text-gray-700 dark:text-gray-300"}`}>Días rotativos</span>
             <span className={`flex h-6 w-10 shrink-0 items-center rounded-full p-1 duration-300 ease-in-out ${rotativos ? "bg-blue-500 dark:bg-blue-600" : "bg-gray-300 dark:bg-gray-700"}`}>
@@ -232,6 +235,7 @@ export const DiasDeTrabajo: React.FC<Props> = ({ jornadas, onJornadas, rotativos
             </span>
             <input type="checkbox" checked={rotativos} onChange={(e) => onRotativos(e.target.checked)} className="hidden" />
           </label>
+          )}
         </div>
 
         {/* En rotativo se aclara qué significan los días marcados; en fijo, los chips y la cuenta de abajo alcanzan. */}

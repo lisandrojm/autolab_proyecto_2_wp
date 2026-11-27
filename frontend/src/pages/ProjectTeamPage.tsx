@@ -35,7 +35,7 @@ import { ImportesDelContrato } from '../components/contratacion/ImportesDelContr
 import { SelectorHora } from '../components/contratacion/SelectorHora';
 import { horarioDentroDelTurno, horasDelHorario, sumarMinutos } from '../utils/horario';
 import { numeroALetras } from '../utils/numeroALetras';
-import { avisoIndeterminado, erroresDeJornadas, hayAjuste, sueldosDelContrato, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from '../utils/jornadas';
+import { avisoIndeterminado, erroresDeJornadas, fechasDelCalendario, hayAjuste, sueldosDelContrato, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from '../utils/jornadas';
 import { CustomMultiDatePicker } from '../apps/mobile/src/components/CustomMultiDatePicker';
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel, claveEstado } from '../components/EstadoSelect';
 import { noPoseeCuit } from '../components/contratos/ConstanciaBulk';
@@ -1275,6 +1275,37 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     de la app: en vez de alta y baja se pintan los días en un calendario y cada uno es una jornada.
   */
   const porDiasSueltosWizard = contratos.find((c) => c._id === wizardData.contrato_id)?.data?.modoFechas === 'dias';
+  /*
+    SERVICIOS POR DÍA, CON DESDE/HASTA Y DÍAS DE LA SEMANA (27/11/2026, pedido del usuario).
+
+    Un tipo que se contrata por días sueltos («Servicios Adicional», «Servicios Intercambio») pedía marcar
+    los días uno por uno en el calendario, y «Cómo trabaja en este turno» no ofrecía días por semana ni
+    jornadas: un mes de lunes a sábado eran veintipico de clics. Con trámite de constancia de CUIT no hay
+    un alta por día ante ARCA que justifique el calendario, así que va como un período: desde y hasta, y
+    los días de la semana que trabaja (en el panel del turno) arman la lista de días —una jornada cada
+    uno—, que es lo que el contrato guarda igual que antes (`fechas_trabajadas`; el server deriva de ahí
+    alta, baja, días y jornadas). Los tipos por día de ARCA («Jornada») siguen con el calendario: cada día
+    marcado es un alta. La lista se rearma al tocar el desde, el hasta, los días o el tipo; no sola al
+    abrir, para no cambiarle los días a una solicitud que se está aprobando.
+  */
+  const rangoConDiasWizard = porDiasSueltosWizard && esServicios;
+  const fechasDeRango = (desde: string, hasta: string, dias: number[]) => {
+    const fechas = fechasDelCalendario(desde, hasta, dias);
+    return { fechas_trabajadas: fechas, cantidad_jornadas_laborales: fechas.length };
+  };
+  const cambiarFechaWizard = (campo: 'fecha_alta_contrato' | 'fecha_baja_contrato', valor: string) =>
+    setWizardData((prev) => {
+      const siguiente = campo === 'fecha_alta_contrato' ? { ...prev, fecha_alta_contrato: valor } : { ...prev, fecha_baja_contrato: valor };
+      return rangoConDiasWizard ? { ...siguiente, ...fechasDeRango(siguiente.fecha_alta_contrato, siguiente.fecha_baja_contrato, siguiente.dias_semana) } : siguiente;
+    });
+  /*
+    LOS TRES PASOS DE LA SOLICITUD DE CONTRATACIÓN DE LA APP (27/11/2026, pedido del usuario): la persona,
+    el tipo de contrato con sus fechas, y recién después el resto. Hasta que no estén el tipo y las fechas,
+    lo demás se ve pero apagado (`fieldset disabled`): rol, empresa, área y turno, categoría e importes
+    dependen de ellos. Editando o aprobando ya vienen cargados, así que nada queda apagado. Sin tipos de
+    contrato configurados no hay qué elegir y no se traba.
+  */
+  const paso2Completo = (!!wizardData.contrato_id || contratos.length === 0) && (porDiasSueltosWizard && !rangoConDiasWizard ? wizardData.fechas_trabajadas.length > 0 : !!wizardData.fecha_alta_contrato && (indeterminadoWizard || !!wizardData.fecha_baja_contrato));
   /** Lo que explica el importe total, debajo del campo (ver `resumenTotal` en `ImportesDelContrato`). */
   const fechaARWizard = (f: string) => (f ? new Date(`${f}T00:00:00`).toLocaleDateString('es-AR') : '');
   const resumenDelTotalWizard = {
@@ -1437,8 +1468,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         dice a qué hora. Estaban separados —uno acá y el otro solo en mobile— y el escritorio
         guardaba 5 jornadas fijas sin que nadie lo eligiera.
       */}
-      {porDiasSueltosWizard ? (
-        /* Con días sueltos no hay días por semana que elegir: salen de los días marcados arriba. */
+      {porDiasSueltosWizard && !rangoConDiasWizard ? (
+        /* Con días sueltos de ARCA no hay días por semana que elegir: salen de los días marcados arriba. Servicios por día va al revés (`rangoConDiasWizard`): los días de la semana arman la lista. */
         <div className="md:col-span-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/40 p-2.5 text-[11px] text-gray-500 dark:text-gray-400">
           {wizardData.fechas_trabajadas.length > 0 ? (
             <>
@@ -1452,8 +1483,20 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           )}
         </div>
       ) : (
-      <div className="md:col-span-2">
-        <DiasDeTrabajo jornadas={wizardData.dias_por_semana} onJornadas={(n) => setWizardData((prev) => ({ ...prev, dias_por_semana: limiteDiasWizard != null ? Math.min(n, limiteDiasWizard) : n }))} rotativos={wizardData.dias_rotativos} onRotativos={(v) => setWizardData((prev) => ({ ...prev, dias_rotativos: v }))} dias={wizardData.dias_semana} onDias={(d) => setWizardData((prev) => ({ ...prev, dias_semana: d }))} limiteContrato={limiteDiasWizard} desde={wizardData.fecha_alta_contrato} hasta={wizardData.fecha_baja_contrato} jornadasTotales={wizardData.cantidad_jornadas_laborales} onJornadasTotales={(n) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: n }))} />
+      <div className="md:col-span-2 space-y-3">
+        <DiasDeTrabajo jornadas={wizardData.dias_por_semana} onJornadas={(n) => setWizardData((prev) => ({ ...prev, dias_por_semana: limiteDiasWizard != null ? Math.min(n, limiteDiasWizard) : n }))} rotativos={wizardData.dias_rotativos} onRotativos={(v) => setWizardData((prev) => ({ ...prev, dias_rotativos: v }))} dias={wizardData.dias_semana} onDias={(d) => setWizardData((prev) => ({ ...prev, dias_semana: d, ...(rangoConDiasWizard ? fechasDeRango(prev.fecha_alta_contrato, prev.fecha_baja_contrato, d) : {}) }))} limiteContrato={limiteDiasWizard} desde={wizardData.fecha_alta_contrato} hasta={wizardData.fecha_baja_contrato} jornadasTotales={wizardData.cantidad_jornadas_laborales} onJornadasTotales={rangoConDiasWizard ? undefined : (n) => setWizardData((prev) => ({ ...prev, cantidad_jornadas_laborales: n }))} sinRotativos={rangoConDiasWizard} />
+        {/* Servicios por día: las jornadas son los días que caen entre el desde y el hasta; no hay nada que ajustar a mano. */}
+        {rangoConDiasWizard && (
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/40 p-2.5 text-[11px] text-gray-500 dark:text-gray-400">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Cantidad de jornadas</p>
+            <p className="mt-1 text-base font-bold text-gray-900 dark:text-white">{wizardData.fechas_trabajadas.length}</p>
+            <p className="mt-1">
+              {wizardData.fechas_trabajadas.length > 0
+                ? `Una por cada día que trabaja entre el desde y el hasta: ${wizardData.fechas_trabajadas.map((d) => new Date(`${d}T00:00:00`).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })).join(' · ')}`
+                : 'Salen solas del desde, el hasta y los días de la semana: todavía no cae ninguno en ese período.'}
+            </p>
+          </div>
+        )}
       </div>
       )}
       {/*
@@ -2864,10 +2907,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // (de hecho el campo ni se muestra).
     const contratoSel = contratos.find((c) => c._id === wizardData.contrato_id);
     const diasSueltos = contratoSel?.data?.modoFechas === 'dias';
-    if (diasSueltos && wizardData.fechas_trabajadas.length === 0) faltan.push('Días que trabaja (marcalos en el calendario)');
+    // Servicios por día (ver `rangoConDiasWizard`): desde/hasta como un período, y la lista de días sale de los de la semana.
+    const rango = diasSueltos && esServicios;
+    if (diasSueltos && !rango && wizardData.fechas_trabajadas.length === 0) faltan.push('Días que trabaja (marcalos en el calendario)');
+    if (rango && wizardData.fecha_alta_contrato && wizardData.fecha_baja_contrato && wizardData.fechas_trabajadas.length === 0) faltan.push('Días que trabaja (ningún día de la semana elegido cae entre el desde y el hasta)');
     // Antes venía siempre precargada (hoy o la del contrato); renovar la deja vacía a propósito.
-    if (!diasSueltos && !wizardData.fecha_alta_contrato) faltan.push('Fecha alta contrato');
-    if (contratoSel && !diasSueltos && !contratoSel.data.esTiempoIndeterminado && !wizardData.fecha_baja_contrato) faltan.push('Fecha baja contrato');
+    if ((!diasSueltos || rango) && !wizardData.fecha_alta_contrato) faltan.push('Fecha alta contrato');
+    if (contratoSel && (!diasSueltos || rango) && !contratoSel.data.esTiempoIndeterminado && !wizardData.fecha_baja_contrato) faltan.push('Fecha baja contrato');
     if (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0) faltan.push('Área y turno');
     else if (wizardData.areaShiftAssignments.some((a) => a.pendienteSede)) faltan.push('La sede del área (elegí el turno en la sede donde trabaja)');
     if (!wizardData.hora_inicio || !wizardData.hora_fin) faltan.push('Horario (entrada y salida)');
@@ -2887,7 +2933,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       La regla vive en `faltaDefinirDias` y no se copia acá: comparte con el aviso del campo la parte
       de los días, y agrega la cantidad — que al guardar tampoco puede quedar vacía.
     */
-    const faltaDias = diasSueltos ? '' : faltaDefinirDias(wizardData.dias_por_semana, wizardData.dias_rotativos, wizardData.dias_semana);
+    const faltaDias = diasSueltos && !rango ? '' : faltaDefinirDias(wizardData.dias_por_semana, wizardData.dias_rotativos, wizardData.dias_semana);
     if (faltaDias) faltan.push(`Días que trabaja (${faltaDias})`);
     return faltan;
   };
@@ -4695,199 +4741,22 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               </div>
             )}
             {
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 {/*
-                  EMPLEADO OCUPA MEDIA FILA, no la entera.
-
-                  Es un campo de solo lectura —el nombre de quien se está configurando— así que no
-                  gana nada con el ancho completo, y lo que costaba era el desfasaje: al ocupar dos
-                  columnas, todo lo de abajo quedaba corrido medio lugar y los pares se partían.
-                  «Empresa del Contrato» terminaba al lado de «Role Frame», y «Empresa del Release»
-                  al lado de «Convenio», que son justamente los que hay que leer juntos.
-
-                  Con esto las filas quedan: Empleado | Role Frame · Empresa del Contrato | Empresa
-                  del Release · Convenio | Categoría · Tipo de Contrato | Estado. Los pares que
-                  comparten fila son los que se deciden juntos, y el orden sigue la cadena:
-                  empresa → convenios de ese CUIT → categorías de esos convenios.
+                  LOS TRES PASOS DE LA SOLICITUD DE CONTRATACIÓN DE LA APP (27/11/2026, pedido del usuario): primero LA
+                  PERSONA (ya elegida al abrir, con su contrato vigente debajo), después EL TIPO DE CONTRATO CON SUS
+                  FECHAS, y recién con eso el resto —rol, empresas, área y turno, categoría, importes—, que hasta
+                  entonces se ve apagado (ver `paso2Completo`). Antes era una sola grilla de arriba abajo y el tipo de
+                  contrato aparecía después del rol, la empresa y la sede, que dependen de él.
                 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Paso 1: la persona. Sólo lectura —el nombre de quien se está configurando— a media fila. */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
                     Empleado <span className="text-red-500">*</span>
                   </label>
                   <input type="text" className="input-field w-full bg-gray-50 dark:bg-transparent" value={`${selectedUserForWizard?.firstName} ${selectedUserForWizard?.lastName}`} readOnly />
                 </div>
-
-                {/*
-                  EL DESPLEGABLE OFRECE LOS OFICIOS DE LA PERSONA; EL BOTÓN, TODOS LOS DEMÁS.
-
-                  La lista corta es la correcta el 90% de las veces y por eso sigue siendo la que se
-                  ve. Pero cuando se contrata a alguien para algo que no figura en su ficha —porque
-                  nunca lo hizo acá, o porque quedó incompleta— antes no había salida: el select no
-                  lo ofrecía y el wizard exige uno. Se elegía cualquiera con tal de avanzar.
-
-                  Lo que se elige por el buscador se le AGREGA a la ficha al guardar: que además sea
-                  Utilero es un dato de la persona, no de este contrato, y la próxima vez tiene que
-                  estar en la lista corta.
-                */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                    Role Frame a Desempeñar <span className="text-red-500">*</span>
-                  </label>
-                  {/*
-                    LA MISMA EXPERIENCIA QUE EN EL MÓVIL (02/11/2026): los oficios de la persona uno debajo del
-                    otro, se marca UNO —con el que se la contrata acá—; el tacho, afuera de la opción, lo saca de
-                    las opciones de este alta (con confirmación); «Otro rol» suma uno del catálogo.
-                  */}
-                  {rolesFrameOfrecidos.length === 0 ? (
-                    <p className="ml-1 text-xs text-gray-400">La persona no tiene roles en su ficha: elegí uno con «Otro rol».</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {rolesFrameOfrecidos.map((rf) => {
-                        const valor = String(rf.data?.rol?.id || '');
-                        const elegido = !!valor && String(wizardData.rol_frame_id) === valor;
-                        const nuevo = !userAssignedRoleFrames.some((p) => p._id === rf._id);
-                        return (
-                          <div key={rf._id} className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => !elegido && setWizardData((prev) => ({ ...prev, rol_frame_id: valor, categoria_sat_id: '' }))}
-                              aria-pressed={elegido}
-                              className={`flex flex-1 items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${elegido ? 'border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-500/20 dark:bg-blue-900/20 dark:text-blue-300' : 'border-gray-300 text-gray-700 hover:border-blue-400 dark:border-gray-600 dark:text-gray-200'}`}
-                            >
-                              <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${elegido ? 'border-blue-600 bg-blue-600' : 'border-gray-400'}`}>{elegido && <span className="h-1.5 w-1.5 rounded-full bg-white" />}</span>
-                              <span className="flex-1 truncate font-medium">{rf.name}</span>
-                              {nuevo && <span className="shrink-0 rounded-full border border-amber-300 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-600 dark:border-amber-700 dark:text-amber-400">nuevo</span>}
-                            </button>
-                            <button
-                              type="button"
-                              title={`Quitar ${rf.name} de las opciones`}
-                              onClick={async () => {
-                                const r: any = await sweetAlert.confirm('¿Quitar el rol?', `«${rf.name}» deja de ofrecerse en este alta. La ficha de la persona no cambia.`, 'Sí, quitar');
-                                if (!r?.isConfirmed) return;
-                                setRolesQuitados((l) => [...l, rf._id]);
-                                if (rolFrameAgregado?._id === rf._id) setRolFrameAgregado(null);
-                                if (elegido) setWizardData((prev) => ({ ...prev, rol_frame_id: '', categoria_sat_id: '' }));
-                              }}
-                              className="shrink-0 rounded-lg border border-gray-300 p-2 text-gray-400 transition-colors hover:border-red-300 hover:text-red-500 dark:border-gray-600"
-                            >
-                              <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <button type="button" onClick={() => setRolFrameBuscadorOpen(true)} title="Buscar otro rol empresa" className="ml-1 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400">
-                    <FontAwesomeIcon icon={faPlus} className="h-3 w-3" /> Otro rol
-                  </button>
-                  {rolFrameAgregado && !userAssignedRoleFrames.some((rf) => rf._id === rolFrameAgregado._id) && <p className="ml-1 text-[11px] text-amber-600 dark:text-amber-400">«{rolFrameAgregado.name}» no estaba en su ficha: se le agrega al guardar.</p>}
-                </div>
-
-                {/*
-                  LA EMPRESA VA ANTES QUE EL CONVENIO, Y ESO NO ES ORDEN ESTÉTICO.
-
-                  La cadena es empresa → convenios registrados por ese CUIT → categorías de esos
-                  convenios. Estaba 200 líneas más abajo, así que quien cargaba de arriba hacia
-                  abajo llegaba a Convenio sin empresa elegida y se encontraba el select apagado
-                  diciéndole que eligiera algo que todavía no había aparecido en pantalla.
-                */}
-                {/*
-                  EL «SELECCIONA EMPRESA…» SÓLO CUANDO HAY ALGO QUE ELEGIR.
-
-                  Con una sola empresa configurada en el proyecto, la opción vacía era la única forma
-                  de equivocarse: el contrato quedaba sin empleadora por no haber desplegado una lista
-                  de un elemento. Se deja igual si lo guardado no está en la lista —el proyecto cambió
-                  sus empresas después—, porque ahí el campo sí está diciendo algo raro y esconderlo
-                  detrás de una única opción haría creer que quedó elegida la que se ve.
-                */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-1.5 ml-1">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Empresa del Contrato</label>
-                    <button type="button" onClick={() => setShowEmpresasInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿De dónde salen estas empresas?" aria-label="Información sobre las empresas del contrato y del release">
-                      <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  <select className="input-field w-full" value={wizardData.empresaContratoId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaContratoId: e.target.value }))}>
-                    {(contratoEmpresas.length !== 1 || !contratoEmpresas.some((e) => e.id === wizardData.empresaContratoId)) && <option value="">{contratoEmpresas.length ? 'Selecciona empresa...' : 'No hay empresas cargadas'}</option>}
-                    {contratoEmpresas.map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.label}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Define qué convenios y categorías se pueden elegir abajo.</p>
-                </div>
-
-                {/* Las dos empresas juntas: se eligen de la misma lista y se confunden si están separadas. */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-1.5 ml-1">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Empresa del Release</label>
-                    <button type="button" onClick={() => setShowEmpresasInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿De dónde salen estas empresas?" aria-label="Información sobre las empresas del contrato y del release">
-                      <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  <select className="input-field w-full" value={wizardData.empresaReleaseId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaReleaseId: e.target.value }))}>
-                    {(releaseEmpresas.length !== 1 || !releaseEmpresas.some((e) => e.id === wizardData.empresaReleaseId)) && <option value="">{releaseEmpresas.length ? 'Selecciona empresa...' : 'No hay empresas cargadas'}</option>}
-                    {releaseEmpresas.map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/*
-                  LA MODALIDAD (Presencial, Remoto…), del ABM de Usuarios › Modalidades. Viene elegida la
-                  por defecto; una inactiva sólo aparece si es la que este contrato ya tenía.
-                */}
-                {modalidades.length > 0 && (
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Modalidad</label>
-                    <select className="input-field w-full" value={wizardData.modalidadId || modalidadPorDefectoId} onChange={(e) => setWizardData((prev) => ({ ...prev, modalidadId: e.target.value }))}>
-                      {modalidades
-                        .filter((m) => m.activo !== false || String(m._id) === wizardData.modalidadId)
-                        .map((m) => (
-                          <option key={m._id} value={m._id}>
-                            {m.name}
-                            {m.esDefault === true ? ' (por defecto)' : ''}
-                            {m.activo === false ? ' (inactiva)' : ''}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                )}
-
-                {/*
-                  EL PUESTO DESEMPEÑADO, siempre cargado con el que le toca por el rol, la categoría,
-                  el convenio y la empleadora elegidos arriba. El alta masiva URGENTE lo exige, y acá
-                  no existía: se descubría que faltaba recién al generar el archivo. Cambiarlo vale
-                  sólo para este contrato; sin tocarlo, el contrato hereda y no se guarda nada.
-                */}
-                <CampoPuestoConDefaultDelServer
-                  rolFrameId={wizardData.rol_frame_id}
-                  categoriaSatId={wizardData.categoria_sat_id}
-                  empresaId={wizardData.empresaContratoId}
-                  valor={wizardData.puestoDesempenado}
-                  onCambiar={(codigo) => setWizardData((prev) => ({ ...prev, puestoDesempenado: codigo }))}
-                />
-
-                {/* La sede, debajo de la empresa: sale de las del proyecto donde trabaja esa empresa. */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sede</label>
-                  <select className="input-field w-full" value={wizardData.sede_id} onChange={(e) => setWizardData((prev) => ({ ...prev, sede_id: e.target.value }))} disabled={opcionesSedeWizard.length === 0 || !!sedeFijadaPorArea}>
-                    {(opcionesSedeWizard.length === 0 || !wizardData.sede_id) && <option value="">{opcionesSedeWizard.length ? 'Elegí la sede...' : 'El proyecto no tiene sedes cargadas'}</option>}
-                    {opcionesSedeWizard.map((s) => (
-                      <option key={s.id} value={String(s.id)}>
-                        {s.nombre}
-                        {s.fuera ? ' (no es del proyecto)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                    {sedeFijadaPorArea ? `La fija el área elegida (${nombreDeSedeId(sedeFijadaPorArea)}). Para cambiarla, elegí el área en otra sede.` : 'Las sedes del proyecto. Viene elegida la principal.'}
-                  </p>
-                </div>
-                {/* Puesto | Sede, debajo las fechas y debajo Tipo de contrato | Estado, en la misma fila (27/10/2026). */}
                 {/* El contrato de la persona, justo arriba de las fechas: es contra lo que se eligen. */}
                 {!wizardEditaContrato && (
                   <ContratoDeLaPersona
@@ -4898,59 +4767,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     rotulo={<label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Contrato</label>}
                   />
                 )}
-                {/*
-                  Alta y baja del contrato, juntas: son los dos extremos del mismo período. VAN ANTES DEL TIPO DE
-                  CONTRATO (05/11/2026): con un contrato en esas fechas, sólo se ofrecen los de Servicios.
-
-                  Cada par va en su PROPIA fila de dos columnas y no suelto en el grid de arriba:
-                  «Fecha baja» desaparece cuando el tipo de contrato es de tiempo indeterminado, y
-                  con los campos sueltos ese hueco corría a todos los de abajo — las horas quedaban
-                  apareadas con una fecha según qué contrato estuviera elegido.
-                */}
-                {porDiasSueltosWizard ? (
-                  /*
-                    DÍAS SUELTOS (ver `modoFechas` en el ABM del tipo de contrato): el mismo calendario
-                    que la solicitud de la app. Cada día marcado es una jornada; alta y baja son el
-                    primero y el último.
-                  */
-                  <div className="md:col-span-2 space-y-1.5">
-                    <CustomMultiDatePicker label="Días que trabaja" value={wizardData.fechas_trabajadas} onChange={(d: string | string[]) => elegirDiasSueltosWizard(Array.isArray(d) ? d : d ? [d] : [])} />
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                      {wizardData.fechas_trabajadas.length > 0 ? (
-                        <>
-                          <span className="font-semibold text-gray-700 dark:text-gray-200">
-                            {wizardData.fechas_trabajadas.length} {wizardData.fechas_trabajadas.length === 1 ? 'jornada' : 'jornadas'}
-                          </span>
-                          , entre el {new Date(`${wizardData.fechas_trabajadas[0]}T00:00:00`).toLocaleDateString('es-AR')} y el {new Date(`${wizardData.fechas_trabajadas[wizardData.fechas_trabajadas.length - 1]}T00:00:00`).toLocaleDateString('es-AR')}.
-                        </>
-                      ) : (
-                        <>«{contratoDelWizard?.name}» se contrata por día: marcá los días en el calendario. Cada uno es una jornada.</>
-                      )}
-                    </p>
-                  </div>
-                ) : (
-                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha alta contrato</label>
-                    <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_alta_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_alta_contrato: e.target.value }))} />
-                  </div>
-                  {!(contratos.find((c) => c._id === wizardData.contrato_id)?.data.esTiempoIndeterminado ?? false) && (
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                        Fecha baja contrato <span className="text-red-500">*</span>
-                      </label>
-                      <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />
-                    </div>
-                  )}
-                  {/*
-                    EL MOTIVO DE BAJA PARA ARCA NO VA ACÁ (27/11/2026, pedido del usuario): estuvo junto a la fecha de
-                    baja del 22/11 al 27/11, en Agregar Miembro y en Editar y Aprobar. Se carga desde Gestión › Bajas
-                    ARCA (`MotivoBajaModal`); este formulario no manda el campo y el server conserva el del contrato.
-                  */}
                 </div>
-                )}
 
-
+                {/* Paso 2: el tipo de contrato, con su estado y su plantilla, y las fechas. */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   {/*
                     RÓTULO, FILTRO Y BADGE, TODO EN UNA FILA DE ALTO FIJO.
@@ -5007,13 +4827,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     mismo badge de Contratos, para que se lea como lo mismo. Ver
                     `components/contratos/TipoContratoSelect.tsx`.
                   */}
-                  <CampoTipoContrato contratos={contratosFiltradosPorTramite} contratoId={wizardData.contrato_id} estados={allEstados} tramitePorContrato={tramitePorContrato} onAbrir={() => {
-                    if (!wizardEditaContrato && !wizardData.fecha_alta_contrato && wizardData.fechas_trabajadas.length === 0) {
-                      sweetAlert.warning('Primero la fecha', 'Cargá la fecha de alta: de eso depende qué tipos de contrato se pueden usar.');
-                      return;
-                    }
-                    setTipoContratoOpen(true);
-                  }} />
+                  {/* El tipo va primero y las fechas después (27/11/2026): con fechas ya cargadas la lista se recorta a Servicios si hay un contrato de ARCA en ellas; sin fechas, se avisa y se rechaza al guardar. */}
+                  <CampoTipoContrato contratos={contratosFiltradosPorTramite} contratoId={wizardData.contrato_id} estados={allEstados} tramitePorContrato={tramitePorContrato} onAbrir={() => setTipoContratoOpen(true)} />
                   <ModalTipoContrato
                     abierto={tipoContratoOpen}
                     onCerrar={() => setTipoContratoOpen(false)}
@@ -5036,10 +4851,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         Con días sueltos no aplica: los días salen del calendario.
                       */
                       setWizardData((prev) => {
-                        const semana = contrato?.data?.modoFechas === 'dias' ? null : semanaDelTipoDeContrato(contrato?.data?.diasPorSemana, prev.dias_semana, prev.dias_rotativos);
+                        // Servicios por día (ver `rangoConDiasWizard`): desde/hasta y días de la semana, no el calendario; la semana del tipo sí aplica.
+                        const rango = contrato?.data?.modoFechas === 'dias' && tramiteSinConvenioNiCategoria(tramitePorContrato.get(contratoId));
+                        const semana = contrato?.data?.modoFechas === 'dias' && !rango ? null : semanaDelTipoDeContrato(contrato?.data?.diasPorSemana, prev.dias_semana, rango ? false : prev.dias_rotativos);
                         return {
                         ...prev,
                         ...(semana ? { dias_por_semana: semana.diasPorSemana, dias_semana: semana.dias } : {}),
+                        ...(rango ? { dias_rotativos: false, ...fechasDeRango(prev.fecha_alta_contrato, prev.fecha_baja_contrato, semana ? semana.dias : prev.dias_semana) } : {}),
                         contrato_id: contratoId,
                         contrato_frame_id: unicaPlantilla?._id || '',
                         nombre_contrato: unicaPlantilla?.name || '',
@@ -5166,6 +4984,80 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   return null;
                 })()}
 
+                {/*
+                  LAS FECHAS, DESPUÉS DEL TIPO DE CONTRATO (27/11/2026, como la Solicitud de Contratación de la app):
+                  de él depende si son días sueltos o un período, así que sin tipo no se eligen. Hasta el 27/11 iban
+                  antes (05/11: con un contrato de ARCA en esas fechas, sólo se ofrecen los de Servicios); esa regla
+                  sigue valiendo igual que en la app: recorta la lista cuando ya hay fechas, avisa debajo del tipo y
+                  rechaza al guardar (`contratoArcaNoPermitido`).
+              
+                  Cada par va en su PROPIA fila de dos columnas y no suelto en el grid de arriba: «Fecha baja»
+                  desaparece cuando el tipo es de tiempo indeterminado, y con los campos sueltos ese hueco corría a
+                  todos los de abajo.
+                */}
+                {!wizardData.contrato_id && contratos.length > 0 ? (
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                      Fechas del contrato <span className="text-red-500">*</span>
+                    </label>
+                    <p className="flex h-10 items-center rounded-lg border border-dashed border-gray-300 px-4 text-sm text-gray-400 dark:border-gray-600 dark:text-gray-500">Elegí primero el tipo de contrato: de él depende si se contrata por días sueltos o por período.</p>
+                  </div>
+                ) : porDiasSueltosWizard && !rangoConDiasWizard ? (
+                  /*
+                    DÍAS SUELTOS (ver `modoFechas` en el ABM del tipo de contrato): el mismo calendario
+                    que la solicitud de la app. Cada día marcado es una jornada; alta y baja son el
+                    primero y el último.
+                  */
+                  <div className="md:col-span-2 space-y-1.5">
+                    <CustomMultiDatePicker label="Días que trabaja" value={wizardData.fechas_trabajadas} onChange={(d: string | string[]) => elegirDiasSueltosWizard(Array.isArray(d) ? d : d ? [d] : [])} />
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                      {wizardData.fechas_trabajadas.length > 0 ? (
+                        <>
+                          <span className="font-semibold text-gray-700 dark:text-gray-200">
+                            {wizardData.fechas_trabajadas.length} {wizardData.fechas_trabajadas.length === 1 ? 'jornada' : 'jornadas'}
+                          </span>
+                          , entre el {new Date(`${wizardData.fechas_trabajadas[0]}T00:00:00`).toLocaleDateString('es-AR')} y el {new Date(`${wizardData.fechas_trabajadas[wizardData.fechas_trabajadas.length - 1]}T00:00:00`).toLocaleDateString('es-AR')}.
+                        </>
+                      ) : (
+                        <>«{contratoDelWizard?.name}» se contrata por día: marcá los días en el calendario. Cada uno es una jornada.</>
+                      )}
+                    </p>
+                  </div>
+                ) : (
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha alta contrato</label>
+                    <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_alta_contrato} onChange={(e) => cambiarFechaWizard('fecha_alta_contrato', e.target.value)} />
+                  </div>
+                  {!(contratos.find((c) => c._id === wizardData.contrato_id)?.data.esTiempoIndeterminado ?? false) && (
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                        Fecha baja contrato <span className="text-red-500">*</span>
+                      </label>
+                      <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => cambiarFechaWizard('fecha_baja_contrato', e.target.value)} />
+                    </div>
+                  )}
+                  {/*
+                    EL MOTIVO DE BAJA PARA ARCA NO VA ACÁ (27/11/2026, pedido del usuario): estuvo junto a la fecha de
+                    baja del 22/11 al 27/11, en Agregar Miembro y en Editar y Aprobar. Se carga desde Gestión › Bajas
+                    ARCA (`MotivoBajaModal`); este formulario no manda el campo y el server conserva el del contrato.
+                  */}
+                  {/* Servicios por día (ver `rangoConDiasWizard`): las jornadas salen del desde/hasta y de los días de la semana del panel del turno. */}
+                  {rangoConDiasWizard && (
+                    <p className="md:col-span-2 -mt-2 text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                      «{contratoDelWizard?.name}» se contrata por día: cada día de la semana que trabaja entre el desde y el hasta es una jornada. Los días se eligen en «Cómo trabaja en este turno».{' '}
+                      {wizardData.fechas_trabajadas.length > 0 ? (
+                        <span className="font-semibold text-gray-700 dark:text-gray-200">
+                          {wizardData.fechas_trabajadas.length} {wizardData.fechas_trabajadas.length === 1 ? 'jornada' : 'jornadas'}, entre el {new Date(`${wizardData.fechas_trabajadas[0]}T00:00:00`).toLocaleDateString('es-AR')} y el {new Date(`${wizardData.fechas_trabajadas[wizardData.fechas_trabajadas.length - 1]}T00:00:00`).toLocaleDateString('es-AR')}.
+                        </span>
+                      ) : wizardData.fecha_alta_contrato && wizardData.fecha_baja_contrato ? (
+                        <span className="font-medium text-amber-600 dark:text-amber-400">Ningún día de la semana elegido cae entre esas fechas.</span>
+                      ) : null}
+                    </p>
+                  )}
+                </div>
+                )}
+
                 {/* La forma de pago es del tipo de contrato: acá sólo se avisa si pide datos bancarios que la persona no tiene. */}
                 {rechazoFormaPago && (
                   <div className="md:col-span-2">
@@ -5175,6 +5067,189 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     </p>
                   </div>
                 )}
+                </div>
+
+                {/* Paso 3: el resto, apagado hasta que estén el tipo de contrato y las fechas (el navegador propaga el `disabled` a todos los controles). */}
+                {!paso2Completo && (
+                  <p className="rounded-lg border border-dashed border-gray-300 p-3 text-center text-xs text-gray-500 dark:border-gray-600 dark:text-gray-400">
+                    {!wizardData.contrato_id && contratos.length > 0 ? 'Elegí el tipo de contrato y las fechas para completar el resto: rol, empresa, área y turno, categoría e importes.' : porDiasSueltosWizard && !rangoConDiasWizard ? 'Marcá los días que trabaja para completar el resto.' : indeterminadoWizard ? 'Cargá la fecha de alta para completar el resto.' : 'Cargá la fecha de alta y la de baja para completar el resto.'}
+                  </p>
+                )}
+                <fieldset disabled={!paso2Completo} className="m-0 min-w-0 border-0 p-0 disabled:opacity-50">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/*
+                  EL DESPLEGABLE OFRECE LOS OFICIOS DE LA PERSONA; EL BOTÓN, TODOS LOS DEMÁS.
+
+                  La lista corta es la correcta el 90% de las veces y por eso sigue siendo la que se
+                  ve. Pero cuando se contrata a alguien para algo que no figura en su ficha —porque
+                  nunca lo hizo acá, o porque quedó incompleta— antes no había salida: el select no
+                  lo ofrecía y el wizard exige uno. Se elegía cualquiera con tal de avanzar.
+
+                  Lo que se elige por el buscador se le AGREGA a la ficha al guardar: que además sea
+                  Utilero es un dato de la persona, no de este contrato, y la próxima vez tiene que
+                  estar en la lista corta.
+                */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                    Role Frame a Desempeñar <span className="text-red-500">*</span>
+                  </label>
+                  {/*
+                    LA MISMA EXPERIENCIA QUE EN EL MÓVIL (02/11/2026): los oficios de la persona uno debajo del
+                    otro, se marca UNO —con el que se la contrata acá—; el tacho, afuera de la opción, lo saca de
+                    las opciones de este alta (con confirmación); «Otro rol» suma uno del catálogo.
+                  */}
+                  {rolesFrameOfrecidos.length === 0 ? (
+                    <p className="ml-1 text-xs text-gray-400">La persona no tiene roles en su ficha: elegí uno con «Otro rol».</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {rolesFrameOfrecidos.map((rf) => {
+                        const valor = String(rf.data?.rol?.id || '');
+                        const elegido = !!valor && String(wizardData.rol_frame_id) === valor;
+                        const nuevo = !userAssignedRoleFrames.some((p) => p._id === rf._id);
+                        return (
+                          <div key={rf._id} className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => !elegido && setWizardData((prev) => ({ ...prev, rol_frame_id: valor, categoria_sat_id: '' }))}
+                              aria-pressed={elegido}
+                              className={`flex flex-1 items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${elegido ? 'border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-500/20 dark:bg-blue-900/20 dark:text-blue-300' : 'border-gray-300 text-gray-700 hover:border-blue-400 dark:border-gray-600 dark:text-gray-200'}`}
+                            >
+                              <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${elegido ? 'border-blue-600 bg-blue-600' : 'border-gray-400'}`}>{elegido && <span className="h-1.5 w-1.5 rounded-full bg-white" />}</span>
+                              <span className="flex-1 truncate font-medium">{rf.name}</span>
+                              {nuevo && <span className="shrink-0 rounded-full border border-amber-300 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-600 dark:border-amber-700 dark:text-amber-400">nuevo</span>}
+                            </button>
+                            <button
+                              type="button"
+                              title={`Quitar ${rf.name} de las opciones`}
+                              onClick={async () => {
+                                const r: any = await sweetAlert.confirm('¿Quitar el rol?', `«${rf.name}» deja de ofrecerse en este alta. La ficha de la persona no cambia.`, 'Sí, quitar');
+                                if (!r?.isConfirmed) return;
+                                setRolesQuitados((l) => [...l, rf._id]);
+                                if (rolFrameAgregado?._id === rf._id) setRolFrameAgregado(null);
+                                if (elegido) setWizardData((prev) => ({ ...prev, rol_frame_id: '', categoria_sat_id: '' }));
+                              }}
+                              className="shrink-0 rounded-lg border border-gray-300 p-2 text-gray-400 transition-colors hover:border-red-300 hover:text-red-500 dark:border-gray-600"
+                            >
+                              <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <button type="button" onClick={() => setRolFrameBuscadorOpen(true)} title="Buscar otro rol empresa" className="ml-1 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400">
+                    <FontAwesomeIcon icon={faPlus} className="h-3 w-3" /> Otro rol
+                  </button>
+                  {rolFrameAgregado && !userAssignedRoleFrames.some((rf) => rf._id === rolFrameAgregado._id) && <p className="ml-1 text-[11px] text-amber-600 dark:text-amber-400">«{rolFrameAgregado.name}» no estaba en su ficha: se le agrega al guardar.</p>}
+                </div>
+
+                {/* Las dos empresas, una debajo de la otra al lado del rol: se eligen de la misma lista y se confunden si están separadas. */}
+                <div className="space-y-4">
+                {/*
+                  LA EMPRESA VA ANTES QUE EL CONVENIO, Y ESO NO ES ORDEN ESTÉTICO.
+
+                  La cadena es empresa → convenios registrados por ese CUIT → categorías de esos
+                  convenios. Estaba 200 líneas más abajo, así que quien cargaba de arriba hacia
+                  abajo llegaba a Convenio sin empresa elegida y se encontraba el select apagado
+                  diciéndole que eligiera algo que todavía no había aparecido en pantalla.
+                */}
+                {/*
+                  EL «SELECCIONA EMPRESA…» SÓLO CUANDO HAY ALGO QUE ELEGIR.
+
+                  Con una sola empresa configurada en el proyecto, la opción vacía era la única forma
+                  de equivocarse: el contrato quedaba sin empleadora por no haber desplegado una lista
+                  de un elemento. Se deja igual si lo guardado no está en la lista —el proyecto cambió
+                  sus empresas después—, porque ahí el campo sí está diciendo algo raro y esconderlo
+                  detrás de una única opción haría creer que quedó elegida la que se ve.
+                */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 ml-1">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Empresa del Contrato</label>
+                    <button type="button" onClick={() => setShowEmpresasInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿De dónde salen estas empresas?" aria-label="Información sobre las empresas del contrato y del release">
+                      <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <select className="input-field w-full" value={wizardData.empresaContratoId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaContratoId: e.target.value }))}>
+                    {(contratoEmpresas.length !== 1 || !contratoEmpresas.some((e) => e.id === wizardData.empresaContratoId)) && <option value="">{contratoEmpresas.length ? 'Selecciona empresa...' : 'No hay empresas cargadas'}</option>}
+                    {contratoEmpresas.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Define qué convenios y categorías se pueden elegir abajo.</p>
+                </div>
+
+                {/* Las dos empresas juntas: se eligen de la misma lista y se confunden si están separadas. */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 ml-1">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Empresa del Release</label>
+                    <button type="button" onClick={() => setShowEmpresasInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿De dónde salen estas empresas?" aria-label="Información sobre las empresas del contrato y del release">
+                      <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <select className="input-field w-full" value={wizardData.empresaReleaseId} onChange={(e) => setWizardData((prev) => ({ ...prev, empresaReleaseId: e.target.value }))}>
+                    {(releaseEmpresas.length !== 1 || !releaseEmpresas.some((e) => e.id === wizardData.empresaReleaseId)) && <option value="">{releaseEmpresas.length ? 'Selecciona empresa...' : 'No hay empresas cargadas'}</option>}
+                    {releaseEmpresas.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                </div>
+
+                {/*
+                  LA MODALIDAD (Presencial, Remoto…), del ABM de Usuarios › Modalidades. Viene elegida la
+                  por defecto; una inactiva sólo aparece si es la que este contrato ya tenía.
+                */}
+                {modalidades.length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Modalidad</label>
+                    <select className="input-field w-full" value={wizardData.modalidadId || modalidadPorDefectoId} onChange={(e) => setWizardData((prev) => ({ ...prev, modalidadId: e.target.value }))}>
+                      {modalidades
+                        .filter((m) => m.activo !== false || String(m._id) === wizardData.modalidadId)
+                        .map((m) => (
+                          <option key={m._id} value={m._id}>
+                            {m.name}
+                            {m.esDefault === true ? ' (por defecto)' : ''}
+                            {m.activo === false ? ' (inactiva)' : ''}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
+
+                {/*
+                  EL PUESTO DESEMPEÑADO, siempre cargado con el que le toca por el rol, la categoría,
+                  el convenio y la empleadora elegidos arriba. El alta masiva URGENTE lo exige, y acá
+                  no existía: se descubría que faltaba recién al generar el archivo. Cambiarlo vale
+                  sólo para este contrato; sin tocarlo, el contrato hereda y no se guarda nada.
+                */}
+                <CampoPuestoConDefaultDelServer
+                  rolFrameId={wizardData.rol_frame_id}
+                  categoriaSatId={wizardData.categoria_sat_id}
+                  empresaId={wizardData.empresaContratoId}
+                  valor={wizardData.puestoDesempenado}
+                  onCambiar={(codigo) => setWizardData((prev) => ({ ...prev, puestoDesempenado: codigo }))}
+                />
+
+                {/* La sede, debajo de la empresa: sale de las del proyecto donde trabaja esa empresa. */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sede</label>
+                  <select className="input-field w-full" value={wizardData.sede_id} onChange={(e) => setWizardData((prev) => ({ ...prev, sede_id: e.target.value }))} disabled={opcionesSedeWizard.length === 0 || !!sedeFijadaPorArea}>
+                    {(opcionesSedeWizard.length === 0 || !wizardData.sede_id) && <option value="">{opcionesSedeWizard.length ? 'Elegí la sede...' : 'El proyecto no tiene sedes cargadas'}</option>}
+                    {opcionesSedeWizard.map((s) => (
+                      <option key={s.id} value={String(s.id)}>
+                        {s.nombre}
+                        {s.fuera ? ' (no es del proyecto)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                    {sedeFijadaPorArea ? `La fija el área elegida (${nombreDeSedeId(sedeFijadaPorArea)}). Para cambiarla, elegí el área en otra sede.` : 'Las sedes del proyecto. Viene elegida la principal.'}
+                  </p>
+                </div>
 
                 {/* --- CONFIGURACIÓN POR ÁREA (visual toggle) --- */}
                 <div className="md:col-span-2 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-700">
@@ -5813,6 +5888,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     </div>
                   )}
                 </div>
+                </div>
+                </fieldset>
               </div>
             }
 

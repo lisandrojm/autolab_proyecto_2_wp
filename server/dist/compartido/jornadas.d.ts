@@ -56,6 +56,13 @@ export declare const diasCorridos: (desde?: string, hasta?: string) => number | 
  */
 export declare const jornadasDelCalendario: (desde: string | undefined, hasta: string | undefined, dias: number[]) => number | null;
 /**
+ * Los días ("YYYY-MM-DD") del período en que caen los días de semana marcados, en orden. Es la lista
+ * que `jornadasDelCalendario` cuenta: la usa Servicios por día (27/11/2026), donde el contrato se pide
+ * con desde/hasta y días de la semana y guarda igual la lista exacta de días, una jornada cada uno.
+ * `[]` si no hay período válido o no hay días marcados.
+ */
+export declare const fechasDelCalendario: (desde: string | undefined, hasta: string | undefined, dias: number[]) => string[];
+/**
  * LAS JORNADAS QUE DA EL CALENDARIO, según cómo se pide el contrato:
  *  - por DÍAS SUELTOS («Jornada»): los días marcados, uno por jornada. NO los días de la semana que
  *    caen en el período: «el martes 1 y el martes 15» son 2 jornadas, aunque entre los dos haya otro
