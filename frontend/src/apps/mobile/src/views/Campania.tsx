@@ -8,6 +8,7 @@ import { contarDiasTramo, erroresDePropuesta, erroresDelTramo, minimoDelTramo } 
 import { TEXTO_ESTADO_VACACION, encabezado, erroresDelTramoEnPantalla, motivoDelBoton, parrafoDeInvitacion, pasoDe, progreso, puedeAgregarTramo, reglaDelPaso, situacionDe, textoDeFechas, textoDeRegreso, textoDelTramo, type DatosDePantalla } from "@compartido/vacaciones/pantallaEmpleado";
 import { getImageUrl } from "../../../../utils/imageHelpers";
 import SectionHeader from "../components/SectionHeader";
+import MenuDeTarjetas from "../components/MenuDeTarjetas";
 import CalendarioVacaciones, { type ModoCalendario } from "../components/CalendarioVacaciones";
 import { useVacations } from "../hooks/useVacations";
 import { useProfile } from "../hooks/useProfile";
@@ -26,8 +27,9 @@ import { ViewType } from "../types";
  * La empresa invita a elegir las vacaciones de la temporada dentro de la ventana, con fecha límite. Esta
  * pantalla va por pasos, con una sola cosa protagonista en cada uno (las decisiones están en
  * `@compartido/vacaciones/pantallaEmpleado`, probadas):
- *   · A — invitada: qué le toca y hasta cuándo, y dos acciones: «Solicitar vacaciones» (registra el acuse de
- *     la invitación como acto de la persona y pasa a elegir) y «Mis solicitudes y saldo».
+ *   · A — invitada: qué le toca y hasta cuándo, y dos tarjetas (las mismas del menú de cada sección, pedido
+ *     del usuario): «Mis solicitudes y saldo» y «Solicitar vacaciones» (registra el acuse de la invitación
+ *     como acto de la persona y pasa a elegir).
  *   · B — eligiendo: el avance en días, la regla en una línea, los tramos como tarjetas (editar y borrar,
  *     también con uno solo) y el botón de enviar fijo abajo, con el motivo neutro mientras no se pueda.
  *   · C — enviada, otorgada, asignada por la empresa o vencida: el resumen, quién la tiene y qué sigue; el
@@ -43,7 +45,6 @@ const INFO =
 
 const caja = "rounded-xl border bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/70";
 const botonPrimario = "flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white shadow-sm active:scale-[0.99] disabled:opacity-50";
-const botonSecundario = "flex w-full items-center justify-between rounded-xl border bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm active:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:active:bg-slate-800";
 const iso = (v: unknown): string => String(v ?? "").slice(0, 10);
 const colorDeEstado = (status: string): string => (["approved", "delivered"].includes(status) ? "text-emerald-600 dark:text-emerald-400" : ["rejected", "cancelled"].includes(status) ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400");
 const TRAMO_VACIO: Tramo = { desde: "", hasta: "" };
@@ -183,15 +184,9 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
   const erroresDelCalendario = kEnEdicion >= 0 ? erroresDelTramo(erroresDeLaPropuesta, kEnEdicion).map((e) => e.mensaje) : [];
   const situacion = situacionDe(pantalla);
 
-  const irAMisSolicitudes = (
-    <button type="button" onClick={() => onNavigate("vacations")} className={botonSecundario}>
-      <span className="flex items-center gap-2">
-        <FontAwesomeIcon icon={faUmbrellaBeach} className="text-primary opacity-70" />
-        Mis solicitudes y saldo
-      </span>
-      <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-slate-400" />
-    </button>
-  );
+  // Las acciones, como las tarjetas del menú de cada sección (pedido del 27/11/2026).
+  const misSolicitudes = { id: "vacations" as const, label: "Mis solicitudes y saldo", icon: faUmbrellaBeach };
+  const elegir = (id: "vacations" | "solicitar") => (id === "vacations" ? onNavigate("vacations") : void solicitar());
 
   // Lo propuesto o lo asignado, con su estado (A: lo que quedó de una propuesta rechazada en parte; C: la propuesta).
   const listaDeVacaciones = datos.vacaciones.length > 0 && (
@@ -250,11 +245,7 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
             </div>
           )}
 
-          <button type="button" disabled={!datos.puedeProponer || enviando} onClick={solicitar} className={botonPrimario}>
-            <FontAwesomeIcon icon={enviando ? faClock : faCalendarAlt} />
-            Solicitar vacaciones
-          </button>
-          {irAMisSolicitudes}
+          <MenuDeTarjetas opciones={[misSolicitudes, { id: "solicitar", label: "Solicitar vacaciones", icon: faCalendarAlt, disabled: !datos.puedeProponer || enviando }]} onElegir={elegir} />
         </div>
       )}
 
@@ -372,7 +363,7 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
             </div>
           )}
 
-          {irAMisSolicitudes}
+          <MenuDeTarjetas opciones={[misSolicitudes]} onElegir={elegir} />
         </div>
       )}
 
