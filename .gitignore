@@ -14,7 +14,7 @@ coverage
 *.csr
 *.pem
 *.p12
-afip
+/afip/
 
 # Perfil de Chrome dedicado a ARCA (`npm run chrome-arca`). Adentro vive una SESIÓN de clave fiscal:
 # nunca se commitea. Es local y descartable — se borra y se vuelve a loguear.
