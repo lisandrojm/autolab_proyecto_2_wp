@@ -93,7 +93,45 @@ async function pedirPdf(url: string, body: unknown): Promise<Blob> {
   }
 }
 
+/** Las automatizaciones de contratación (27/11/2026): generación y envío de documentos, y validación del CUIT. */
+export type ClaveAutomatizacion = "generacionDocumentos" | "validacionCuit";
+
+export interface ItemDeCorrida {
+  persona: string;
+  proyecto: string;
+  motivo: string;
+}
+
+export interface EstadoAutomatizacion {
+  titulo: string;
+  activa: boolean;
+  cadaMinutos: number;
+  ultimaCorridaAt: string | null;
+  /** El resumen de la última corrida (los contadores dependen de cuál es; ver `AutomatizacionCard`). */
+  ultimaCorrida: any | null;
+  ultimoError: string;
+  proximaAt: string | null;
+  enCurso: boolean;
+  frecuencias: number[];
+}
+
 export const firmaDigitalAPI = {
+  async automatizacion(): Promise<Record<ClaveAutomatizacion, EstadoAutomatizacion>> {
+    const { data } = await axios.get("/firma-digital/automatizacion");
+    return data;
+  },
+
+  async setAutomatizacion(clave: ClaveAutomatizacion, cambios: Partial<{ activa: boolean; cadaMinutos: number }>): Promise<EstadoAutomatizacion> {
+    const { data } = await axios.post("/firma-digital/automatizacion", { clave, ...cambios });
+    return data;
+  },
+
+  /** «Correr ahora»: espera a que termine la corrida (puede tardar: un PDF por documento). */
+  async correrAutomatizacion(clave: ClaveAutomatizacion): Promise<EstadoAutomatizacion & { resumen: any; error: string }> {
+    const { data } = await axios.post("/firma-digital/automatizacion/correr", { clave }, { timeout: 600000 });
+    return data;
+  },
+
   async config(): Promise<FirmaDigitalConfig> {
     const { data } = await axios.get("/firma-digital/config");
     return data;

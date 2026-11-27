@@ -49,6 +49,8 @@ import { EstadoObraSocial } from './CeldaObraSocial';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, cuitEsValido, fmtCuit, cuitDisplay, noPoseeCuit } from './ConstanciaBulk';
 import { NombreArca, estadoNombreArca } from '../arca/NombreArca';
 import { sweetAlert } from '../../utils/sweetAlert';
+import { AutomatizacionCard } from './AutomatizacionCard';
+import { altaVaAFirma as altaVaAFirmaCompartido, contratoGenerado as contratoGeneradoCompartido, contratoRequiereFirma as contratoRequiereFirmaCompartido, contratoRequiereFirmaRelease as contratoRequiereFirmaReleaseCompartido, contratoRequiereFirmaAlta as contratoRequiereFirmaAltaCompartido, pendienteDeFirma, PendienteDeFirma, releaseRequiereFirma as releaseRequiereFirmaCompartido, releasesDeLaFila as releasesDeLaFilaCompartido, releasesGenerados as releasesGeneradosCompartido, tipoDeLaFila as tipoDeLaFilaCompartido } from '@compartido/pendienteDeFirma';
 import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
 import { CLASE_SALIENDO, estiloDeSalida, useSalidaDeFilas } from '../ui/salidaDeFilas';
 import { arcaDefaultsAPI, ArcaDefaults, CLAVE_CACHE_DEFAULTS_ARCA } from "../../api/arcaDefaults";
@@ -2140,6 +2142,8 @@ export const ContractBulkAfipTab: React.FC<{
 
       {/* Constancia de CUIT: worklist (qué falta pedirle a ARCA). */}
 
+      {/* La automatización de esta variante (27/11/2026): valida el CUIT en ARCA sola. */}
+      {filterTipo === 'constancia_cuit' && !loading && <AutomatizacionCard clave="validacionCuit" onCorrida={() => void recargarDespidiendo()} />}
       {filterTipo === 'constancia_cuit' && !loading && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -2950,145 +2954,44 @@ const GenerarMenu: React.FC<{ empresas: EmpresaOption[]; onGenerar: (empresaId?:
   );
 };
 
-/** Si el contrato ya tiene todo lo que se puede generar de este tipo — usado para decidir si la fila
- *  se puede seleccionar para "Enviar a firmar" (hacen falta AMBOS: contrato y release(s), de los que
- *  efectivamente apliquen — ver `contratoRequiereFirma`/`releaseRequiereFirma` más abajo). */
-const contratoGenerado = (r: ContractOverviewRow): boolean => !!r.firmaGeneradoAt;
-const releasesGenerados = (r: ContractOverviewRow, releasesAplicables: Release[]): boolean => {
-  if (releasesAplicables.length === 0) return true;
-  if (!r.firmaReleasesGeneradoAt) return false;
-  // Un release custom entra al grupo cuando se le escribe el texto: si se sumó después de generar, el
-  // grupo generado ya no es el que se tiene que enviar.
-  const conPdf = new Set((r.firmaReleases || []).map((f) => f.releaseId));
-  return releasesAplicables.filter((a) => a.esCustom).every((a) => conPdf.has(a._id));
-};
-
-/** Si el Tipo de Contrato de la plantilla (populado en `template.contratoId`) tiene tildado "Se envía
- *  a firmar" — sin el dato poblado, se asume que sí (comportamiento previo a que existiera el campo). */
-const contratoRequiereFirma = (template: ContratoFrameItem | null): boolean => {
-  const contratoId = template?.contratoId;
-  return typeof contratoId === 'object' && contratoId ? contratoId.data?.requiereFirma !== false : true;
-};
-
-/** «Se envía a firmar el release» del Tipo de Contrato. Sin el dato, sí (como antes de existir). */
-const contratoRequiereFirmaRelease = (template: ContratoFrameItem | null): boolean => {
-  const contratoId = template?.contratoId;
-  return typeof contratoId === 'object' && contratoId ? contratoId.data?.requiereFirmaRelease !== false : true;
-};
-
+/*
+  LA REGLA DE QUÉ LE FALTA A UNA FILA PARA IR A LA FIRMA vive en `@compartido/pendienteDeFirma` desde el
+  27/11/2026: la comparte con la GENERACIÓN AUTOMÁTICA del server (`services/automatizacionesContratacion`),
+  para que los botones de esta bandeja y el reloj decidan exactamente lo mismo. Acá quedan los nombres de
+  siempre, delegando; `tipos` ya no hace falta (el tipo de la fila sale del contrato o de su plantilla).
+*/
+const contratoGenerado = (r: ContractOverviewRow): boolean => contratoGeneradoCompartido(r);
+const releasesGenerados = (r: ContractOverviewRow, releasesAplicables: Release[]): boolean => releasesGeneradosCompartido(r, releasesAplicables);
+/** «Se envía a firmar» del Tipo de Contrato de la plantilla. Sin el dato populado, sí (como antes de existir el campo). */
+const contratoRequiereFirma = (template: ContratoFrameItem | null): boolean => contratoRequiereFirmaCompartido(template);
+/** «Se envía a firmar el release» del Tipo de Contrato. Sin el dato, sí. */
+const contratoRequiereFirmaRelease = (template: ContratoFrameItem | null): boolean => contratoRequiereFirmaReleaseCompartido(template);
 /** «Se envía a firmar el alta de ARCA» del Tipo de Contrato. Sin el dato, sí. */
-const contratoRequiereFirmaAlta = (template: ContratoFrameItem | null): boolean => {
-  const contratoId = template?.contratoId;
-  return typeof contratoId === 'object' && contratoId ? contratoId.data?.requiereFirmaAlta !== false : true;
-};
-
-/**
- * LOS RELEASES QUE VAN A FIRMA PARA ESTA FILA: los que su tipo de release manda a firmar, y sólo si el
- * Tipo de Contrato también lo pide («Se envía a firmar el release»). Tienen que decir que sí los dos.
- */
-const releasesDeLaFila = (template: ContratoFrameItem | null, releasesQueFirman: Release[], record: ContractOverviewRow, tipos?: ContratoItem[], todosLosReleases?: Release[]): Release[] =>
-  contratoRequiereFirmaRelease(template) ? releasesDelTipo(releasesQueFirman, tipoDeLaFila(record, template, tipos), todosLosReleases).filter((r) => !r.esCustom || textoCustomUsable(textoCustomDeRelease(record.contenidoCustomReleases, r._id))) : [];
-
-/**
- * EL TIPO DE CONTRATO DE LA FILA, para saber qué releases le tocan («Plantilla de Release asignada»):
- * el que guarda el contrato (`tipoContratoId`) y, si no lo guarda, el principal de su plantilla.
- */
-const tipoDeLaFila = (record: ContractOverviewRow, template: ContratoFrameItem | null, tipos?: ContratoItem[]): { _id?: string } | null => {
-  const propio = record.tipoContratoId && tipos ? tipos.find((t) => t._id === record.tipoContratoId) : undefined;
-  if (propio) return propio;
-  if (record.tipoContratoId) return { _id: record.tipoContratoId };
-  const principal = template?.contratoId;
-  return typeof principal === 'object' && principal ? { _id: String((principal as { _id?: string })._id || '') } : typeof principal === 'string' ? { _id: principal } : null;
-};
-
+const contratoRequiereFirmaAlta = (template: ContratoFrameItem | null): boolean => contratoRequiereFirmaAltaCompartido(template);
+/** El tipo de contrato de la fila: el que guarda el contrato y, si no, el principal de su plantilla. */
+const tipoDeLaFila = (record: ContractOverviewRow, template: ContratoFrameItem | null, _tipos?: ContratoItem[]): { _id?: string } | null => tipoDeLaFilaCompartido(record, template);
+/** Los releases que van a firma para esta fila (los que su tipo manda a firmar y el Tipo de Contrato pide; el custom sólo con texto). */
+const releasesDeLaFila = (template: ContratoFrameItem | null, releasesQueFirman: Release[], record: ContractOverviewRow, _tipos?: ContratoItem[], todosLosReleases?: Release[]): Release[] =>
+  releasesDeLaFilaCompartido(template, releasesQueFirman, record, todosLosReleases);
 /**
  * LOS RELEASES CUSTOM QUE ESTA FILA PODRÍA LLEVAR (decisión del 13/10/2026): no se exigen. Un release
  * custom va a firma sólo en el trámite que tenga su texto escrito (`releasesDeLaFila`); acá están todos,
  * con texto o sin, para ofrecer escribirlo.
  */
-const releasesCustomDeLaFila = (template: ContratoFrameItem | null, releasesQueFirman: Release[], record?: ContractOverviewRow, tipos?: ContratoItem[], todosLosReleases?: Release[]): Release[] =>
-  contratoRequiereFirmaRelease(template) ? releasesDelTipo(releasesQueFirman, record ? tipoDeLaFila(record, template, tipos) : null, todosLosReleases).filter((r) => r.esCustom) : [];
-
+const releasesCustomDeLaFila = (template: ContratoFrameItem | null, releasesQueFirman: Release[], record?: ContractOverviewRow, _tipos?: ContratoItem[], todosLosReleases?: Release[]): Release[] =>
+  contratoRequiereFirmaRelease(template) ? releasesDelTipo(releasesQueFirman, record ? tipoDeLaFila(record, template) : null, todosLosReleases).filter((r) => r.esCustom) : [];
 /** El alta de ARCA va a firma: trámite de alta temprana, documento cargado y el tipo lo pide. */
-const altaVaAFirma = (record: ContractOverviewRow, template: ContratoFrameItem | null, tipo?: TipoImpositivo): boolean => tipo === 'alta_temprana_afip' && !!record.altaDocumentoUrl && contratoRequiereFirmaAlta(template);
-
+const altaVaAFirma = (record: ContractOverviewRow, template: ContratoFrameItem | null, tipo?: TipoImpositivo): boolean => altaVaAFirmaCompartido(record, template, tipo);
 /** Mismo criterio que `contratoRequiereFirma`, para el Tipo de Release (`release.releaseTipoId`). */
-const releaseRequiereFirma = (release: Release): boolean => {
-  const tipo = release.releaseTipoId;
-  return typeof tipo === 'object' && tipo ? tipo.requiereFirma !== false : true;
-};
+const releaseRequiereFirma = (release: Release): boolean => releaseRequiereFirmaCompartido(release);
+/** Si la fila tiene algo para enviar y ya está listo (generado lo que aplica y todavía no enviado). */
+const calcularEnviable = (record: ContractOverviewRow, contratoFrames: ContratoFrameItem[], releasesQueFirman: Release[], tipo?: TipoImpositivo, _tipos?: ContratoItem[], todosLosReleases?: Release[]): boolean =>
+  pendienteDeFirma(record, contratoFrames, releasesQueFirman, tipo, todosLosReleases).enviable;
 
-/**
- * Si la fila tiene ALGO para enviar a firmar (el Contrato y/o el/los Release(s) que efectivamente
- * apliquen, según "Se envía a firmar") y ya está listo — es decir, generado lo que aplica y todavía
- * no enviado. Si NI el Contrato NI ningún Release de este contrato requieren firma, no hay nada que
- * mandar y la fila nunca se habilita.
- */
-const calcularEnviable = (record: ContractOverviewRow, contratoFrames: ContratoFrameItem[], releasesQueFirman: Release[], tipo?: TipoImpositivo, tipos?: ContratoItem[], todosLosReleases?: Release[]): boolean => {
-  if (record.firmaEnviadaAt) return false;
-  const template = findTemplate(record as unknown as Contract, contratoFrames);
-  const contratoAplica = contratoRequiereFirma(template);
-  const releasesAplicables = releasesDeLaFila(template, releasesQueFirman, record, tipos, todosLosReleases);
-  const contratoOk = !contratoAplica || contratoGenerado(record);
-  const releaseOk = releasesAplicables.length === 0 || releasesGenerados(record, releasesAplicables);
-  // El alta ya está cargada (no se genera acá): si es lo único que va a firma, alcanza con ella.
-  const algoAplica = contratoAplica || releasesAplicables.length > 0 || altaVaAFirma(record, template, tipo);
-  return algoAplica && contratoOk && releaseOk;
-};
-
-/**
- * LO QUE LE FALTA A UNA FILA PARA PODER ENVIARSE, y si se puede generar sin preguntar nada.
- *
- * «Seleccionar todo» marca también las filas que todavía no tienen el contrato o el release generados,
- * y «Generar contratos» / «Generar releases» los generan en lote, de todas las páginas (pedido del
- * 19/10/2026), con la empresa que la fila ya tiene (o la única del proyecto). Lo que no se puede generar
- * sin una decisión —el proyecto tiene varias empresas y la fila no eligió, un contrato custom sin texto,
- * una plantilla vacía— queda afuera y se informa con su motivo.
- */
-interface PendienteDeFila {
-  /** La fila tiene algo que mandar a firma (contrato, release o alta). Sin esto no se puede marcar. */
-  algoAplica: boolean;
-  template: ContratoFrameItem | null;
-  releasesAplicables: Release[];
-  faltaContrato: boolean;
-  faltaRelease: boolean;
-  /** Con qué empresa generar (`undefined` = la que elija el server: la primera del proyecto). */
-  empresaContrato?: string;
-  empresaRelease?: string;
-  /** Por qué no se puede generar solo el contrato / el release. Vacío = se puede (o no hace falta). */
-  motivoContrato: string;
-  motivoRelease: string;
-  /** Los dos juntos, para el título de la casilla. */
-  motivo: string;
-}
-
-const empresaParaGenerar = (guardada: string | undefined, opciones: { id: string }[] | undefined): { id?: string; falta: boolean } => {
-  if (guardada) return { id: guardada, falta: false };
-  const lista = opciones || [];
-  if (lista.length <= 1) return { id: lista[0]?.id, falta: false };
-  return { falta: true };
-};
-
-const pendienteDeFila = (record: ContractOverviewRow, contratoFrames: ContratoFrameItem[], releasesQueFirman: Release[], tipo?: TipoImpositivo, tipos?: ContratoItem[], todosLosReleases?: Release[]): PendienteDeFila => {
-  const template = findTemplate(record as unknown as Contract, contratoFrames);
-  const contratoAplica = contratoRequiereFirma(template);
-  const releasesAplicables = releasesDeLaFila(template, releasesQueFirman, record, tipos, todosLosReleases);
-  const algoAplica = contratoAplica || releasesAplicables.length > 0 || altaVaAFirma(record, template, tipo);
-  const faltaContrato = contratoAplica && !contratoGenerado(record);
-  const faltaRelease = releasesAplicables.length > 0 && !releasesGenerados(record, releasesAplicables);
-  const empC = empresaParaGenerar(record.empresaContratoId, record.contratoEmpresas);
-  const empR = empresaParaGenerar(record.empresaReleaseId, record.releaseEmpresas);
-  let motivoContrato = '';
-  if (faltaContrato) {
-    if (!template) motivoContrato = 'No tiene plantilla de contrato';
-    else if (template.esCustom && !textoCustomUsable(record.contenidoCustomContrato)) motivoContrato = 'Contrato custom sin texto escrito';
-    else if (!template.esCustom && !templateHasContent(template)) motivoContrato = 'La plantilla del contrato no tiene contenido';
-    else if (empC.falta) motivoContrato = 'Falta elegir la empresa del contrato';
-  }
-  const motivoRelease = faltaRelease && empR.falta ? 'Falta elegir la empresa del release' : '';
-  const motivo = [motivoContrato, motivoRelease].filter(Boolean).join(' · ');
-  return { algoAplica, template, releasesAplicables, faltaContrato, faltaRelease, empresaContrato: empC.id, empresaRelease: empR.id, motivoContrato, motivoRelease, motivo };
-};
+/** Lo que le falta a una fila para poder enviarse, y si se puede generar sin preguntar nada (ver `pendienteDeFirma`). */
+type PendienteDeFila = PendienteDeFirma<ContratoFrameItem, Release>;
+const pendienteDeFila = (record: ContractOverviewRow, contratoFrames: ContratoFrameItem[], releasesQueFirman: Release[], tipo?: TipoImpositivo, _tipos?: ContratoItem[], todosLosReleases?: Release[]): PendienteDeFila =>
+  pendienteDeFirma(record, contratoFrames, releasesQueFirman, tipo, todosLosReleases);
 
 /**
  * Celda "Contrato" de la pestaña Firma digital: botón "Generar" independiente (con menú de empresa si
@@ -4003,6 +3906,9 @@ export const ContractBulkFirmaTab: React.FC<{
           />
         </div>
       </div>
+
+      {/* La automatización de esta bandeja (27/11/2026): genera y envía sola lo que llega acá. */}
+      {!loading && <AutomatizacionCard clave="generacionDocumentos" onCorrida={() => load(true)} />}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">

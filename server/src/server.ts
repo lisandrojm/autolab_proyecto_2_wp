@@ -2,6 +2,7 @@
 // Trigger reload 2
 import { enContexto } from "./utils/contextoAuditoria.js";
 import { initTransicionEstadoScheduler } from "./services/transicionEstadoContratos.js";
+import { initAutomatizacionesContratacionScheduler } from "./services/automatizacionesContratacion/cronService.js";
 import { initCambioTurnoScheduler } from "./services/cambioTurnoCronService.js";
 import "./config/env.js";
 import { env } from "./config/env.js";
@@ -556,6 +557,13 @@ connectDB()
         enContexto({ origen: "sistema", detalle: "tarea initTransicionEstadoScheduler" }, () => initTransicionEstadoScheduler());
       } catch (error) {
         console.error("❌ Failed to initialize transicion-estado scheduler:", error);
+      }
+
+      // Automatizaciones de contratación (27/11/2026): generación y envío de documentos, y validación del CUIT (sólo tenants que las prendieron).
+      try {
+        enContexto({ origen: "sistema", detalle: "tarea initAutomatizacionesContratacionScheduler" }, () => initAutomatizacionesContratacionScheduler());
+      } catch (error) {
+        console.error("❌ Failed to initialize automatizaciones-contratacion scheduler:", error);
       }
 
       // Cambios de turno aprobados: se aplican cuando llega la fecha y se revierten los temporales vencidos (una vez por día).

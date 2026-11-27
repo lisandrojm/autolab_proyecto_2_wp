@@ -246,6 +246,28 @@ export interface ITenant extends Document {
          * Dropbox Sign → Configuración → Perfil → Notificaciones). Leyéndola se detecta qué contratos ya
          * se enviaron a firmar, para moverlos de "Outbox" a "Pendbox" sin que nadie toque archivos.
          */
+        /**
+         * AUTOMATIZACIONES DE CONTRATACIÓN (27/11/2026, ver `services/automatizacionesContratacion/`): la
+         * generación y envío de documentos (paso 3) y la validación del CUIT en ARCA (paso 2 › Constancia de
+         * CUIT), cada una con si está prendida, cada cuántos minutos corre, la última corrida (candado entre
+         * procesos), qué hizo y el último error. Apagadas por defecto: se prenden desde su bandeja.
+         */
+        automatizacionesContratacion?: {
+            generacionDocumentos?: {
+                activa?: boolean;
+                cadaMinutos?: number;
+                ultimaCorridaAt?: Date | null;
+                ultimaCorrida?: any;
+                ultimoError?: string | null;
+            };
+            validacionCuit?: {
+                activa?: boolean;
+                cadaMinutos?: number;
+                ultimaCorridaAt?: Date | null;
+                ultimaCorrida?: any;
+                ultimoError?: string | null;
+            };
+        };
         dropboxSign?: {
             /** Casilla que recibe las notificaciones (ej. framerecursoshumanos@gmail.com). Es también el CC obligatorio de cada envío del bot. */
             email?: string;

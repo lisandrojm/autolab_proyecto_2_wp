@@ -124,6 +124,23 @@ const tenantSchema = new Schema({
                 bajasArca: { actual: { type: Schema.Types.Mixed }, corrida: { type: Schema.Types.Mixed }, movimientos: { type: [Schema.Types.Mixed], default: undefined } },
             },
         },
+        // Declarados a propósito (el esquema es `strict`): las automatizaciones de contratación (27/11/2026).
+        automatizacionesContratacion: {
+            generacionDocumentos: {
+                activa: { type: Boolean, default: false },
+                cadaMinutos: { type: Number },
+                ultimaCorridaAt: { type: Date, default: null },
+                ultimaCorrida: { type: Schema.Types.Mixed },
+                ultimoError: { type: String },
+            },
+            validacionCuit: {
+                activa: { type: Boolean, default: false },
+                cadaMinutos: { type: Number },
+                ultimaCorridaAt: { type: Date, default: null },
+                ultimaCorrida: { type: Schema.Types.Mixed },
+                ultimoError: { type: String },
+            },
+        },
         dropboxSign: {
             email: { type: String },
             // Declarados a propósito (el esquema es `strict`): el bot de envío a la firma.

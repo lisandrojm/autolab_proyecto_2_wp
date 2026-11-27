@@ -1,26 +1,20 @@
 import { Router } from "express";
 import { z } from "zod";
-import path from "path";
-import fs from "fs";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
 import { Tenant } from "../models/Tenant.js";
 import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
-import { getTenantDropboxConfig, uploadFile } from "../services/dropboxService.js";
 import { resolverCarpetaPorProposito, resolverEstadoPorPropositos } from "../utils/estadoCarpetas.js";
-import { ETIQUETA_TRAMITE } from "../utils/employeeDocData.js";
-import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
 import { generarContratoPdf } from "./contratosFrame.js";
 import { generarReleasePdf } from "./releases.js";
 import { ContratoFrame } from "../models/ContratoFrame.js";
 import { Release } from "../models/Release.js";
 import { textoCustomUsable } from "../compartido/textoCustom.js";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { CLAVES, TITULO, validarCambios, BASE as BASE_AUTOMATIZACIONES } from "../services/automatizacionesContratacion/config.js";
+import { correrAhora, estadoDe } from "../services/automatizacionesContratacion/cronService.js";
+import { eliminarContratoDeTramite, eliminarReleasesDeTramite, enviarAFirmar, ErrorDeTramite, generarContratoDeTramite, generarReleasesDeTramite, statusDeErrorDePdf, YA_ENVIADO } from "../services/firmaDigital/documentos.js";
 const router = Router();
 router.use(requireTenant, authenticateToken);
 // Mismos patrones de nombre de carpeta que ya usa el resto de la integración AFIP/Dropbox (ver
@@ -61,15 +55,6 @@ router.get("/config", async (_req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
-/*
-  YA ENVIADO = SOLO LECTURA (pedido del 13/10/2026). Antes, borrar el PDF de un trámite ya enviado
-  dejaba `firmaEnviadaAt` en null y se podía generar y mandar otra vez: dos documentos distintos del
-  mismo trámite en Dropbox Sign. Ahora, una vez enviado, no se genera, no se borra y no se edita el
-  texto custom.
-*/
-const YA_ENVIADO = "Este trámite ya se envió a firmar: sus documentos quedan como se enviaron.";
-/** Errores de generarContratoPdf / generarReleasePdf que son culpa del pedido, no del server. */
-const statusDeErrorDePdf = (msg) => (/no encontrad/i.test(msg) ? 404 : /no tiene texto escrito|no tiene contenido redactado|no es custom|declara firma/i.test(msg) ? 400 : 500);
 const generarContratoSchema = z.object({
     projectId: z.string().min(1),
     userId: z.string().min(1),
@@ -91,53 +76,15 @@ router.post("/generar-contrato", async (req, res) => {
             res.status(400).json({ error: "Datos inválidos para generar el contrato." });
             return;
         }
+        // Generar vive en `services/firmaDigital/documentos.ts` (27/11/2026): es lo mismo que hace la generación automática.
         const { projectId, userId, contractIndex, contratoTemplateId, empresaContratoId, tramite } = parsed.data;
-        const tenantId = String(req.tenantObjectId);
-        // Los DOS trámites se etiquetan: antes solo la constancia llevaba sufijo y las altas tempranas
-        // quedaban sin nada, así que no se distinguían de un contrato generado fuera de un trámite.
-        /*
-         * La etiqueta del trámite viaja por el PATRÓN, como `{{extra}}`.
-         *
-         * Antes se concatenaba acá, después del render. Eso tenía dos consecuencias: `{{extra}}` rendía
-         * vacío en los archivos reales —así que el ABM mostraba una previsualización que no existía— y
-         * la etiqueta caía siempre al final sin importar dónde el patrón la hubiera puesto. Además
-         * quedaba FUERA del presupuesto de `recortarNombre`, que es lo que garantiza que el nombre entre
-         * en el tope de Dropbox.
-         */
-        const etiquetaTramite = tramite ? ETIQUETA_TRAMITE[tramite] : undefined;
-        const up = await UserProject.findOne({ projectId, userId });
-        if (!up || contractIndex < 0 || contractIndex >= up.contracts.length) {
-            res.status(404).json({ error: "Contrato no encontrado." });
-            return;
-        }
-        if (up.contracts[contractIndex].firmaEnviadaAt) {
-            res.status(409).json({ error: YA_ENVIADO });
-            return;
-        }
-        const dir = path.join(__dirname, "../../storage", tenantId, userId, "firma");
-        fs.mkdirSync(dir, { recursive: true });
-        const contratoPdf = await generarContratoPdf({ tenantId, templateId: contratoTemplateId, userId, projectId, contractIndex, empresaId: empresaContratoId, extra: etiquetaTramite });
-        const contratoFilename = `${contratoPdf.filename}.pdf`;
-        fs.writeFileSync(path.join(dir, contratoFilename), contratoPdf.buffer);
-        const firmaContratoUrl = `/storage/${tenantId}/${userId}/firma/${contratoFilename}`;
-        const firmaGeneradoAt = new Date();
-        up.contracts[contractIndex] = {
-            ...up.contracts[contractIndex].toObject(),
-            firmaContratoUrl,
-            firmaContratoNombre: contratoFilename,
-            firmaEmpresaContratoId: empresaContratoId || null,
-            firmaGeneradoAt,
-            firmaEnviadaAt: null,
-        };
-        up.markModified("contracts");
-        await up.save();
-        res.json({ firmaContratoUrl, firmaContratoNombre: contratoFilename, firmaGeneradoAt });
+        res.json(await generarContratoDeTramite({ tenantId: String(req.tenantObjectId), projectId: String(projectId), userId: String(userId), contractIndex: Number(contractIndex), contratoTemplateId: String(contratoTemplateId), empresaContratoId, tramite }));
     }
     catch (error) {
         console.error("Firma digital generar-contrato error:", error);
         // Plantilla sin contenido o contrato custom sin texto: es un 400 (lo que falta lo tiene que poner
         // quien genera), no una falla del server.
-        res.status(statusDeErrorDePdf(String(error?.message || ""))).json({ error: error?.message || "No se pudo generar el contrato." });
+        res.status(error instanceof ErrorDeTramite ? error.status : 500).json({ error: error?.message || "No se pudo generar el contrato." });
     }
 });
 const generarReleaseSchema = z.object({
@@ -158,61 +105,13 @@ router.post("/generar-release", async (req, res) => {
             return;
         }
         const { projectId, userId, contractIndex, releaseIds, empresaReleaseId, tramite } = parsed.data;
-        const tenantId = String(req.tenantObjectId);
-        // Los DOS trámites se etiquetan: antes solo la constancia llevaba sufijo y las altas tempranas
-        // quedaban sin nada, así que no se distinguían de un contrato generado fuera de un trámite.
-        /*
-         * La etiqueta del trámite viaja por el PATRÓN, como `{{extra}}`.
-         *
-         * Antes se concatenaba acá, después del render. Eso tenía dos consecuencias: `{{extra}}` rendía
-         * vacío en los archivos reales —así que el ABM mostraba una previsualización que no existía— y
-         * la etiqueta caía siempre al final sin importar dónde el patrón la hubiera puesto. Además
-         * quedaba FUERA del presupuesto de `recortarNombre`, que es lo que garantiza que el nombre entre
-         * en el tope de Dropbox.
-         */
-        const etiquetaTramite = tramite ? ETIQUETA_TRAMITE[tramite] : undefined;
-        const up = await UserProject.findOne({ projectId, userId });
-        if (!up || contractIndex < 0 || contractIndex >= up.contracts.length) {
-            res.status(404).json({ error: "Contrato no encontrado." });
-            return;
-        }
-        if (up.contracts[contractIndex].firmaEnviadaAt) {
-            res.status(409).json({ error: YA_ENVIADO });
-            return;
-        }
-        const dir = path.join(__dirname, "../../storage", tenantId, userId, "firma");
-        fs.mkdirSync(dir, { recursive: true });
-        const firmaReleases = [];
-        for (const releaseId of releaseIds) {
-            const releasePdf = await generarReleasePdf({ tenantId, releaseId, userId, projectId, contractIndex, empresaId: empresaReleaseId, extra: etiquetaTramite });
-            const releaseFilename = `${releasePdf.filename}.pdf`;
-            fs.writeFileSync(path.join(dir, releaseFilename), releasePdf.buffer);
-            firmaReleases.push({ releaseId, nombre: releaseFilename, url: `/storage/${tenantId}/${userId}/firma/${releaseFilename}` });
-        }
-        const firmaReleasesGeneradoAt = new Date();
-        up.contracts[contractIndex] = {
-            ...up.contracts[contractIndex].toObject(),
-            firmaReleases,
-            firmaEmpresaReleaseId: empresaReleaseId || null,
-            firmaReleasesGeneradoAt,
-            firmaEnviadaAt: null,
-        };
-        up.markModified("contracts");
-        await up.save();
-        res.json({ firmaReleases, firmaReleasesGeneradoAt });
+        res.json(await generarReleasesDeTramite({ tenantId: String(req.tenantObjectId), projectId: String(projectId), userId: String(userId), contractIndex: Number(contractIndex), releaseIds: (releaseIds || []).map(String), empresaReleaseId, tramite }));
     }
     catch (error) {
         console.error("Firma digital generar-release error:", error);
-        res.status(statusDeErrorDePdf(String(error?.message || ""))).json({ error: error?.message || "No se pudieron generar los release(s)." });
+        res.status(error instanceof ErrorDeTramite ? error.status : 500).json({ error: error?.message || "No se pudieron generar los release(s)." });
     }
 });
-/** Borra un archivo guardado en disco a partir de su URL pública `/storage/...` — no falla si ya no existe. */
-function borrarArchivoStorage(urlStorage) {
-    if (!urlStorage)
-        return;
-    const rel = urlStorage.replace(/^\/storage\//, "storage/");
-    fs.rm(path.join(__dirname, "../..", rel), { force: true }, () => { });
-}
 const eliminarSchema = z.object({
     projectId: z.string().min(1),
     userId: z.string().min(1),
@@ -227,33 +126,12 @@ router.post("/eliminar-contrato", async (req, res) => {
             res.status(400).json({ error: "Datos inválidos." });
             return;
         }
-        const { projectId, userId, contractIndex } = parsed.data;
-        const up = await UserProject.findOne({ projectId, userId });
-        const contract = up?.contracts?.[contractIndex];
-        if (!up || !contract) {
-            res.status(404).json({ error: "Contrato no encontrado." });
-            return;
-        }
-        if (contract.firmaEnviadaAt) {
-            res.status(409).json({ error: YA_ENVIADO });
-            return;
-        }
-        borrarArchivoStorage(contract.firmaContratoUrl);
-        up.contracts[contractIndex] = {
-            ...contract.toObject(),
-            firmaContratoUrl: null,
-            firmaContratoNombre: null,
-            firmaEmpresaContratoId: null,
-            firmaGeneradoAt: null,
-            firmaEnviadaAt: null,
-        };
-        up.markModified("contracts");
-        await up.save();
+        await eliminarContratoDeTramite({ projectId: String(parsed.data.projectId), userId: String(parsed.data.userId), contractIndex: Number(parsed.data.contractIndex) });
         res.json({ ok: true });
     }
     catch (error) {
         console.error("Firma digital eliminar-contrato error:", error);
-        res.status(500).json({ error: error?.message || "No se pudo eliminar el contrato." });
+        res.status(error instanceof ErrorDeTramite ? error.status : 500).json({ error: error?.message || "No se pudo eliminar el contrato." });
     }
 });
 // POST /firma-digital/eliminar-release - ícono de tacho junto al/los Release(s) ya generados: borra
@@ -265,32 +143,12 @@ router.post("/eliminar-release", async (req, res) => {
             res.status(400).json({ error: "Datos inválidos." });
             return;
         }
-        const { projectId, userId, contractIndex } = parsed.data;
-        const up = await UserProject.findOne({ projectId, userId });
-        const contract = up?.contracts?.[contractIndex];
-        if (!up || !contract) {
-            res.status(404).json({ error: "Contrato no encontrado." });
-            return;
-        }
-        if (contract.firmaEnviadaAt) {
-            res.status(409).json({ error: YA_ENVIADO });
-            return;
-        }
-        (contract.firmaReleases || []).forEach((r) => borrarArchivoStorage(r.url));
-        up.contracts[contractIndex] = {
-            ...contract.toObject(),
-            firmaReleases: [],
-            firmaEmpresaReleaseId: null,
-            firmaReleasesGeneradoAt: null,
-            firmaEnviadaAt: null,
-        };
-        up.markModified("contracts");
-        await up.save();
+        await eliminarReleasesDeTramite({ projectId: String(parsed.data.projectId), userId: String(parsed.data.userId), contractIndex: Number(parsed.data.contractIndex) });
         res.json({ ok: true });
     }
     catch (error) {
         console.error("Firma digital eliminar-release error:", error);
-        res.status(500).json({ error: error?.message || "No se pudieron eliminar los release(s)." });
+        res.status(error instanceof ErrorDeTramite ? error.status : 500).json({ error: error?.message || "No se pudieron eliminar los release(s)." });
     }
 });
 /*
@@ -484,11 +342,6 @@ const enviarTargetSchema = z.object({
     incluirReleases: z.boolean().optional().default(true),
     incluirAlta: z.boolean().optional().default(true),
 });
-/** Lee un archivo guardado en disco local a partir de su URL pública `/storage/...`. */
-function leerArchivoStorage(urlStorage) {
-    const rel = urlStorage.replace(/^\/storage\//, "storage/");
-    return fs.readFileSync(path.join(__dirname, "../..", rel));
-}
 // POST /firma-digital/enviar { targets: [...] } - paso 2: sube a la carpeta Outbox de Dropbox los
 // documentos YA generados en el paso 1 (nunca genera nada acá) — Contrato + Release(s) siempre, y si
 // el trámite de origen fue "Alta temprana de ARCA" también el documento de Alta ya cargado. La
@@ -503,86 +356,92 @@ router.post("/enviar", async (req, res) => {
             res.status(400).json({ error: "El listado de contratos (targets) es inválido." });
             return;
         }
-        const tenant = await Tenant.findById(req.tenantObjectId).lean();
-        const dropboxCfg = getTenantDropboxConfig(tenant);
-        if (!dropboxCfg) {
-            res.status(400).json({ error: "Dropbox no está conectado para esta organización." });
-            return;
-        }
-        const outboxCarpeta = await resolverCarpetaPorProposito("outbox");
-        if (!outboxCarpeta) {
-            res.status(400).json({ error: 'No se encontró ninguna carpeta de Dropbox configurada como "Outbox" en Documentos → Configurar transición automática.' });
-            return;
-        }
-        const tenantId = String(req.tenantObjectId);
-        const projectIds = [...new Set(targets.map((t) => t.projectId))];
-        const userIds = [...new Set(targets.map((t) => t.userId))];
-        const [projects, users] = await Promise.all([
-            Project.find({ _id: { $in: projectIds }, tenantId: req.tenantObjectId }).select("_id").lean(),
-            User.find({ _id: { $in: userIds }, tenantId: req.tenantObjectId }).select("_id firstName lastName email metadata.cuit").lean(),
-        ]);
-        const projectIdsValidos = new Set(projects.map((p) => String(p._id)));
-        const userById = new Map(users.map((u) => [String(u._id), u]));
-        const resultados = [];
-        for (const t of targets) {
-            const base = { projectId: t.projectId, userId: t.userId, contractIndex: t.contractIndex };
-            if (!projectIdsValidos.has(t.projectId) || !userById.has(t.userId)) {
-                resultados.push({ ...base, ok: false, error: "Contrato no encontrado." });
-                continue;
-            }
-            try {
-                const up = await UserProject.findOne({ projectId: t.projectId, userId: t.userId });
-                const contract = up?.contracts?.[t.contractIndex];
-                if (!up || !contract) {
-                    resultados.push({ ...base, ok: false, error: "Contrato no encontrado." });
-                    continue;
-                }
-                if (t.incluirContrato && (!contract.firmaGeneradoAt || !contract.firmaContratoUrl)) {
-                    resultados.push({ ...base, ok: false, error: 'Todavía no se generó el Contrato — usá "Generar" primero.' });
-                    continue;
-                }
-                const user = userById.get(t.userId);
-                const carpeta = outboxCarpeta.replace(/\/$/, "");
-                const archivos = [
-                    ...(t.incluirContrato && contract.firmaContratoUrl ? [{ nombre: contract.firmaContratoNombre || "Contrato.pdf", buffer: leerArchivoStorage(contract.firmaContratoUrl) }] : []),
-                    ...(t.incluirReleases ? (contract.firmaReleases || []).map((r) => ({ nombre: r.nombre, buffer: leerArchivoStorage(r.url) })) : []),
-                ];
-                // Alta temprana de ARCA: el documento ya cargado (altaDocumentoUrl) se suma, pero renombrado
-                // con la nomenclatura del sistema — el nombre original que le puso quien lo subió a mano no
-                // necesariamente lo trae, y el cron de estadoDropboxCronService.ts matchea por CUIT en el nombre.
-                // UNA SOLA VEZ: si el alta ya salió a firmar (`altaEnviadaAFirmarEl`), un reenvío del contrato
-                // no la vuelve a mandar.
-                const mandaAlta = !!(t.incluirAlta && t.tipoImpositivo === "alta_temprana_afip" && contract.altaDocumentoUrl && !contract.altaEnviadaAFirmarEl);
-                if (mandaAlta) {
-                    const ext = (contract.altaDocumentoNombre || "").match(/\.[a-z0-9]+$/i)?.[0] || ".pdf";
-                    const nombreAlta = `${await nombreArchivoDocumento({ tenantId: req.tenantObjectId, tipo: "AltaAFIP", user, up, contract, docName: "AltaAFIP" })}${ext}`;
-                    archivos.push({ nombre: nombreAlta, buffer: leerArchivoStorage(contract.altaDocumentoUrl) });
-                }
-                // Después del alta: puede ser lo único que este tipo manda a firmar.
-                if (archivos.length === 0) {
-                    resultados.push({ ...base, ok: false, error: "No hay ningún documento generado para enviar." });
-                    continue;
-                }
-                for (const archivo of archivos) {
-                    await uploadFile(tenantId, dropboxCfg, `${carpeta}/${archivo.nombre}`, archivo.buffer);
-                }
-                contract.firmaEnviadaAt = new Date();
-                if (mandaAlta)
-                    contract.altaEnviadaAFirmarEl = new Date();
-                up.markModified("contracts");
-                await up.save();
-                resultados.push({ ...base, ok: true, archivosSubidos: archivos.length });
-            }
-            catch (e) {
-                const detalle = e?.response?.data ? JSON.stringify(e.response.data) : e?.message || String(e);
-                console.error(`Firma digital enviar error (CUIT/target ${t.userId}):`, detalle);
-                resultados.push({ ...base, ok: false, error: detalle });
-            }
-        }
-        res.json({ resultados, enviados: resultados.filter((r) => r.ok).length });
+        // El envío vive en `services/firmaDigital/documentos.ts` (27/11/2026): es lo mismo que hace la generación automática.
+        res.json(await enviarAFirmar({ tenantObjectId: req.tenantObjectId, targets: targets.map((t) => ({ projectId: String(t.projectId), userId: String(t.userId), contractIndex: Number(t.contractIndex), tipoImpositivo: t.tipoImpositivo, incluirContrato: t.incluirContrato !== false, incluirReleases: t.incluirReleases !== false, incluirAlta: t.incluirAlta !== false })) }));
     }
     catch (error) {
+        if (error instanceof ErrorDeTramite) {
+            res.status(error.status).json({ error: error.message });
+            return;
+        }
         console.error("Firma digital enviar error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/*
+  LAS AUTOMATIZACIONES DE CONTRATACIÓN (27/11/2026, ver `services/automatizacionesContratacion/`): la
+  generación y envío de documentos (bandeja Generar Documentos) y la validación del CUIT en ARCA (Trámite
+  impositivo › Constancia de CUIT). Cada bandeja muestra la suya: prender/apagar, cada cuánto, la última
+  corrida y «Correr ahora». Cambiarlas es de administrador, como las credenciales de ARCA.
+*/
+const esAdmin = (req) => (req.user?.roles || []).some((r) => ["admin", "superadmin"].includes(r.toLowerCase()));
+const claveDe = (x) => (CLAVES.includes(x) ? x : null);
+router.get("/automatizacion", async (req, res) => {
+    try {
+        const tenant = await Tenant.findById(req.tenantObjectId).select(`_id ${BASE_AUTOMATIZACIONES}`).lean();
+        res.json(Object.fromEntries(CLAVES.map((c) => [c, { ...estadoDe(tenant, c), titulo: TITULO[c] }])));
+    }
+    catch (error) {
+        console.error("Firma digital automatizacion error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.post("/automatizacion", async (req, res) => {
+    try {
+        if (!esAdmin(req)) {
+            res.status(403).json({ error: "Solo un administrador puede cambiar las automatizaciones." });
+            return;
+        }
+        const clave = claveDe(req.body?.clave);
+        if (!clave) {
+            res.status(400).json({ error: "Falta decir qué automatización se cambia (clave)." });
+            return;
+        }
+        const v = validarCambios(req.body);
+        if (v.ok === false) {
+            res.status(400).json({ error: v.error });
+            return;
+        }
+        const set = {};
+        if (v.cambios.activa !== undefined)
+            set[`${BASE_AUTOMATIZACIONES}.${clave}.activa`] = v.cambios.activa;
+        if (v.cambios.cadaMinutos !== undefined)
+            set[`${BASE_AUTOMATIZACIONES}.${clave}.cadaMinutos`] = v.cambios.cadaMinutos;
+        if (Object.keys(set).length)
+            await Tenant.updateOne({ _id: req.tenantObjectId }, { $set: set });
+        const tenant = await Tenant.findById(req.tenantObjectId).select(`_id ${BASE_AUTOMATIZACIONES}`).lean();
+        res.json({ ...estadoDe(tenant, clave), titulo: TITULO[clave] });
+    }
+    catch (error) {
+        console.error("Firma digital automatizacion save error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// «Correr ahora»: la misma corrida que haría el reloj, ya. Espera a que termine y devuelve el resumen.
+router.post("/automatizacion/correr", async (req, res) => {
+    try {
+        if (!esAdmin(req)) {
+            res.status(403).json({ error: "Solo un administrador puede correr una automatización a mano." });
+            return;
+        }
+        const clave = claveDe(req.body?.clave);
+        if (!clave) {
+            res.status(400).json({ error: "Falta decir qué automatización se corre (clave)." });
+            return;
+        }
+        let resumen = null;
+        let error = "";
+        try {
+            resumen = await correrAhora(req.tenantObjectId, clave);
+        }
+        catch (e) {
+            error = e?.message || String(e);
+        }
+        const tenant = await Tenant.findById(req.tenantObjectId).select(`_id ${BASE_AUTOMATIZACIONES}`).lean();
+        res.json({ ...estadoDe(tenant, clave), titulo: TITULO[clave], resumen, error });
+    }
+    catch (error) {
+        console.error("Firma digital automatizacion correr error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
