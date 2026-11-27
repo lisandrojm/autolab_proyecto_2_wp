@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendarAlt, faCheck, faCircleCheck, faClock, faFilePdf, faHourglassHalf, faPlus, faTrash, faTriangleExclamation, faUmbrellaBeach } from "@fortawesome/free-solid-svg-icons";
+import { faCalendarAlt, faCheck, faChevronRight, faCircleCheck, faClock, faFilePdf, faHourglassHalf, faPen, faPlus, faTrash, faTriangleExclamation, faUmbrellaBeach } from "@fortawesome/free-solid-svg-icons";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { campaniasVacacionesAPI, errorDeCampania, type MiInvitacion, type Tramo } from "../../../../api/campaniasVacaciones";
 import { fechaCorta } from "@compartido/planVacaciones/fechas";
-import { ETIQUETA_ESTADO, OTORGADOS, contarDiasTramo, erroresDePropuesta, erroresDelTramo, minimoDelTramo, normalizarDiasDeInicio, textoDiasDeInicio } from "@compartido/vacaciones/campania";
+import { contarDiasTramo, erroresDePropuesta, erroresDelTramo, minimoDelTramo } from "@compartido/vacaciones/campania";
+import { TEXTO_ESTADO_VACACION, encabezado, erroresDelTramoEnPantalla, motivoDelBoton, parrafoDeInvitacion, pasoDe, progreso, puedeAgregarTramo, reglaDelPaso, situacionDe, textoDeFechas, textoDeRegreso, textoDelTramo, type DatosDePantalla } from "@compartido/vacaciones/pantallaEmpleado";
 import { getImageUrl } from "../../../../utils/imageHelpers";
 import SectionHeader from "../components/SectionHeader";
 import CalendarioVacaciones, { type ModoCalendario } from "../components/CalendarioVacaciones";
@@ -12,7 +13,6 @@ import { useVacations } from "../hooks/useVacations";
 import { useProfile } from "../hooks/useProfile";
 import VacationDetailModal from "../components/VacationDetailModal";
 import { vacationsAPI, type VacationRequest } from "../../../../api/vacations";
-import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { fechaPermitida, textoDeVentana } from "@compartido/ventanaGoce";
 import { useRefrescoEnFoco } from "../hooks/useRefrescoEnFoco";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -20,24 +20,39 @@ import { ViewType } from "../types";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
- * «ELEGÍ TUS VACACIONES» (campaña de goce, 15/11/2026)
+ * «VACACIONES» DEL EMPLEADO INVITADO (campaña de goce, 15/11/2026; por pasos desde el 27/11/2026)
  * ═══════════════════════════════════════════════════════════════════════
  *
- * La empresa invita a elegir las vacaciones de la temporada dentro de la ventana, con fecha límite. Acá
- * la persona acusa recibo, propone uno o más tramos (las mismas reglas que el server, de
- * `@compartido/vacaciones/campania`), sigue la aprobación y, al otorgarse, acusa recibo del aviso por
- * escrito. Si no elige a tiempo, la empresa le asigna un tramo único: nunca se paga en lugar de gozar.
+ * La empresa invita a elegir las vacaciones de la temporada dentro de la ventana, con fecha límite. Esta
+ * pantalla va por pasos, con una sola cosa protagonista en cada uno (las decisiones están en
+ * `@compartido/vacaciones/pantallaEmpleado`, probadas):
+ *   · A — invitada: qué le toca y hasta cuándo, y dos acciones: «Solicitar vacaciones» (registra el acuse de
+ *     la invitación como acto de la persona y pasa a elegir) y «Mis solicitudes y saldo».
+ *   · B — eligiendo: el avance en días, la regla en una línea, los tramos como tarjetas (editar y borrar,
+ *     también con uno solo) y el botón de enviar fijo abajo, con el motivo neutro mientras no se pueda.
+ *   · C — enviada, otorgada, asignada por la empresa o vencida: el resumen, quién la tiene y qué sigue; el
+ *     aviso por escrito con su acuse cuando llega. Sin formulario.
+ *
+ * Las reglas de la propuesta son las mismas del server (`@compartido/vacaciones/campania`): lo que acá cambia
+ * es que «te faltan repartir N días» es avance (gris) y sólo un tramo mal armado se marca en rojo. El texto
+ * completo de las reglas vive en un solo lugar: el ⓘ del encabezado.
  */
 
 const INFO =
   "La empresa te invita a elegir tus vacaciones de la temporada dentro de la ventana, antes de la fecha límite.\n\nPodés tomarlas de una vez o dividirlas en tramos: en orden de fecha, cada uno de al menos el mínimo, salvo el último si te quedan menos. Si tenés menos días que el mínimo, van seguidos. Si en tu rol eligen por antigüedad, esperás tu turno. Tu propuesta la aprueba tu supervisor, tu coordinador y RR.HH.; cuando se aprueba te llega el aviso por escrito y acusás recibo.\n\nSi no elegís a tiempo, la empresa te asigna un período continuo. Las vacaciones se gozan: no se pagan en lugar de tomarlas.";
 
 const caja = "rounded-xl border bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/70";
-const TEXTO_STATUS: Record<string, string> = { pending: "Esperando aprobación", pre_approved: "Esperando a RR.HH.", approved: "Aprobada", delivered: "Aprobada", rejected: "Rechazada", cancelled: "Cancelada" };
+const botonPrimario = "flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white shadow-sm active:scale-[0.99] disabled:opacity-50";
+const botonSecundario = "flex w-full items-center justify-between rounded-xl border bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm active:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:active:bg-slate-800";
+const iso = (v: unknown): string => String(v ?? "").slice(0, 10);
+const colorDeEstado = (status: string): string => (["approved", "delivered"].includes(status) ? "text-emerald-600 dark:text-emerald-400" : ["rejected", "cancelled"].includes(status) ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400");
+const TRAMO_VACIO: Tramo = { desde: "", hasta: "" };
 
 export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) => void }) {
   const [datos, setDatos] = useState<MiInvitacion | null | undefined>(undefined);
-  const [tramos, setTramos] = useState<Tramo[]>([{ desde: "", hasta: "" }]);
+  // Paso B: la persona entró a elegir (lo demás lo decide el server).
+  const [eligiendo, setEligiendo] = useState(false);
+  const [tramos, setTramos] = useState<Tramo[]>([TRAMO_VACIO]);
   const [enviando, setEnviando] = useState(false);
   // El calendario de «Mis Vacaciones», abierto para un tramo.
   const [calendario, setCalendario] = useState<{ tramo: number; modo: ModoCalendario | null } | null>(null);
@@ -67,10 +82,34 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
   const inv = datos?.invitacion;
   const c = datos?.campania;
   const diasCorridos = inv?.diasCorridos ?? true;
+  // Lo que la pantalla decide con lo que manda el server.
+  const pantalla: DatosDePantalla | null =
+    datos && inv && c
+      ? {
+          estado: inv.estado,
+          estadoVisible: datos.estadoVisible,
+          puedeProponer: datos.puedeProponer,
+          turnoCerradoDesde: datos.turno && !datos.turno.abierto ? datos.turno.desde || "" : null,
+          diasDisponibles: datos.diasDisponibles,
+          diasCorridos,
+          minPorTramo: c.minDiasPorTramo,
+          diasDeInicio: c.diasDeInicio,
+          ventanaDesde: c.ventanaDesde,
+          ventanaHasta: c.ventanaHasta,
+          fechaLimite: c.fechaLimite,
+          nombreCampania: c.nombre,
+          acuseOtorgamientoAt: inv.acuseOtorgamientoAt,
+          hayAviso: !!inv.notificacion,
+          asignadaPorEmpresa: !!inv.asignacion?.vacationId,
+          rechazoMotivo: inv.estado === "rechazada" && inv.rechazo ? inv.rechazo.motivo || "" : null,
+          vacaciones: datos.vacaciones,
+        }
+      : null;
+  const paso = pantalla ? pasoDe(pantalla, eligiendo) : null;
+
   // Los tramos con las dos fechas y en qué posición de `tramos` está cada uno (los errores apuntan a `completos`).
   const indicesCompletos = tramos.map((_, i) => i).filter((i) => tramos[i].desde && tramos[i].hasta);
   const completos = indicesCompletos.map((i) => tramos[i]);
-  const suma = completos.reduce((s, t) => s + (t.hasta >= t.desde ? contarDiasTramo(t, diasCorridos) : 0), 0);
   const erroresDeLaPropuesta = useMemo(
     () =>
       datos && c && inv
@@ -79,33 +118,53 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [datos, JSON.stringify(completos)],
   );
-  const errores = erroresDeLaPropuesta.map((e) => e.mensaje);
+  const avance = pantalla ? progreso(tramos, pantalla.diasDisponibles, diasCorridos) : null;
+  const motivo = pantalla && avance ? motivoDelBoton({ tramos, errores: erroresDeLaPropuesta, indicesCompletos, faltan: avance.faltan }) : null;
 
-  const accion = async (fn: () => Promise<MiInvitacion | null>, ok?: string) => {
+  /** Una acción contra el server; `true` si salió. */
+  const accion = async (fn: () => Promise<MiInvitacion | null>, ok?: string): Promise<boolean> => {
     setEnviando(true);
     try {
       setDatos(await fn());
       if (ok) sweetAlert.success("Listo", ok);
+      return true;
     } catch (e) {
       sweetAlert.error("No se pudo", errorDeCampania(e));
+      return false;
     } finally {
       setEnviando(false);
     }
   };
 
-  const proponer = async () => {
-    const r = await sweetAlert.confirm("¿Enviar tu propuesta?", `${completos.map((t) => `${fechaCorta(t.desde)} al ${fechaCorta(t.hasta)}`).join(" y ")} (${suma} días). La revisan tu supervisor, tu coordinador y RR.HH.`, "Enviar");
-    if (!r.isConfirmed) return;
-    await accion(() => campaniasVacacionesAPI.proponer(completos), "Tu propuesta quedó enviada. Te avisamos cuando se apruebe.");
+  // «Solicitar vacaciones»: el acuse de la invitación queda registrado como acto de la persona, y pasa a elegir.
+  const solicitar = async () => {
+    if (!inv?.acuseInvitacionAt && !(await accion(() => campaniasVacacionesAPI.acusar()))) return;
+    setEligiendo(true);
   };
+
+  const proponer = async () => {
+    const r = await sweetAlert.confirm("¿Enviar tu propuesta?", `${completos.map((t) => `${fechaCorta(t.desde)} al ${fechaCorta(t.hasta)}`).join(" y ")} (${avance?.repartidos ?? 0} días). La revisan tu supervisor, tu coordinador y RR.HH.`, "Enviar");
+    if (!r.isConfirmed) return;
+    if (await accion(() => campaniasVacacionesAPI.proponer(completos), "Tu propuesta quedó enviada. Te avisamos cuando se apruebe.")) {
+      setEligiendo(false);
+      setTramos([TRAMO_VACIO]);
+      await refrescarOcupadas();
+    }
+  };
+
+  const agregarTramo = () => {
+    setTramos([...tramos, TRAMO_VACIO]);
+    setCalendario({ tramo: tramos.length, modo: "start" });
+  };
+  // Borrar el único tramo lo deja vacío: siempre se puede borrar (pedido del 27/11/2026).
+  const borrarTramo = (i: number) => setTramos(tramos.length > 1 ? tramos.filter((_, k) => k !== i) : [TRAMO_VACIO]);
 
   if (datos === undefined) return <LoadingSpinner message="Cargando..." />;
 
-  const encabezado = <SectionHeader icon={faUmbrellaBeach} titulo="Vacaciones" onBack={() => onNavigate("home")} info={INFO} />;
-  if (!datos || !inv || !c)
+  if (!datos || !inv || !c || !pantalla || !paso || !avance)
     return (
       <div className="flex-1 pb-24">
-        {encabezado}
+        <SectionHeader icon={faUmbrellaBeach} titulo="Vacaciones" onBack={() => onNavigate("home")} info={INFO} />
         <div className="px-4 pt-4">
           <div className="flex flex-col items-center rounded-xl border bg-slate-50 p-10 text-center dark:bg-slate-800/50">
             <FontAwesomeIcon icon={faUmbrellaBeach} className="mb-3 h-10 w-10 text-slate-300" />
@@ -116,187 +175,206 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
     );
 
   const desdeMinimo = datos.primerInicioPosible > c.ventanaDesde ? datos.primerInicioPosible : c.ventanaDesde;
-  const otorgada = OTORGADOS.includes(inv.estado);
-  const faltan = datos.diasParaLaFechaLimite;
   const ventanaPersona = (inv as any).ventanaPersona?.enabled ? (inv as any).ventanaPersona : null;
   // Lo que el calendario avisa del tramo que se está eligiendo: su mínimo al fraccionar y lo que está mal con lo elegido hasta ahora.
   const tramoEnEdicion = calendario ? tramos[calendario.tramo] : null;
   const minimoDelCalendario = calendario && tramoEnEdicion ? minimoDelTramo({ desde: tramoEnEdicion.desde, otros: tramos.filter((_, k) => k !== calendario.tramo), diasDisponibles: datos.diasDisponibles, minPorTramo: c.minDiasPorTramo, diasCorridos }) : 0;
   const kEnEdicion = calendario ? indicesCompletos.indexOf(calendario.tramo) : -1;
   const erroresDelCalendario = kEnEdicion >= 0 ? erroresDelTramo(erroresDeLaPropuesta, kEnEdicion).map((e) => e.mensaje) : [];
+  const situacion = situacionDe(pantalla);
+
+  const irAMisSolicitudes = (
+    <button type="button" onClick={() => onNavigate("vacations")} className={botonSecundario}>
+      <span className="flex items-center gap-2">
+        <FontAwesomeIcon icon={faUmbrellaBeach} className="text-primary opacity-70" />
+        Mis solicitudes y saldo
+      </span>
+      <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-slate-400" />
+    </button>
+  );
+
+  // Lo propuesto o lo asignado, con su estado (A: lo que quedó de una propuesta rechazada en parte; C: la propuesta).
+  const listaDeVacaciones = datos.vacaciones.length > 0 && (
+    <div className="mt-2 space-y-2">
+      {datos.vacaciones.map((v) => (
+        <button type="button" key={v._id} onClick={() => abrirDetalle(v._id)} className="flex w-full items-center justify-between gap-2 rounded-lg px-1 py-1 text-left active:bg-slate-100 dark:active:bg-slate-800">
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
+              {textoDeFechas(iso(v.startDate), iso(v.endDate))} · {v.daysRequested} {v.daysRequested === 1 ? "día" : "días"}
+            </span>
+            <span className="block text-xs text-slate-500 dark:text-slate-400">{textoDeRegreso(iso(v.endDate))}</span>
+          </span>
+          <span className={`shrink-0 text-[11px] font-bold ${colorDeEstado(v.status)}`}>{TEXTO_ESTADO_VACACION[v.status] || v.status}</span>
+          <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 shrink-0 text-slate-400" />
+        </button>
+      ))}
+    </div>
+  );
 
   return (
-    <div className="flex-1 pb-24">
-      {encabezado}
-      <div className="space-y-3 px-4 pt-4">
-        {/* Lo que le toca y hasta cuándo. */}
-        <div className={caja}>
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">{c.nombre}</p>
-              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-slate-100">{datos.diasDisponibles} días</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {diasCorridos ? "corridos" : "hábiles"}, entre el {fechaCorta(c.ventanaDesde)} y el {fechaCorta(c.ventanaHasta)}
-              </p>
-            </div>
-            <span className="shrink-0 rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">{ETIQUETA_ESTADO[datos.estadoVisible]}</span>
-          </div>
-          {/* El recordatorio es siempre ámbar, aunque falten pocos días: informa, no alarma. */}
-          {datos.puedeProponer && (
-            <div className="mt-3 rounded-lg bg-amber-50 p-3 dark:bg-amber-950/20">
-              <p className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-400">
-                <FontAwesomeIcon icon={faHourglassHalf} />
-                {faltan === 0 ? "Hoy es el último día para elegir" : `Te quedan ${faltan} día(s) para elegir (hasta el ${fechaCorta(c.fechaLimite)})`}
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-                Si para esa fecha todavía no elegiste, no te preocupes: la empresa te propone unas fechas para que no te quedes sin organizarlas.
-              </p>
-            </div>
-          )}
-          {/* Eligen por antigüedad en su rol: espera su turno (no pierde su plazo). */}
-          {datos.turno && !datos.turno.abierto && (
-            <div className="mt-3 rounded-lg bg-violet-50 p-3 dark:bg-violet-950/20">
-              <p className="flex items-center gap-2 text-sm font-semibold text-violet-700 dark:text-violet-300">
-                <FontAwesomeIcon icon={faHourglassHalf} />
-                Tu turno para elegir empieza el {fechaCorta(datos.turno.desde || "")}
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-                En tu rol eligen primero las personas con más antigüedad: sos la {datos.turno.orden}ª de {datos.turno.de}. Si las {datos.turno.esperando} que tenés adelante eligen antes, tu turno se abre antes. Tenés hasta el {fechaCorta(c.fechaLimite)} para elegir.
-              </p>
-            </div>
-          )}
-        </div>
+    <div className={`flex-1 ${paso === "B" ? "pb-44" : "pb-24"}`}>
+      <SectionHeader icon={faUmbrellaBeach} titulo="Vacaciones" subtitulo={encabezado(pantalla)} onBack={() => (paso === "B" ? setEligiendo(false) : onNavigate("home"))} info={INFO} />
 
-        {/* El acuse de la invitación. */}
-        {!inv.acuseInvitacionAt && (datos.puedeProponer || (datos.turno && !datos.turno.abierto)) && (
-          <button type="button" disabled={enviando} onClick={() => accion(() => campaniasVacacionesAPI.acusar(), "Registramos que recibiste la invitación.")} className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 py-3 text-sm font-bold text-primary active:scale-[0.99] disabled:opacity-50">
-            <FontAwesomeIcon icon={faCircleCheck} /> Recibí la invitación
-          </button>
-        )}
-        {inv.acuseInvitacionAt && !otorgada && <p className="text-center text-[11px] text-slate-400">Acusaste recibo el {new Date(inv.acuseInvitacionAt).toLocaleString("es-AR")}</p>}
-
-        {inv.estado === "rechazada" && inv.rechazo && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
-            <FontAwesomeIcon icon={faTriangleExclamation} className="mr-2" />
-            No se aprobó parte de tu propuesta{inv.rechazo.motivo ? `: ${inv.rechazo.motivo}` : ""}. Elegí de nuevo esos días.
-          </div>
-        )}
-
-        {/* Lo propuesto o lo asignado, con su estado. */}
-        {datos.vacaciones.length > 0 && (
+      {/* ───────── A: invitada ───────── */}
+      {paso === "A" && (
+        <div className="space-y-3 px-4 pt-4">
           <div className={caja}>
-            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{inv.asignacion?.vacationId ? "Asignadas por la empresa" : "Tu propuesta"}</p>
-            <div className="space-y-2">
-              {datos.vacaciones.map((v) => (
-                <button type="button" key={v._id} onClick={() => abrirDetalle(v._id)} className="flex w-full items-center justify-between gap-2 rounded-lg px-1 py-1 text-left text-sm active:bg-slate-100 dark:active:bg-slate-800">
-                  <span className="flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                    <FontAwesomeIcon icon={faCalendarAlt} className="text-primary opacity-70" />
-                    {fechaCorta(String(v.startDate).slice(0, 10))} al {fechaCorta(String(v.endDate).slice(0, 10))} · {v.daysRequested} d
-                  </span>
-                  <span className={`shrink-0 text-[11px] font-bold ${["approved", "delivered"].includes(v.status) ? "text-emerald-600 dark:text-emerald-400" : ["rejected", "cancelled"].includes(v.status) ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>{TEXTO_STATUS[v.status] || v.status}</span>
-                  <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 shrink-0 text-slate-400" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {inv.estado === "vencido_sin_definir" && (
-          <div className={`${caja} text-sm text-slate-700 dark:text-slate-300`}>
-            <FontAwesomeIcon icon={faClock} className="mr-2 text-amber-500" />
-            Venció el plazo para elegir. La empresa te va a asignar un período continuo y te llega el aviso por escrito acá.
-          </div>
-        )}
-
-        {/* El aviso por escrito del otorgamiento, y su acuse. */}
-        {otorgada && inv.notificacion && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
-            <p className="mb-1 text-xs font-bold uppercase tracking-wider">Aviso de otorgamiento</p>
-            <p className="whitespace-pre-wrap">{inv.notificacion.texto}</p>
-            {inv.notificacion.pdfUrls.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-3">
-                {inv.notificacion.pdfUrls.map((u, k) => (
-                  <a key={k} href={getImageUrl(u)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-bold text-violet-700 dark:text-violet-300">
-                    <FontAwesomeIcon icon={faFilePdf} /> Ver PDF{inv.notificacion!.pdfUrls.length > 1 ? ` ${k + 1}` : ""}
-                  </a>
-                ))}
-              </div>
-            )}
-            {inv.acuseOtorgamientoAt ? (
-              <p className="mt-3 text-xs">
-                <FontAwesomeIcon icon={faCircleCheck} className="mr-1" />
-                Acusaste recibo el {new Date(inv.acuseOtorgamientoAt).toLocaleString("es-AR")}
-              </p>
-            ) : (
-              <button type="button" disabled={enviando} onClick={() => accion(() => campaniasVacacionesAPI.acusarOtorgamiento(), "Registramos que recibiste el aviso.")} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-2.5 text-sm font-bold text-white active:scale-[0.99] disabled:opacity-50">
-                <FontAwesomeIcon icon={faCheck} /> Recibí el aviso
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* La campaña reemplaza a la tarjeta «Vacaciones» de la home: desde acá se sigue llegando a lo de siempre. */}
-        <button type="button" onClick={() => onNavigate("vacations")} className="flex w-full items-center justify-between rounded-xl border bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm active:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:active:bg-slate-800">
-          <span className="flex items-center gap-2">
-            <FontAwesomeIcon icon={faUmbrellaBeach} className="text-primary opacity-70" />
-            Mis solicitudes y saldo
-          </span>
-          <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-slate-400" />
-        </button>
-
-        {/* Elegir: uno o más tramos. */}
-        {datos.puedeProponer && (
-          <div className={caja}>
-            <p className="mb-1 text-sm font-bold text-slate-900 dark:text-slate-100">Elegí tus fechas</p>
-            <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-              Desde el {fechaCorta(desdeMinimo)} hasta el {fechaCorta(c.ventanaHasta)}.
-              {normalizarDiasDeInicio(c.diasDeInicio).length > 0 && <> Cada tramo empieza {textoDiasDeInicio(c.diasDeInicio)}.</>}
-              {datos.diasDisponibles < c.minDiasPorTramo ? <> Con {datos.diasDisponibles} días van seguidos, en un solo tramo.</> : <> Si las dividís, en orden de fecha cada parte de al menos {c.minDiasPorTramo} días (la última puede tener menos, si te quedan menos).</>}
+            <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">{c.nombre}</p>
+            <p className="mt-1 text-2xl font-black text-slate-900 dark:text-slate-100">
+              {datos.diasDisponibles} {datos.diasDisponibles === 1 ? "día" : "días"}
             </p>
-            <div className="space-y-3">
-              {tramos.map((t, i) => (
-                <div key={i} className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{tramos.length > 1 ? `Tramo ${i + 1}` : "Período"}</span>
-                    <span className="text-xs text-slate-500">{t.desde && t.hasta && t.hasta >= t.desde ? `${contarDiasTramo(t, diasCorridos)} días` : ""}</span>
-                    {tramos.length > 1 && (
-                      <button type="button" onClick={() => setTramos(tramos.filter((_, k) => k !== i))} className="text-slate-400" aria-label="Quitar tramo">
-                        <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                  <div onClick={() => setCalendario({ tramo: i, modo: "start" })} className="relative cursor-pointer">
-                    <input type="text" value={t.desde && t.hasta ? `Desde ${fechaCorta(t.desde)} Hasta ${fechaCorta(t.hasta)}` : t.desde ? `Desde ${fechaCorta(t.desde)} ...` : ""} readOnly placeholder="Seleccionar rango de fechas" className="w-full cursor-pointer rounded border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100" />
-                    <FontAwesomeIcon icon={faCalendarAlt} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-300">{parrafoDeInvitacion(pantalla)}</p>
+            {pantalla.rechazoMotivo != null && (
+              <p className="mt-3 flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">
+                <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5 shrink-0" />
+                <span>
+                  No se aprobó parte de tu propuesta{pantalla.rechazoMotivo ? `: ${pantalla.rechazoMotivo}` : ""}. Elegí de nuevo esos días.
+                </span>
+              </p>
+            )}
+            {/* Eligen por antigüedad en su rol: espera su turno (no pierde su plazo). */}
+            {datos.turno && !datos.turno.abierto && (
+              <p className="mt-3 flex items-start gap-2 rounded-lg bg-violet-50 p-3 text-sm text-violet-700 dark:bg-violet-950/20 dark:text-violet-300">
+                <FontAwesomeIcon icon={faHourglassHalf} className="mt-0.5 shrink-0" />
+                <span>
+                  Tu turno para elegir empieza el {fechaCorta(datos.turno.desde || "")}: en tu rol eligen primero las personas con más antigüedad (sos la {datos.turno.orden}ª de {datos.turno.de}).
+                </span>
+              </p>
+            )}
+          </div>
+
+          {listaDeVacaciones && (
+            <div className={caja}>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Lo que ya quedó</p>
+              {listaDeVacaciones}
+            </div>
+          )}
+
+          <button type="button" disabled={!datos.puedeProponer || enviando} onClick={solicitar} className={botonPrimario}>
+            <FontAwesomeIcon icon={enviando ? faClock : faCalendarAlt} />
+            Solicitar vacaciones
+          </button>
+          {irAMisSolicitudes}
+        </div>
+      )}
+
+      {/* ───────── B: eligiendo ───────── */}
+      {paso === "B" && (
+        <div className="space-y-3 px-4 pt-4">
+          <div className={caja}>
+            <div className="flex items-baseline justify-between gap-2">
+              <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{avance.texto}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{avance.faltan > 0 ? `faltan ${avance.faltan}` : "completo"}</p>
+            </div>
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${avance.total > 0 ? Math.min(100, Math.round((avance.repartidos / avance.total) * 100)) : 0}%` }} />
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{reglaDelPaso(pantalla)}</p>
+          </div>
+
+          {tramos.map((t, i) => {
+            const texto = textoDelTramo(t, diasCorridos);
+            const errores = erroresDelTramoEnPantalla(erroresDeLaPropuesta, indicesCompletos, i);
+            return (
+              <div key={i} className={`${caja} ${errores.length > 0 ? "border-red-300 dark:border-red-900/60" : ""}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{tramos.length > 1 ? `Tramo ${i + 1}` : "Tus vacaciones"}</p>
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => setCalendario({ tramo: i, modo: "start" })} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 active:bg-slate-100 dark:active:bg-slate-800" aria-label={`Editar ${tramos.length > 1 ? `tramo ${i + 1}` : "las fechas"}`}>
+                      <FontAwesomeIcon icon={faPen} className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onClick={() => borrarTramo(i)} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 active:bg-slate-100 dark:active:bg-slate-800" aria-label={`Borrar ${tramos.length > 1 ? `tramo ${i + 1}` : "las fechas"}`}>
+                      <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
-            <button type="button" onClick={() => setTramos([...tramos, { desde: "", hasta: "" }])} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 py-2 text-xs font-bold text-slate-600 dark:border-slate-600 dark:text-slate-300">
-              <FontAwesomeIcon icon={faPlus} /> Dividir en otro tramo
-            </button>
+                {texto ? (
+                  <>
+                    <p className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-100">{texto}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{textoDeRegreso(t.hasta)}</p>
+                  </>
+                ) : (
+                  <button type="button" onClick={() => setCalendario({ tramo: i, modo: "start" })} className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-primary/50 py-2.5 text-sm font-semibold text-primary active:bg-primary/10">
+                    <FontAwesomeIcon icon={faCalendarAlt} />
+                    {t.desde ? `Desde el ${fechaCorta(t.desde)}: elegí hasta cuándo` : "Elegí las fechas"}
+                  </button>
+                )}
+                {errores.length > 0 && (
+                  <ul className="mt-2 space-y-1 text-xs text-red-600 dark:text-red-400">
+                    {errores.map((e) => (
+                      <li key={e}>· {e}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
 
-            <p className={`mt-3 text-sm font-semibold ${suma === datos.diasDisponibles ? "text-emerald-600 dark:text-emerald-400" : "text-slate-600 dark:text-slate-300"}`}>
-              {suma} de {datos.diasDisponibles} días
-            </p>
-            {completos.length > 0 && errores.length > 0 && (
-              <ul className="mt-2 space-y-1 text-xs text-red-600 dark:text-red-400">
-                {errores.map((e) => (
-                  <li key={e}>· {e}</li>
-                ))}
-              </ul>
-            )}
-            <button type="button" disabled={enviando || completos.length === 0 || errores.length > 0} onClick={proponer} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-green-200 bg-green-100 py-3 text-sm font-bold text-green-700 active:bg-green-200 disabled:opacity-50 dark:border-green-900/60 dark:bg-green-900/30 dark:text-green-400">
-              <FontAwesomeIcon icon={enviando ? faClock : faCheck} />
-              {enviando ? "Enviando..." : "Enviar propuesta"}
+          {puedeAgregarTramo({ tramos, faltan: avance.faltan, diasDisponibles: pantalla.diasDisponibles, minPorTramo: pantalla.minPorTramo }) && (
+            <button type="button" onClick={agregarTramo} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm font-bold text-slate-600 active:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:active:bg-slate-800">
+              <FontAwesomeIcon icon={faPlus} /> Agregar tramo
             </button>
-            <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-500 dark:text-slate-400">
-              <span aria-hidden="true">🌴</span>
-              {faltan === 0 ? "Todavía estás a tiempo: hoy podés elegir con calma." : "Podés tomarte tu tiempo, estás a tiempo de elegir."}
-            </p>
+          )}
+
+          {/* El botón fijo abajo, con el motivo en una línea neutra mientras no se pueda. */}
+          <div className="fixed bottom-20 left-1/2 z-10 w-full -translate-x-1/2 px-4 xl:w-1/2">
+            <div className="rounded-xl border bg-white p-3 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+              <p className="mb-2 text-center text-xs text-slate-500 dark:text-slate-400">{motivo ?? "Todo repartido: podés enviar tu propuesta."}</p>
+              <button type="button" disabled={!!motivo || enviando} onClick={proponer} className={botonPrimario}>
+                <FontAwesomeIcon icon={enviando ? faClock : faCheck} />
+                {enviando ? "Enviando..." : "Enviar propuesta"}
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* ───────── C: enviada, otorgada, asignada o vencida ───────── */}
+      {paso === "C" && (
+        <div className="space-y-3 px-4 pt-4">
+          <div className={caja}>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{situacion.titulo}</p>
+            {listaDeVacaciones}
+            {situacion.clave === "vencida" && (
+              <p className="mt-2 flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+                <FontAwesomeIcon icon={faClock} className="mt-0.5 shrink-0 text-amber-500" />
+                <span>Pasó el {fechaCorta(c.fechaLimite)} sin elegir.</span>
+              </p>
+            )}
+            {situacion.detalle && <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">{situacion.detalle}</p>}
+            {situacion.queSigue && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{situacion.queSigue}</p>}
+          </div>
+
+          {/* El aviso por escrito del otorgamiento, y su acuse. */}
+          {situacion.clave === "otorgada" && inv.notificacion && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
+              <p className="mb-1 text-xs font-bold uppercase tracking-wider">Aviso de otorgamiento</p>
+              <p className="whitespace-pre-wrap">{inv.notificacion.texto}</p>
+              {inv.notificacion.pdfUrls.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-3">
+                  {inv.notificacion.pdfUrls.map((u, k) => (
+                    <a key={k} href={getImageUrl(u)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-bold text-violet-700 dark:text-violet-300">
+                      <FontAwesomeIcon icon={faFilePdf} /> Ver PDF{inv.notificacion!.pdfUrls.length > 1 ? ` ${k + 1}` : ""}
+                    </a>
+                  ))}
+                </div>
+              )}
+              {inv.acuseOtorgamientoAt ? (
+                <p className="mt-3 text-xs">
+                  <FontAwesomeIcon icon={faCircleCheck} className="mr-1" />
+                  Acusaste recibo el {new Date(inv.acuseOtorgamientoAt).toLocaleString("es-AR")}
+                </p>
+              ) : (
+                <button type="button" disabled={enviando} onClick={() => accion(() => campaniasVacacionesAPI.acusarOtorgamiento(), "Registramos que recibiste el aviso.")} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-2.5 text-sm font-bold text-white active:scale-[0.99] disabled:opacity-50">
+                  <FontAwesomeIcon icon={faCheck} /> Recibí el aviso
+                </button>
+              )}
+            </div>
+          )}
+
+          {irAMisSolicitudes}
+        </div>
+      )}
 
       {/* Ver la propuesta completa; se puede cancelar mientras nada esté aprobado, nunca editar. */}
       <VacationDetailModal
@@ -309,9 +387,10 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
           titulo: "¿Cancelar tu propuesta?",
           texto:
             (datos.vacaciones.length > 1 ? `Se cancelan los ${datos.vacaciones.length} tramos de tu propuesta y se te devuelven los días.` : "Se cancela tu propuesta y se te devuelven los días.") +
-            (faltan >= 0 ? " Después podés volver a elegir tus fechas." : " Como ya pasó la fecha límite, la empresa te va a proponer unas fechas."),
+            (datos.diasParaLaFechaLimite >= 0 ? " Después podés volver a elegir tus fechas." : " Como ya pasó la fecha límite, la empresa te va a proponer unas fechas."),
           cancelar: async () => {
             setDatos(await campaniasVacacionesAPI.cancelarPropuesta());
+            setEligiendo(false);
             await refrescarOcupadas();
           },
         }}

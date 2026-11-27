@@ -31,4 +31,7 @@ export interface ResumenValidacionCuit {
     paraResolver: ItemDeCorrida[];
     errores: ItemDeCorrida[];
 }
-export declare function correrValidacionCuit(tenantObjectId: Types.ObjectId, log?: (l: string) => void): Promise<ResumenValidacionCuit>;
+/** `escribir: false` = SÓLO MIRAR: arma las listas pero no consulta al padrón ni avanza nada; `consultados` y `avanzados` dicen lo que haría. */
+export declare function correrValidacionCuit(tenantObjectId: Types.ObjectId, log?: (l: string) => void, opciones?: {
+    escribir?: boolean;
+}): Promise<ResumenValidacionCuit>;

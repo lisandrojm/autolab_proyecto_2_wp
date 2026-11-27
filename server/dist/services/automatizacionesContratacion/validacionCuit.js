@@ -6,6 +6,7 @@ import { claveEstado } from "../../utils/estadoClave.js";
 import { sigueElCircuito } from "../../utils/circuitoContrato.js";
 import { normalizarCuit, cuitEsValido } from "../../utils/constanciaPdf.js";
 import { avanzarConstanciasArchivadas, consultarPadronDeContratos } from "../afip/consultaPadronContratos.js";
+import { desdeBandeja, enVentana } from "./generacionDocumentos.js";
 const DIA_MS = 24 * 60 * 60 * 1000;
 const nombreDe = (u) => [u?.firstName, u?.lastName].filter(Boolean).join(" ").trim() || "Persona";
 /** Sin CUIT/CUIL argentino: lo declarado al dar de alta, o un placeholder (vacío, 00-00000000-0). Misma regla que la pantalla (`noPoseeCuit`). */
@@ -15,7 +16,9 @@ const noPoseeCuit = (raw, sinCuit) => {
     const d = String(raw || "").replace(/\D/g, "");
     return d.length === 0 || /^(\d)\1*$/.test(d);
 };
-export async function correrValidacionCuit(tenantObjectId, log = () => { }) {
+/** `escribir: false` = SÓLO MIRAR: arma las listas pero no consulta al padrón ni avanza nada; `consultados` y `avanzados` dicen lo que haría. */
+export async function correrValidacionCuit(tenantObjectId, log = () => { }, opciones = {}) {
+    const escribir = opciones.escribir !== false;
     const resumen = { fecha: new Date(), revisados: 0, consultados: 0, activos: 0, inactivos: 0, desconocidos: 0, avanzados: 0, esperando: 0, paraResolver: [], errores: [] };
     const estados = await Info.find({ type: "estado-empleado", "data.esImpositivo": true, "data.tipoImpositivo": "constancia_cuit" }).select("name").lean();
     if (estados.length === 0)
@@ -36,6 +39,7 @@ export async function correrValidacionCuit(tenantObjectId, log = () => { }) {
     const consultar = [];
     const avanzar = [];
     const ahora = Date.now();
+    const desde = desdeBandeja();
     for (const up of ups) {
         const projectId = String(up.projectId);
         const userId = String(up.userId);
@@ -50,6 +54,9 @@ export async function correrValidacionCuit(tenantObjectId, log = () => { }) {
             if (!claves.has(claveEstado(String(c.nombre_estado_empleado || ""))))
                 continue;
             if (!sigueElCircuito(c))
+                continue;
+            // La ventana de la bandeja (ver `enVentana`): lo viejo que quedó en el trámite no se toca solo.
+            if (!enVentana(c, desde))
                 continue;
             resumen.revisados++;
             const cuit = normalizarCuit(user?.metadata?.cuit);
@@ -75,6 +82,12 @@ export async function correrValidacionCuit(tenantObjectId, log = () => { }) {
                     resumen.esperando++;
             }
         }
+    }
+    if (!escribir) {
+        resumen.consultados = consultar.length;
+        resumen.avanzados = avanzar.length;
+        log(`consultaría ${consultar.length} y avanzaría ${avanzar.length}`);
+        return resumen;
     }
     if (consultar.length > 0) {
         log(`consultando ${consultar.length} contrato(s) al padrón`);

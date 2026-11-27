@@ -6,6 +6,7 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInte
 import { es } from 'date-fns/locale';
 import { sweetAlert } from '../utils/sweetAlert';
 import { hastaParaDias, normalizarDiasDeInicio, puedeEmpezar, textoDiasDeInicio } from '@compartido/vacaciones/campania';
+import { primerInicioElegible } from '@compartido/vacaciones/pantallaEmpleado';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -26,6 +27,11 @@ import { hastaParaDias, normalizarDiasDeInicio, puedeEmpezar, textoDiasDeInicio 
  * que no puede empezar un tramo (`diasDeInicio`), o un fin que deja el tramo más corto que el mínimo al
  * fraccionar (`minimo`, con desde qué día sí). Lo que todavía está mal en el tramo (`errores`, calculado por
  * quien lo usa con las mismas reglas que el server) se muestra en rojo y no deja confirmar.
+ *
+ * POR PASOS (27/11/2026, reemplaza lo del 24/11 para los días de inicio): al elegir el INICIO, los días en que se
+ * puede empezar se destacan y el resto se atenúa (sólo el texto, sin fondo: no es el gris de «bloqueado»);
+ * al elegir el fin se ven todos normales. Abre en el mes del primer día en que se puede empezar, no en el
+ * actual. La leyenda de vacaciones de otros se muestra sólo si hay alguna en el mes que se ve.
  */
 
 export type ModoCalendario = 'start' | 'end';
@@ -71,10 +77,11 @@ export function contarDiasSeleccionados(desde: string, hasta: string, diasCorrid
 export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCambiar, disponibles, diasCorridos, ocupadas, pendientes, permitida, textoVentana, mesInicial, onConfirmar, onInfoPendientes, diasDeInicio, minimo = 0, errores = [] }: Props) {
   const [viewDate, setViewDate] = useState(new Date());
 
-  // Al abrir, el mes de lo elegido o el primero en que se puede elegir.
+  // Al abrir, el mes de lo elegido o el del primer día en que se puede EMPEZAR (no el actual, que suele no tener ninguno).
   useEffect(() => {
     if (!modo) return;
-    const base = desde || mesInicial;
+    const manana = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+    const base = desde || primerInicioElegible(mesInicial && mesInicial > manana ? mesInicial : manana, diasDeInicio, permitida) || mesInicial;
     const d = base ? parseISO(base) : new Date();
     setViewDate(isBefore(d, new Date()) ? new Date() : d);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -204,6 +211,14 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
   const seleccionados = contarDiasSeleccionados(desde, hasta, diasCorridos);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const diasDelMes = generateCalendarDays();
+  // La leyenda de otros usuarios, sólo si hay alguna vacación ajena en el mes que se ve.
+  const hayAjenasVisibles = diasDelMes.some((d) => {
+    const f = format(d, 'yyyy-MM-dd');
+    return ocupadas.includes(f) || pendientes.includes(f);
+  });
+  // Al elegir el inicio con días de inicio fijados: los que pueden empezar se destacan, el resto se atenúa.
+  const destacaInicio = modo === 'start' && diasQueEmpiezan.length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -212,7 +227,7 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
           <div className="flex flex-col">
             <h3 className="font-bold text-lg text-slate-900 dark:text-white capitalize">{format(viewDate, 'MMMM yyyy', { locale: es })}</h3>
             {textoVentana && <span className="text-[11px] text-slate-500 dark:text-slate-400">Se pueden pedir {textoVentana}</span>}
-            {textoEmpiezan && <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">{textoEmpiezan}</span>}
+            {textoEmpiezan && modo === 'start' && <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{textoEmpiezan}</span>}
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded p-1">
@@ -241,7 +256,7 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
             ))}
           </div>
           <div className="grid grid-cols-7 gap-y-1">
-            {generateCalendarDays().map((day, idx) => {
+            {diasDelMes.map((day, idx) => {
               const isCurrentMonth = isSameMonth(day, viewDate);
               const formattedDay = format(day, 'yyyy-MM-dd');
               const isOccupiedDay = isOccupied(day);
@@ -294,7 +309,9 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
                 classes += ' bg-transparent text-sky-600 dark:text-white rounded border border-blue-500 border-dashed';
               } else {
                 classes += ' border-transparent border-2';
-                classes += !isCurrentMonth ? ' text-slate-300 dark:text-slate-700' : ' text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded';
+                if (!isCurrentMonth) classes += ' text-slate-300 dark:text-slate-700';
+                else if (destacaInicio) classes += noPuedeEmpezar ? ' text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded' : ' font-bold text-primary ring-1 ring-inset ring-primary/40 hover:bg-primary/10 rounded';
+                else classes += ' text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded';
               }
 
               let dayTitle = '';
@@ -347,6 +364,7 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
             )}
           </div>
 
+          {hayAjenasVisibles && (
           <div className="flex flex-col gap-2 mb-4">
             <span className="text-[10px] uppercase text-slate-500 font-bold tracking-wider mb-1">Vacaciones de otros usuarios (No seleccionables)</span>
             <div className="flex items-center gap-2">
@@ -359,6 +377,7 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
               {onInfoPendientes && <FontAwesomeIcon icon={faInfoCircle} className="w-3 h-3 text-slate-400 ml-auto" onClick={onInfoPendientes} />}
             </div>
           </div>
+          )}
 
           {errores.length > 0 && (
             <ul className="mb-3 space-y-1 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-900/20 dark:text-red-300">

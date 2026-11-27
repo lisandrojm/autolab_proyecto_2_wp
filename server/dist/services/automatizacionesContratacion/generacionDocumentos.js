@@ -9,13 +9,35 @@ import { Release } from "../../models/Release.js";
 import { ReleaseTipo } from "../../models/ReleaseTipo.js";
 import { resolverCarpetaPorProposito, resolverEstadoPorPropositos } from "../../utils/estadoCarpetas.js";
 import { claveEstado } from "../../utils/estadoClave.js";
+import { fechaISO, hoyArgentina } from "../../utils/contratoVigencia.js";
 import { sigueElCircuito } from "../../utils/circuitoContrato.js";
 import { getTenantDropboxConfig } from "../dropboxService.js";
 import { lectorDeTramites } from "../superposicion.js";
 import { pendienteDeFirma, releaseRequiereFirma } from "../../compartido/pendienteDeFirma.js";
 import { eliminarReleasesDeTramite, enviarAFirmar, generarContratoDeTramite, generarReleasesDeTramite } from "../firmaDigital/documentos.js";
 const nombreDe = (u) => [u?.firstName, u?.lastName].filter(Boolean).join(" ").trim() || "Persona";
-export async function correrGeneracionDocumentos(tenantObjectId, log = () => { }) {
+/**
+ * LA VENTANA DE LA BANDEJA (la misma que el listado, `DIAS_ATRAS_BANDEJA` en `contracts-overview`): un
+ * contrato en el estado que arrancó hace más de 90 días no es trabajo pendiente sino uno que quedó en
+ * un estado de trámite sin que nadie lo cerrara. No se toca solo.
+ */
+export const DIAS_ATRAS_BANDEJA = 90;
+export const desdeBandeja = (hoy = hoyArgentina()) => {
+    const d = new Date(`${hoy}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - DIAS_ATRAS_BANDEJA);
+    return d.toISOString().slice(0, 10);
+};
+/** ¿Entra en la bandeja? Alta dentro de la ventana (o más adelante). Sin fecha de alta, no. */
+export const enVentana = (c, desde) => {
+    const alta = fechaISO(c?.fecha_alta_contrato);
+    return !!alta && alta >= desde;
+};
+/**
+ * `escribir: false` = SÓLO MIRAR: decide lo mismo pero no genera ni envía nada; `generados` y
+ * `enviados` dicen lo que haría. Para probar contra la base real y para el «¿qué haría?».
+ */
+export async function correrGeneracionDocumentos(tenantObjectId, log = () => { }, opciones = {}) {
+    const escribir = opciones.escribir !== false;
     const resumen = { fecha: new Date(), revisados: 0, generados: 0, enviados: 0, sinNadaQueFirmar: 0, paraResolver: [], errores: [] };
     const tenantId = String(tenantObjectId);
     // Sin dónde dejar los documentos no se puede enviar nada: se dice de entrada, no contrato por contrato.
@@ -56,6 +78,7 @@ export async function correrGeneracionDocumentos(tenantObjectId, log = () => { }
     const releasesQueFirman = releases.filter(releaseRequiereFirma);
     const personaDe = new Map(users.map((u) => [String(u._id), nombreDe(u)]));
     const filaDe = (c, projectId) => ({ ...c, tipoContratoId: c.contrato_id, contratoEmpresas: empresasDe.get(projectId)?.contratoEmpresas, releaseEmpresas: empresasDe.get(projectId)?.releaseEmpresas });
+    const desde = desdeBandeja();
     for (const up of ups) {
         const projectId = String(up.projectId);
         const userId = String(up.userId);
@@ -71,6 +94,8 @@ export async function correrGeneracionDocumentos(tenantObjectId, log = () => { }
             // Sólo lo que nació en WeProdu (aprobado desde Solicitudes o «Agregar miembro»), como el listado de la bandeja.
             if (!sigueElCircuito(c))
                 continue;
+            if (!enVentana(c, desde))
+                continue;
             resumen.revisados++;
             const tipo = (tramiteDe({ nombre_contrato: c.nombre_contrato, tipo_contrato_id: c.tipo_contrato_id, contrato_id: c.contrato_id }) || null);
             const pen = pendienteDeFirma(filaDe(c, projectId), plantillas, releasesQueFirman, tipo, releases);
@@ -83,6 +108,14 @@ export async function correrGeneracionDocumentos(tenantObjectId, log = () => { }
                 continue;
             }
             const tramite = { projectId, userId, contractIndex: idx };
+            if (!escribir) {
+                if (pen.faltaContrato || pen.faltaRelease)
+                    resumen.generados++;
+                else if (pen.enviable)
+                    resumen.enviados++;
+                log(`${persona} (${proyecto}): ${pen.faltaContrato ? "generaría el contrato" : ""}${pen.faltaRelease ? ` generaría ${pen.releasesAplicables.length} release(s)` : ""}${pen.enviable ? " enviaría a firmar" : ""}`.trim());
+                continue;
+            }
             try {
                 if (pen.faltaContrato) {
                     log(`${persona} (${proyecto}): generando el contrato`);

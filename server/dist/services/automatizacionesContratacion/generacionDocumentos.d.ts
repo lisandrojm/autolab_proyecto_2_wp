@@ -32,4 +32,19 @@ export interface ResumenGeneracion {
     /** Fallaron al generar o al enviar: quedan en la bandeja y se reintentan. */
     errores: ItemDeCorrida[];
 }
-export declare function correrGeneracionDocumentos(tenantObjectId: Types.ObjectId, log?: (l: string) => void): Promise<ResumenGeneracion>;
+/**
+ * LA VENTANA DE LA BANDEJA (la misma que el listado, `DIAS_ATRAS_BANDEJA` en `contracts-overview`): un
+ * contrato en el estado que arrancó hace más de 90 días no es trabajo pendiente sino uno que quedó en
+ * un estado de trámite sin que nadie lo cerrara. No se toca solo.
+ */
+export declare const DIAS_ATRAS_BANDEJA = 90;
+export declare const desdeBandeja: (hoy?: string) => string;
+/** ¿Entra en la bandeja? Alta dentro de la ventana (o más adelante). Sin fecha de alta, no. */
+export declare const enVentana: (c: any, desde: string) => boolean;
+/**
+ * `escribir: false` = SÓLO MIRAR: decide lo mismo pero no genera ni envía nada; `generados` y
+ * `enviados` dicen lo que haría. Para probar contra la base real y para el «¿qué haría?».
+ */
+export declare function correrGeneracionDocumentos(tenantObjectId: Types.ObjectId, log?: (l: string) => void, opciones?: {
+    escribir?: boolean;
+}): Promise<ResumenGeneracion>;

@@ -36,6 +36,7 @@ import { InfoModal } from '../../../../components/ui/InfoModal';
 import { calculateLCTVacationDays, calculateLCTDaysFromSeniority } from '../../../../utils/vacationLCT';
 import { vacationConfigAPI, VacationConfig } from '../../../../api/vacationConfig';
 import { fechaDeCalendario } from "../../../../utils/fechas";
+import { campaniasVacacionesAPI, type MiInvitacion } from '../../../../api/campaniasVacaciones';
 
 // Helper to parse date string as local date (ignoring time/timezone)
 const getLocalDate = (dateString: string) => {
@@ -68,6 +69,22 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   const [showDetailModal, setShowDetailModal] = useState(false);
   // Nuevo estado para el modal de información/ayuda
   const [showInfoModal, setShowInfoModal] = useState(false);
+  // El detalle contable del saldo (total anual, LCT, beneficio, arrastre), plegado (27/11/2026).
+  const [verDetalle, setVerDetalle] = useState(false);
+  /*
+    LA CAMPAÑA DE LA TEMPORADA (27/11/2026): mientras la persona puede elegir sus vacaciones en «Vacaciones»
+    (campaña de goce), acá no se piden días sueltos: los dos caminos consumen el mismo saldo y la propuesta de la
+    campaña reparte TODOS los días, así que un pedido suelto en el medio la desarma. El botón se reemplaza por el
+    atajo a la campaña.
+  */
+  const [campania, setCampania] = useState<MiInvitacion | null>(null);
+  useEffect(() => {
+    campaniasVacacionesAPI
+      .mia()
+      .then(setCampania)
+      .catch(() => setCampania(null));
+  }, []);
+  const enCampania = !!campania?.puedeProponer;
   const [showPendingInfoModal, setShowPendingInfoModal] = useState(false);
   const [showSignatureInfoModal, setShowSignatureInfoModal] = useState(false);
   const [showProfileInfoModal, setShowProfileInfoModal] = useState(false);
@@ -577,62 +594,58 @@ export default function Vacations({ onNavigate }: VacationsProps) {
           </div>
 
           <div className="dark:bg-slate-900 rounded p-4">
-            {/* NUEVA FILA DE SALDO PRINCIPAL: Corridos vs. Hábiles */}
-            <div className="flex flex-col justify-between items-center mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-semibold uppercase text-slate-700 dark:text-slate-200 mr-2">Días Disponibles</h4>
-                {/* Botón de Ayuda movido aquí */}
-                <button onClick={() => setShowInfoModal(true)} className="text-slate-400 hover:text-slate-600 transition-colors p-1">
-                  <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" />
+            {/* LO QUE LA PERSONA NECESITA (27/11/2026): disponibles, pendientes y gozados; lo contable, en «Ver detalle». Spinner mientras carga: nunca ceros. */}
+            {loading ? (
+              <LoadingSpinner message="Cargando datos..." />
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold uppercase text-slate-700 dark:text-slate-200 mr-2">Días Disponibles</h4>
+                  <button onClick={() => setShowInfoModal(true)} className="text-slate-400 hover:text-slate-600 transition-colors p-1" aria-label="Qué significa cada número">
+                    <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex items-baseline w-full justify-around">
+                  <div className="text-center">
+                    <p className="text-xs text-slate-400 mb-1">Disponibles</p>
+                    <p className="text-3xl font-extrabold text-blue-500">{calculatedAvailable}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-slate-400 mb-1">Pendientes</p>
+                    <p className="text-2xl font-bold text-yellow-500">{availableDays?.pending ?? 0}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-slate-400 mb-1">Gozados</p>
+                    <p className="text-2xl font-bold text-slate-700 dark:text-slate-200">{availableDays?.used || 0}</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setVerDetalle(!verDetalle)} className="mt-3 w-full text-center text-xs font-semibold text-primary">
+                  {verDetalle ? 'Ocultar detalle' : 'Ver detalle'}
                 </button>
-              </div>
-              <div className="flex items-baseline gap-4k w-full justify-around">
-                {/* Días Corridos (Saldo Contable, el más grande) */}
-                <div className="text-center">
-                  <p className="text-xs text-slate-400">Total Anual</p>
-                  <p className="text-3xl font-extrabold text-blue-500">{calculatedTotal}</p>
-                </div>
-                {/* Disponibles */}
-                <div className="text-center">
-                  <p className="text-xs text-slate-400 mb-1">Disponibles</p>
-                  <p className="text-2xl font-bold text-blue-500">{calculatedAvailable}</p>
-                </div>
-                {/* Pendientes */}
-                <div className="text-center">
-                  <p className="text-xs text-slate-400 mb-1">Pendientes</p>
-                  <p className="text-2xl font-bold text-yellow-500">{availableDays?.pending ?? '-'}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* BALANCE DE DÍAS (Fila única 4 columnas o 2x2 para mobile) - BALANCE Contable y Uso */}
-            <div className={`grid grid-cols-2 ${isArrastreEnabled ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-y-4 gap-x-2 text-center`}>
-              {/* LCT */}
-              <div className="bg-white dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
-                <p className="text-xs text-slate-400 mb-1">Por Ley (LCT)</p>
-                <p className="text-lg font-bold text-slate-700 dark:text-slate-200">{lctDays}</p>
-              </div>
-
-              {/* Beneficio */}
-              <div className="bg-white dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
-                <p className="text-xs text-slate-400 mb-1">Beneficio</p>
-                <p className="text-lg font-bold text-blue-500">{(globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0)}</p>
-              </div>
-
-              {/* Arrastre - Solo visible si está habilitado */}
-              {isArrastreEnabled && (
-                <div className="bg-white dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
-                  <p className="text-xs text-slate-400 mb-1">Arrastre</p>
-                  <p className="text-lg font-bold text-gray-500">{carryOver}</p>
-                </div>
-              )}
-
-              {/* Gozados */}
-              <div className="bg-white dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
-                <p className="text-xs text-slate-400 mb-1">Gozados</p>
-                <p className="text-lg font-bold">{availableDays?.used || 0}</p>
-              </div>
-            </div>
+                {verDetalle && (
+                  <div className={`mt-3 grid grid-cols-2 ${isArrastreEnabled ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-y-3 gap-x-2 text-center border-t border-slate-200 dark:border-slate-800 pt-3`}>
+                    <div className="bg-white dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
+                      <p className="text-xs text-slate-400 mb-1">Total anual</p>
+                      <p className="text-lg font-bold text-blue-500">{calculatedTotal}</p>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
+                      <p className="text-xs text-slate-400 mb-1">Por Ley (LCT)</p>
+                      <p className="text-lg font-bold text-slate-700 dark:text-slate-200">{lctDays}</p>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
+                      <p className="text-xs text-slate-400 mb-1">Beneficio</p>
+                      <p className="text-lg font-bold text-blue-500">{(globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0)}</p>
+                    </div>
+                    {isArrastreEnabled && (
+                      <div className="bg-white dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
+                        <p className="text-xs text-slate-400 mb-1">Arrastre</p>
+                        <p className="text-lg font-bold text-gray-500">{carryOver}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 
@@ -641,13 +654,14 @@ export default function Vacations({ onNavigate }: VacationsProps) {
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-xl shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
-                <h3 className="font-bold text-lg text-slate-900 dark:text-white">Nueva Solicitud</h3>
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white">Pedir días sueltos</h3>
                 <button onClick={() => setShowForm(false)} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                   <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
                 </button>
               </div>
 
               <form onSubmit={handleSubmit} className="p-4 space-y-4">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Un pedido suelto, fuera de la campaña de la temporada. Lo aprueban tu supervisor, tu coordinador y RR.HH., y después se firma.</p>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fechas</label>
                   {textoVentanaGoce && <p className="text-xs text-slate-500 dark:text-slate-400 -mt-1 mb-2">Podés solicitar vacaciones {textoVentanaGoce}.</p>}
@@ -1192,13 +1206,21 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         onRefresh={refetch}
       />
 
-      {/* Floating Action Button for New Request */}
-      {/* Floating Action Button for New Request */}
-      <div className="fixed bottom-24 z-10 w-full xl:w-1/2 left-1/2 -translate-x-1/2 flex justify-end px-6 pointer-events-none">
-        <button onClick={() => setShowForm(true)} disabled={loading || hasActiveRequest || hasNoDays} className="pointer-events-auto flex items-center justify-center w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100" title={hasActiveRequest ? 'Ya tienes una solicitud en curso' : hasNoDays ? 'Sin días disponibles' : 'Nueva Solicitud'}>
-          <FontAwesomeIcon icon={faPlus} className="w-6 h-6" />
-        </button>
-      </div>
+      {/* PEDIR DÍAS SUELTOS (fuera de la campaña). Mientras la persona elige sus vacaciones de la temporada, no compite con «Solicitar vacaciones»: se la manda ahí. */}
+      {enCampania ? (
+        <div className="fixed bottom-24 z-10 w-full xl:w-1/2 left-1/2 -translate-x-1/2 px-4 pointer-events-none">
+          <button type="button" onClick={() => onNavigate('campania')} className="pointer-events-auto flex w-full items-center justify-between gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 text-left text-sm font-semibold text-primary shadow-lg backdrop-blur">
+            <span>Tus vacaciones de la temporada se eligen desde Vacaciones</span>
+            <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 shrink-0" />
+          </button>
+        </div>
+      ) : (
+        <div className="fixed bottom-24 z-10 w-full xl:w-1/2 left-1/2 -translate-x-1/2 flex justify-end px-6 pointer-events-none">
+          <button onClick={() => setShowForm(true)} disabled={loading || hasActiveRequest || hasNoDays} className="pointer-events-auto flex items-center justify-center w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100" title={hasActiveRequest ? 'Ya tenés una solicitud en curso' : hasNoDays ? 'Sin días disponibles' : 'Pedir días sueltos'} aria-label="Pedir días sueltos">
+            <FontAwesomeIcon icon={faPlus} className="w-6 h-6" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
